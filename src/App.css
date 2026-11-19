@@ -124,6 +124,8 @@
     --sidebar-glass-base: color-mix(in srgb, var(--bg-panel) 56%, transparent);
   }
   .has-sidebar-scene .scrim.is-open { opacity: .56; }
+  /* The scenic layer is a sibling, so opening the drawer covers only the work surface. */
+  .has-sidebar-scene .pane-column[inert] { opacity: 0; }
 }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   .app.has-sidebar-scene .sidebar { background: var(--bg-panel); }

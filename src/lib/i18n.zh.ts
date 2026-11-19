@@ -989,6 +989,8 @@ export const ZH: Record<string, string> = {
   "Tab name": "标签页名称",
   "Actions for {tab}": "{tab} 的操作",
   "Close tab {name}?": "关闭标签页 {name}？",
+  "Closing tab…": "正在关闭标签页…",
+  "Close result is unconfirmed. Check the tab before trying again.": "无法确认标签页是否已关闭。请先查看标签页，再重试。",
   "Close failed: {reason}": "关闭失败：{reason}",
   "Split right": "向右拆分",
   "Split down": "向下拆分",

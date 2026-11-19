@@ -102,14 +102,16 @@
 /* Desktop tabs use their context menu; only touch or narrow layouts expose the ellipsis. */
 .tab-strip-menu { display: none; }
 
-.tab-strip-error {
+.tab-strip-error, .tab-strip-progress {
   align-self: center;
   flex: 0 0 auto;
   margin-left: var(--space-2);
-  color: var(--status-blocked);
   font-size: var(--fs-xs);
   white-space: nowrap;
 }
+
+.tab-strip-error { color: var(--status-blocked); }
+.tab-strip-progress { color: var(--text-dim); }
 
 /* the + stays at the strip's end while the tabs scroll under it: more tabs than fit must not
    take it off the screen */

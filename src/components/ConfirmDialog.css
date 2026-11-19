@@ -18,3 +18,11 @@
   font-size: var(--fs-xs);
   overflow-wrap: anywhere;
 }
+
+.confirm-progress {
+  margin: var(--space-2) 0 0;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
+.confirm-progress:empty { margin: 0; }

@@ -65,6 +65,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
   const refocus = useRef<string | null>(null);
   // tabs whose close is on its way: a second press, or a held Delete, does not send another
   const closing = useRef(new Set<string>());
+  const [showClosing, setShowClosing] = useState(false);
   // A requested close: register focus return before the native snapshot can remove its tab.
   const closed = useRef<{ tabId: string; beside: string } | null>(null);
   // what is on screen now, for a close that answers after the selection or the PC has moved on
@@ -223,6 +224,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
     const key = JSON.stringify([machineId, workspace.workspace_id, tab.tab_id]);
     if (closing.current.has(key)) return;
     closing.current.add(key);
+    setShowClosing(true);
     // Herdr can publish the removal before the HTTP acknowledgement arrives. The removal
     // commit must already know where the disappearing tab's keyboard focus belongs.
     const focusAfterClose = beside ? { tabId: tab.tab_id, beside: beside.tab_id } : null;
@@ -231,7 +233,10 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
     catch (reason) {
       if (closed.current === focusAfterClose) closed.current = null;
       throw reason;
-    } finally { closing.current.delete(key); }
+    } finally {
+      closing.current.delete(key);
+      if (!closing.current.size) setShowClosing(false);
+    }
     // the answer may come after another tab, workspace or PC was picked: the open pane, and the focus, then stay
     if (latest.current.machineId !== machineId || latest.current.workspaceId !== workspace.workspace_id) return;
     // the last tab took its workspace, and the strip, with it: focus goes where a closed row's goes
@@ -453,6 +458,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
           <Plus aria-hidden="true" />
         </button>
         {error && <span className="tab-strip-error" role="alert">{error}</span>}
+        {showClosing && !confirm && <span className="tab-strip-progress" role="status">{t("Closing tab…")}</span>}
       </div>
       <button type="button" className="tab-strip-switch icon-button" aria-label={t("All tabs")} title={t("All tabs")}
         aria-haspopup="menu" aria-expanded={switcher !== null}
@@ -466,7 +472,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
         }))} />}
       {picker && <RowMenu key={grouping ? "groups" : "actions"} anchor={picker.anchor} point={picker.point} restoreFocusTo={picker.previousFocus}
         title={grouping ? t("Group with…") : nameOf(picker.tab)} subtitle={grouping ? nameOf(picker.tab) : workspace.label} variant="actions" items={grouping ? [{ id: "back", label: t("Back to actions"), icon: ArrowLeft, run: () => { setGrouping(false); setPicker(picker); } }, ...groupItems(picker.tab)] : pickerItems(picker.tab, picker.touch)} align="start" onClose={() => setPicker(null)} />}
-      {confirm && <ConfirmDialog title={confirm.title} body={confirm.body} confirmLabel={t("Close tab")} onConfirm={async () => { await close(confirm.tab); setConfirm(null); }} onClose={() => setConfirm(null)} />}
+      {confirm && <ConfirmDialog title={confirm.title} body={confirm.body} confirmLabel={t("Close tab")} pendingLabel={t("Closing tab…")} onConfirm={async () => { await close(confirm.tab); setConfirm(null); }} onClose={() => setConfirm(null)} />}
     </>
   );
 }

@@ -56,7 +56,7 @@ export function TabCloseConfirmation({ name, workspaceName, lastTab, onClose, on
     body={lastTab
       ? t("It is the last tab of {workspace}: the workspace closes with it, and the agents and shells in it stop.", { workspace: workspaceName })
       : t("Closing this tab stops the shells and agents in it.")}
-    confirmLabel={t("Close tab")} onClose={onClose} onConfirm={onConfirm} />;
+    confirmLabel={t("Close tab")} pendingLabel={t("Closing tab…")} onClose={onClose} onConfirm={onConfirm} />;
 }
 
 export function RenameNativeTab({ tab, panes, name, onClose, onSaved }: {

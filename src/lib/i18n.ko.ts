@@ -985,6 +985,8 @@ export const KO: Record<string, string> = {
   "Tab name": "탭 이름",
   "Actions for {tab}": "{tab} 작업",
   "Close tab {name}?": "{name} 탭을 닫을까요?",
+  "Closing tab…": "탭 닫는 중…",
+  "Close result is unconfirmed. Check the tab before trying again.": "탭이 닫혔는지 확인하지 못했습니다. 다시 시도하기 전에 탭을 확인하세요.",
   "Close failed: {reason}": "닫기 실패: {reason}",
   "Split right": "오른쪽으로 분할",
   "Split down": "아래로 분할",

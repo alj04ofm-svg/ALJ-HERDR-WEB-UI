@@ -21,6 +21,7 @@ interface Props {
   title: string;
   body: string;
   confirmLabel: string;
+  pendingLabel?: string;
   /** resolves once the deed is done; the owner then takes the dialog down */
   onConfirm: () => Promise<void>;
   /** when the deed is refused with this error code, the action becomes this one */
@@ -28,7 +29,7 @@ interface Props {
   onClose: () => void;
 }
 
-export function ConfirmDialog({ title, body, confirmLabel, onConfirm, escalation, onClose }: Props) {
+export function ConfirmDialog({ title, body, confirmLabel, pendingLabel, onConfirm, escalation, onClose }: Props) {
   const t = useT();
   const id = useId();
   const cancel = useRef<HTMLButtonElement>(null);
@@ -44,7 +45,10 @@ export function ConfirmDialog({ title, body, confirmLabel, onConfirm, escalation
 
   // both buttons disable while the deed runs, which would drop the focus into the page: the
   // dialog itself holds it, and Tab stays put until the dialog goes
-  useEffect(() => { if (pending) surface.current?.focus(); }, [pending]);
+  useEffect(() => {
+    if (pending) surface.current?.focus();
+    else if (error && pendingLabel) cancel.current?.focus({ preventScroll: true });
+  }, [pending, error, pendingLabel, surface]);
   // Escape is this dialog's while it is up, even while the deed runs and cannot be undone
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -76,6 +80,7 @@ export function ConfirmDialog({ title, body, confirmLabel, onConfirm, escalation
         <header className="modal-header"><h2 className="modal-title" id={`${id}-title`}>{title}</h2></header>
         <div className="modal-body">
           <p className="confirm-body" id={`${id}-body`}>{body}</p>
+          {pendingLabel && <p className="confirm-progress" role="status">{pending ? pendingLabel : ""}</p>}
           {error && <p className="confirm-error" role="alert">{error}</p>}
         </div>
         <footer className="modal-footer">

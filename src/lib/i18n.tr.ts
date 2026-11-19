@@ -940,6 +940,8 @@ export const TR: Record<string, string> = {
   "Tab name": "Sekme adı",
   "Actions for {tab}": "{tab} için eylemler",
   "Close tab {name}?": "{name} sekmesi kapatılsın mı?",
+  "Closing tab…": "Sekme kapatılıyor…",
+  "Close result is unconfirmed. Check the tab before trying again.": "Sekmenin kapanıp kapanmadığı doğrulanamadı. Tekrar denemeden önce sekmeyi kontrol edin.",
   "Close failed: {reason}": "Kapatma başarısız: {reason}",
   "Split right": "Sağa böl",
   "Split down": "Aşağı böl",

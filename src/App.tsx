@@ -31,7 +31,9 @@ import { SidebarResizer } from "./components/SidebarResizer.tsx";
 import { storedSidebarWidth } from "./lib/sidebarWidth.ts";
 import { MachineDialog } from "./components/MachineDialog.tsx";
 import { RowMenu, type RowMenuItem } from "./components/RowMenu.tsx";
-import { focusWorkspaceListToggle } from "./lib/focus.ts";
+import { focusWorkspaceListToggle, modalOpen } from "./lib/focus.ts";
+import { chatReadDeadlineMs } from "./lib/chatReadDeadline.ts";
+import { withMutationDeadline } from "./lib/mutationDeadline.ts";
 import { headerCrumb, showsChat } from "./lib/headerCrumb.ts";
 import { paneStorageId, type Machine, type MachineEvent } from "../shared/machines.ts";
 import { takeAuthTokenFromUrl } from "./lib/authLink.ts";
@@ -252,7 +254,19 @@ export function App() {
   // narrow window opened must not come back (with its scrim) the next time the window narrows
   const wideScreen = useMediaQuery("(min-width: 769px)");
   const compactHeader = useMediaQuery("(max-width: 560px)");
+  const phoneDrawerOpen = drawerOpen && !wideScreen;
   useEffect(() => { if (wideScreen) setDrawerOpen(false); }, [wideScreen]);
+  useEffect(() => {
+    if (!phoneDrawerOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented || event.isComposing || modalOpen()) return;
+      event.preventDefault();
+      setDrawerOpen(false);
+      focusWorkspaceListToggle();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [phoneDrawerOpen]);
   // with a generation (lib/selectionMark.ts): a call that answers after the user opened another pane or PC leaves
   // the selection alone. Marked at commit, not in render: a render React throws away (Strict Mode, a replay)
   // must not move the generation on, and every reader runs from an event or a reply, after the commit
@@ -374,14 +388,15 @@ export function App() {
     try { const next = await fetchHealth(); setHealth((previous) => sameData(previous, next) ? previous : next); } catch { setHealth(null); }
   }, []);
   const snapshotRequests = useRef(new SnapshotRequests());
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     try {
-      await snapshotRequests.current.read(fetchMachines, (next) => {
+      await snapshotRequests.current.read(() => fetchMachines(signal), (next) => {
         setMachines((previous) => sameData(previous, next) ? previous : next);
         setError(null); setLocked(false);
       });
     }
     catch (err) {
+      if (signal?.aborted) return;
       if (err instanceof ApiError && err.status === 401) { setLocked(true); return; }
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -911,6 +926,7 @@ export function App() {
     document.title = navigationTitle ? `${navigationTitle} · ALJ HERDR WEB UI` : APP_TITLE;
   }, [navigationTitle]);
 
+  const tabCloses = useRef(new Map<string, Promise<void>>());
   const actions = useMemo<AppActions>(
     () => ({
       selectPane,
@@ -950,15 +966,27 @@ export function App() {
         setNewSessionOpen(true);
       },
       openPalette: () => setPaletteOpen(true),
-      closeTab: async (machineId, tabId) => {
-        try {
-          await closeTab(tabId, machineId);
-        } catch (error) {
-          // A missing reply can follow a successful native close. Check the owning PC once.
-          const current = await fetchSession(machineId).catch(() => null);
-          if (!current || current.tabs.some(tab => tab.tab_id === tabId)) throw error;
-        }
-        void load();
+      closeTab: (machineId, tabId) => {
+        const key = JSON.stringify([machineId, tabId]);
+        const active = tabCloses.current.get(key);
+        if (active) return active;
+        const deadline = chatReadDeadlineMs(machineId);
+        const close = (async () => {
+          try {
+            await withMutationDeadline(signal => closeTab(tabId, machineId, signal), deadline);
+          } catch (error) {
+            if (error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 408 && error.status !== 404) throw error;
+            // A missing reply can follow a successful native close. Check the owning PC once.
+            const current = await withMutationDeadline(signal => fetchSession(machineId, signal), deadline).catch(() => null);
+            if (!current || current.tabs.some(tab => tab.tab_id === tabId)) {
+              throw new Error(t("Close result is unconfirmed. Check the tab before trying again."));
+            }
+          }
+          // Bring the shared roster up to date before dismissing the close controls.
+          await withMutationDeadline(load, chatReadDeadlineMs("local")).catch(() => undefined);
+        })().finally(() => tabCloses.current.delete(key));
+        tabCloses.current.set(key, close);
+        return close;
       },
       paneMoved: (machineId, previousPaneId, paneId) => {
         if (previousPaneId === paneId) return;
@@ -1017,7 +1045,7 @@ export function App() {
         void zoomPane(paneId, mode, machineId).then(() => void load()).catch((err) => layoutRefused("pane zoom failed", err));
       } : null,
     }),
-    [selectPane, selectedPaneId, selectedMachineId, setView, view, updateSettings, resolvedTheme, canSignOut, openSignOut, bellVisible, bell.run, enableNotifications, load, layoutRefused, lenses, toggleDesktopSidebar],
+    [selectPane, selectedPaneId, selectedMachineId, setView, view, updateSettings, resolvedTheme, canSignOut, openSignOut, bellVisible, bell.run, enableNotifications, load, layoutRefused, lenses, toggleDesktopSidebar, t],
   );
 
   useShortcuts(actions, locked === false);
@@ -1240,7 +1268,7 @@ export function App() {
 
         {/* a file path in the chat opens in the viewer, relative to the selected pane's folder */}
         <OpenFileContext.Provider value={selectedPaneId !== null ? viewFile : null}>
-        <div className={`pane-column${chatShown ? " is-chat" : ""}`}>
+        <div className={`pane-column${chatShown ? " is-chat" : ""}`} {...(phoneDrawerOpen ? { inert: "" } : {})}>
         {/* over the pane only: a bar across the window would cut the sidebar off from its top row in the header */}
         <UpdateNotice updates={updates} onOpen={() => { setSettingsSection("updates"); setSettingsOpen(true); }} />
         <TelemetryNotice enabled={locked === false} onOpen={() => { setSettingsSection("updates"); setSettingsOpen(true); }} />

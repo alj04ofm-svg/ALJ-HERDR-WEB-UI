@@ -165,8 +165,8 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function fetchSession(machineId = "local"): Promise<SessionSnapshot> {
-  const body = await getJson<{ snapshot: SessionSnapshot }>(machinePath(machineId, "session"));
+export async function fetchSession(machineId = "local", signal?: AbortSignal): Promise<SessionSnapshot> {
+  const body = await getJson<{ snapshot: SessionSnapshot }>(machinePath(machineId, "session"), { signal });
   return body.snapshot;
 }
 
@@ -363,9 +363,10 @@ export async function uploadPaneImage(paneId: string, image: Blob, machineId = "
   return inAttachmentQueue(() => uploadAttachment(machinePath(machineId, "pane/attachment-upload"), paneId, image, options));
 }
 
-async function sendJson(url: string, method: "POST" | "PATCH" | "DELETE", body: unknown, headers: Record<string, string> = {}): Promise<Response> {
+async function sendJson(url: string, method: "POST" | "PATCH" | "DELETE", body: unknown, headers: Record<string, string> = {}, signal?: AbortSignal): Promise<Response> {
   const response = await fetch(url, {
     method,
+    signal,
     headers: { "content-type": "application/json", "x-herdr-machine": "1", ...headers },
     body: JSON.stringify(body),
   });
@@ -583,8 +584,8 @@ export async function moveTab(tabId: string, insertIndex: number, machineId = "l
 }
 
 /** POST /api/tab/close: the tab and every pane in it; a workspace's last tab takes the workspace with it. */
-export async function closeTab(tabId: string, machineId = "local"): Promise<void> {
-  await sendJson(machinePath(machineId, "tab/close"), "POST", { tab_id: tabId });
+export async function closeTab(tabId: string, machineId = "local", signal?: AbortSignal): Promise<void> {
+  await sendJson(machinePath(machineId, "tab/close"), "POST", { tab_id: tabId }, {}, signal);
 }
 
 export async function renameWorkspace(workspaceId: string, label: string, machineId = "local"): Promise<void> {

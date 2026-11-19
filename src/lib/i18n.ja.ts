@@ -987,6 +987,8 @@ export const JA: Record<string, string> = {
   "Tab name": "タブ名",
   "Actions for {tab}": "{tab} の操作",
   "Close tab {name}?": "タブ {name} を閉じますか？",
+  "Closing tab…": "タブを閉じています…",
+  "Close result is unconfirmed. Check the tab before trying again.": "タブが閉じたか確認できませんでした。もう一度試す前にタブを確認してください。",
   "Close failed: {reason}": "閉じられませんでした: {reason}",
   "Split right": "右に分割",
   "Split down": "下に分割",
