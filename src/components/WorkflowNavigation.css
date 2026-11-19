@@ -1,0 +1,24 @@
+.workflow-navigation { flex: none; min-width: 0; margin: 0 var(--space-3) var(--space-3); }
+.workflow-section + .workflow-section { margin-top: var(--space-3); }
+.workflow-heading { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: var(--touch-target); padding: var(--space-2); background: transparent; border: 0; color: var(--text-dim); font: inherit; font-size: var(--fs-xs); font-weight: var(--fw-semibold); text-align: start; cursor: pointer; }
+.workflow-heading > svg { width: var(--space-4); height: var(--space-4); }
+.workflow-heading > svg:last-child { width: var(--space-3); height: var(--space-3); }
+.workflow-heading > span:first-of-type { flex: 1; }
+.workflow-count { color: var(--accent); font-variant-numeric: tabular-nums; }
+.is-attention .workflow-heading, .is-attention .workflow-count { color: var(--status-blocked); }
+.workflow-section ul { list-style: none; padding: 0; margin: 0; }
+.workflow-target { display: flex; align-items: center; width: 100%; min-height: var(--touch-target); gap: var(--space-3); padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text); text-align: start; font: inherit; cursor: pointer; }
+.workflow-target > span:not(.agent-mark) { flex: 1; min-width: 0; }
+.workflow-target > .agent-mark { flex: none; color: var(--accent); }
+.workflow-target strong { display: block; font-size: var(--fs-sm); font-weight: var(--fw-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workflow-target small { display: block; margin-top: var(--space-1); font-size: var(--fs-2xs); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workflow-target > svg { width: var(--space-4); height: var(--space-4); color: var(--accent); }
+.workflow-target[aria-current="page"] { background: var(--accent-tint); color: var(--text-strong); }
+.workflow-heading:focus-visible, .workflow-target:focus-visible { outline: var(--ring); outline-offset: var(--ring-offset); }
+@media (hover: hover) and (pointer: fine) { .workflow-target:hover { background: var(--side-hover); } }
+@media (prefers-reduced-motion: no-preference) {
+  .workflow-target { transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out); }
+  .workflow-target:active { transform: scale(.98); }
+  .workflow-section ul { animation: workflow-reveal var(--dur-base) var(--ease-out); }
+}
+@keyframes workflow-reveal { from { opacity: 0; transform: translateY(calc(-1 * var(--space-1))); } to { opacity: 1; transform: translateY(0); } }

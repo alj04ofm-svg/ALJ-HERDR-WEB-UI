@@ -1,0 +1,8 @@
+{
+  "version": "0.22.0",
+  "commit": "2fc8cbfa5aaf348e0576e47359d5cc77c49eceb0",
+  "platform": "linux-x64",
+  "binarySha256": "d3986e4856656b08249e6e65e020d63a6dd27c8e1d3742d178e72d32f5d8dadf",
+  "archiveSha256": "747745eac681e7102ccb714f46566b8260a4ec02debc86b6c27c8dfd0e40808a",
+  "source": "https://github.com/openclaw/wacli/releases/tag/v0.22.0"
+}

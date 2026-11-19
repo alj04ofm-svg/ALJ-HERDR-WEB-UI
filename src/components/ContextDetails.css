@@ -1,0 +1,8 @@
+.context-details { max-width: calc(var(--space-8) * 20); }
+.context-details-body { padding: 0 var(--space-5) var(--space-5); overflow-y: auto; }
+.context-details-body > p { color: var(--text-dim); font-size: var(--fs-sm); line-height: var(--lh-prose); margin: var(--space-4) 0; }
+.context-details-body h3 { font-size: var(--fs-sm); color: var(--text-strong); margin-top: var(--space-6); }
+.context-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.context-metrics > div { padding: var(--space-3) 0; border-bottom: var(--hairline) solid var(--border); }
+.context-metrics dt { color: var(--text-dim); font-size: var(--fs-xs); }
+.context-metrics dd { margin: var(--space-2) 0 0; color: var(--text-strong); font-size: var(--fs-lg); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }

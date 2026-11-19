@@ -1,0 +1,7 @@
+.workspace-sync { margin-top: var(--space-6); padding-block: var(--space-4); border-top: var(--hairline) solid var(--border); }
+.workspace-sync summary { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; color: var(--text); font-weight: var(--fw-medium); min-height: var(--touch-target); }
+.workspace-sync summary svg { width: var(--space-4); height: var(--space-4); color: var(--accent); flex: none; }
+.workspace-sync summary:focus-visible { outline: var(--ring); outline-offset: var(--ring-offset); }
+.workspace-sync-preview { margin-top: var(--space-4); padding: var(--space-3); border-radius: var(--radius-md); border: var(--hairline) solid var(--border); background: var(--bg-panel); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.workspace-sync-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+@media (max-width: 640px) { .workspace-sync-actions .btn { flex: 1 1 100%; white-space: normal; } }

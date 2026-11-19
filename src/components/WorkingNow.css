@@ -1,0 +1,12 @@
+.working-now { flex: none; min-width: 0; border-bottom: var(--hairline) solid var(--border); background: var(--bg-panel); font-size: var(--fs-xs); }
+.working-now-toggle { display: flex; align-items: center; width: 100%; min-height: var(--touch-target); padding: var(--space-2) var(--space-4); gap: var(--space-2); border: 0; background: transparent; color: var(--text); font: inherit; cursor: pointer; text-align: start; }
+.working-now-toggle svg { flex: none; width: var(--icon-size); height: var(--icon-size); }
+.working-now-count { margin-inline-start: auto; color: var(--text-dim); text-align: end; }
+.working-now ul { margin: 0; padding: 0 var(--space-4) var(--space-2); list-style: none; max-height: 25dvh; overflow-y: auto; overscroll-behavior: contain; }
+.working-now li button { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: start; gap: var(--space-3); width: 100%; min-height: var(--touch-target); padding: var(--space-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text); text-align: start; font: inherit; cursor: pointer; }
+.working-now li button:hover, .working-now-toggle:hover { background: var(--bg-hover); }
+.working-now button:focus-visible { outline: var(--ring); outline-offset: var(--ring-offset); }
+.working-now li span { min-width: 0; overflow-wrap: anywhere; line-height: var(--lh-base); }
+.working-now small { display: block; margin-top: var(--space-1); color: var(--text-dim); font-size: var(--fs-2xs); }
+.working-now-name { color: var(--text-strong); font-weight: var(--fw-medium); }
+.working-now-waiting { color: var(--status-blocked); }

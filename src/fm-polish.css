@@ -1,0 +1,62 @@
+/* Extend the current palette and layout; keep the subscription panel and compact strip intact. */
+:root { --radius-lg: 12px; --radius-xl: 16px; --accent-tint: color-mix(in srgb, var(--accent) 10%, transparent); --shadow-card: 0 5px 18px color-mix(in srgb, var(--bg) 85%, transparent); }
+::selection { color: var(--text); background: color-mix(in srgb, var(--accent) 30%, var(--bg)); }
+:focus-visible { outline-color: var(--accent); }
+.composer-attachments { max-height: min(240px, 30dvh); overflow-y: auto; }
+.composer-attachment progress { width: 52px; height: 4px; accent-color: var(--accent); }
+.composer-upload-error { color: var(--text); max-width: 230px; font-size: 11px; line-height: 1.4; }
+.composer-attachment.is-error { flex-wrap: wrap; max-width: 340px; }
+.composer-work-prompts { font: inherit; }
+@media (prefers-reduced-motion: reduce) { .btn-primary, .composer { transition: none; } }
+
+.fm-tools-backdrop { position: fixed; inset: 0; z-index: var(--z-modal); background: var(--scrim); display: grid; place-items: center; padding: var(--space-5); }
+.fm-tools { width: min(100%, 680px); max-height: calc(var(--app-height, 100dvh) - 2 * var(--space-5)); overflow: auto; background: var(--bg-panel); border-radius: var(--radius-xl); box-shadow: var(--shadow-pop); }
+.fm-tools-heading { display: flex; align-items: flex-start; justify-content: space-between; padding: var(--space-6); gap: var(--space-3); }
+.fm-tools-heading h2 { font-size: var(--fs-xl); letter-spacing: -.02em; margin: 0; }
+.fm-tools-heading p { margin: var(--space-2) 0 0; color: var(--text-dim); font-size: var(--fs-sm); }
+.fm-tools-list { padding-inline: var(--space-6); }
+.fm-tool { display: flex; gap: var(--space-4); padding-block: var(--space-5); border-top: var(--hairline) solid var(--border); }
+.fm-tool-icon { display: grid; place-items: center; flex: 0 0 var(--fm-tool-icon); height: var(--fm-tool-icon); background: var(--accent-tint); color: var(--accent); border-radius: var(--radius-md); }
+.fm-tool-icon svg { width: var(--mark-size); height: var(--mark-size); }
+.fm-tool-content { min-width: 0; flex: 1; }
+.fm-tool-heading { display: flex; align-items: baseline; gap: var(--space-3); }
+.fm-tool-heading h3 { margin: 0; font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
+.fm-tool-heading > span { color: var(--text-dim); font-size: var(--fs-2xs); }
+.fm-tool-content > p { margin: var(--space-2) 0 var(--space-3); color: var(--text-dim); font-size: var(--fs-sm); line-height: var(--lh-base); }
+.fm-tool-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.fm-tool-actions .btn { font-size: var(--fs-xs); gap: var(--space-2); white-space: normal; text-align: left; }
+.fm-tool-actions svg, .fm-tools-footer svg, .fm-tools-result svg { width: var(--fs-sm); height: var(--fs-sm); flex-shrink: 0; }
+.fm-tools-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-5) var(--space-6); border-top: var(--hairline) solid var(--border); }
+.fm-tools-footer > span { color: var(--text-dim); font-size: var(--fs-xs); }
+.fm-tools-footer button { gap: var(--space-2); }
+.fm-tools-result { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-4) var(--space-6); font-size: var(--fs-sm); color: var(--status-done); overflow-wrap: anywhere; }
+.fm-tools-result.is-error { color: var(--status-blocked); }
+:root[data-atmosphere="off"] .btn-primary,
+:root[data-atmosphere="off"] .composer:focus-within,
+:root[data-atmosphere="off"] .sidebar-footer,
+:root[data-atmosphere="off"] .fm-navigation button:hover { box-shadow: none; }
+.chat-history-fallback { margin: 12px 0; padding: 16px; background: var(--bg-panel); border-radius: var(--radius-md); }
+.chat-history-fallback h3 { margin: 0 0 8px; font-size: var(--fs-md); }
+.chat-history-fallback p, .chat-compaction-status small { color: var(--text-dim); }
+.chat-recovery-actions { margin: 12px 0; }
+.fm-live-progress { margin: 8px 0; color: var(--text); }
+.chat-compaction-status { padding: 12px; background: var(--bg-panel); border-radius: var(--radius-md); }
+.chat-compaction-status > div:first-child { display: flex; align-items: center; gap: 8px; }
+.chat-compaction-status svg { width: 16px; height: 16px; color: var(--accent); }
+.chat-compaction-track { height: 3px; margin: 12px 0; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--accent) 25%, var(--bg-hover)); }
+
+:root { --fm-tools-w: 680px; --fm-tool-icon: 40px; --fm-toolbar-surface: var(--bg-elevated); --fm-rail-atmosphere: var(--bg-panel); --fm-control-glow: none; --shadow-sidebar-active: none; }
+@media (prefers-reduced-motion: reduce) { .activity-rail *, .workflow-navigation *, .fm-tools *, .composer-work-prompts { animation: none; transition: none; } }
+:root[data-atmosphere="off"] .sidebar [aria-current="page"] { box-shadow: none; }
+
+/* Text/video cards need room for progress and a reachable retry beside Remove. */
+.composer-attachments { flex-wrap: wrap; padding-bottom: 8px; }
+.composer-attachment:has(.composer-attachment-file), .composer-attachment.is-error { width: min(290px, 100%); height: auto; min-height: 70px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 26px 10px 10px; }
+.composer-attachment .composer-attachment-file { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 6px; min-width: 0; width: 100%; height: auto; padding: 0; font-size: 11px; text-align: left; }
+.composer-attachment-file svg { width: 16px; height: 16px; flex: none; }
+.composer-attachment-file > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composer-attachment:has(.composer-attachment-file) .composer-attachment-state, .composer-attachment.is-error .composer-attachment-state { position: static; width: auto; }
+.composer-attachment .composer-upload-retry { position: static; width: auto; height: auto; min-height: 28px; padding: 4px 10px; border-radius: var(--radius-md); color: var(--accent); font: inherit; font-size: 11px; }
+.composer-upload-error { flex-basis: 100%; max-width: none; }
+
+@media (pointer: coarse) { .composer-attachment .composer-upload-retry { min-height: 44px; } }

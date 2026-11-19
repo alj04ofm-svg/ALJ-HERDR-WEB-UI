@@ -1,0 +1,14 @@
+.prompt-library { width: min(100%, var(--fm-tools-w)); max-height: calc(var(--app-height, 100dvh) - var(--space-8)); overflow-y: auto; }
+.prompt-library .modal-title { display: flex; align-items: center; gap: var(--space-3); }
+.prompt-library .modal-title svg { width: var(--space-5); height: var(--space-5); color: var(--accent); }
+.prompt-library textarea { resize: vertical; }
+.prompt-library ul { padding: 0; list-style: none; margin: var(--space-5) 0 0; }
+.prompt-library li { display: flex; gap: var(--space-2); align-items: center; padding-block: var(--space-3); border-top: var(--hairline) solid var(--border); }
+.prompt-library-use { min-width: 0; flex: 1; min-height: var(--touch-target); border: 0; background: transparent; color: var(--text); font: inherit; text-align: start; cursor: pointer; }
+.prompt-library-use strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: var(--fs-sm); font-weight: var(--fw-medium); overflow-wrap: anywhere; }
+.prompt-library-use span { display: block; margin-top: var(--space-2); color: var(--accent); font-size: var(--fs-xs); }
+.prompt-library-use:focus-visible { outline: var(--ring); outline-offset: var(--ring-offset); }
+.prompt-library-empty { color: var(--text-dim); line-height: var(--lh-prose); padding-block: var(--space-5); }
+
+.prompt-library-search { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-5); }
+.prompt-library-search svg { width: var(--space-4); flex: none; color: var(--text-dim); }

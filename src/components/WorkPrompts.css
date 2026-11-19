@@ -1,0 +1,21 @@
+.composer-work-prompts {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.composer-work-prompts svg { width: var(--icon-size); height: var(--icon-size); flex: none; }
+.composer-work-prompts:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.composer-work-prompts[aria-expanded="true"] { background: var(--bg-hover); color: var(--text); }
+.composer-work-prompts:disabled { opacity: 0.5; cursor: default; }
+@media (hover: hover) { .composer-work-prompts:hover:not(:disabled) { background: var(--bg-hover); color: var(--text); } }
+@media (max-width: 640px) { .composer-work-prompts span { display: none; } .composer-work-prompts { width: var(--touch-target); padding: 0; } }

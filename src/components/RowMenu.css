@@ -1,0 +1,254 @@
+/* The row menu floats over everything that scrolls, and over the phone drawer: the drawer is a
+   layer of its own, and the menu opens from inside it. */
+.row-menu {
+  position: fixed;
+  z-index: calc(var(--z-drawer) + 1);
+  min-width: 208px;
+  max-width: min(280px, calc(100vw - var(--space-4)));
+  /* the popover's max-height comes from the room the anchor leaves (RowMenu.tsx); `.menu` hides
+     its overflow, so the scroll box is here */
+  overflow-y: auto;
+}
+
+/* hints that are paths (New workspace's "+N" folders): room for them, and the path, not the name, is cut */
+.row-menu-paths {
+  max-width: min(420px, calc(100vw - var(--space-4)));
+}
+
+.row-menu-paths .menu-item-main {
+  flex: 0 1 auto;
+  max-width: 50%;
+}
+
+.row-menu-paths .menu-item-hint {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* opened from inside a dialog (New workspace's "+N" folders): over the dialog */
+.row-menu.is-over-modal {
+  z-index: calc(var(--z-modal) + 1);
+}
+
+.row-menu .menu-item:focus-visible {
+  outline: none;
+  background: var(--bg-hover);
+  color: var(--text-strong);
+}
+
+.row-menu .menu-item.is-danger,
+.row-sheet-item.is-danger {
+  color: var(--status-blocked);
+}
+
+.row-menu .menu-item.is-danger svg,
+.row-sheet-item.is-danger svg {
+  color: currentColor;
+}
+
+/* a picker's item that is what is open now: named in the strong colour, with its mark unfaded */
+.row-menu .menu-item[aria-current="true"],
+.row-sheet-item[aria-current="true"] {
+  color: var(--text-strong);
+  font-weight: var(--fw-semibold);
+}
+
+/* what the menu is about, above its items: a line of its own, ruled off from them */
+.row-menu-header {
+  padding: var(--space-2);
+  margin-bottom: var(--space-1);
+  border-bottom: var(--hairline) solid var(--border);
+}
+
+.row-menu-divider {
+  height: var(--hairline);
+  margin: var(--space-1) 0;
+  background: var(--border);
+}
+
+.row-menu.row-menu-actions {
+  width: min(264px, calc(100vw - var(--space-4)));
+  min-width: 0;
+  max-width: none;
+  padding: var(--space-1);
+  border-radius: var(--radius-lg);
+}
+
+.row-menu-actions .row-menu-header {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+}
+
+.row-menu-actions .menu-item {
+  min-height: 34px;
+  padding-inline: var(--space-3);
+}
+
+.row-menu-actions .row-sheet-head {
+  margin-bottom: var(--space-1);
+  border-bottom: var(--hairline) solid var(--border);
+}
+
+/* the phone's sheet: a grip, the row's name, then one tall button per action, and Cancel */
+.row-sheet {
+  padding: var(--space-2) var(--space-3) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+}
+
+/* the actions, between the head and Cancel, which stay put: the sheet is held to the screen
+   (`.modal` at <=640px) and hides its overflow, so a tab's menu of a dozen actions scrolls here */
+.row-sheet-items {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.row-sheet-grip {
+  align-self: center;
+  width: 36px;
+  height: 4px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+}
+
+.row-sheet-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-1) var(--space-2) var(--space-3);
+}
+
+.row-sheet-title {
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-sheet-subtitle {
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  padding: 0 var(--space-2);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* the label takes the row; a state in words sits at its far end */
+.row-sheet-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.row-sheet-hint {
+  flex: 0 0 auto;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
+.row-sheet-item svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: var(--text-dim);
+}
+
+.row-sheet-item.has-divider {
+  position: relative;
+  margin-top: calc(var(--space-2) + var(--hairline));
+}
+
+.row-sheet-item.has-divider::before {
+  content: "";
+  position: absolute;
+  top: calc(-1 * var(--space-1) - var(--hairline));
+  right: 0;
+  left: 0;
+  height: var(--hairline);
+  background: var(--border);
+}
+
+.row-sheet-item:active,
+.row-sheet-item:focus-visible {
+  outline: none;
+  background: var(--bg-hover);
+}
+
+/* the row fills when pressed, as an iPhone's does: it does not dim as a lone button would (styles.css) */
+.row-sheet-item:active {
+  opacity: 1;
+}
+
+.row-sheet-cancel {
+  height: 44px;
+  margin-top: var(--space-2);
+  font-size: var(--fs-md);
+}
+
+/* Reusable briefs need a readable title and explanation, including on narrow sheets. */
+.row-menu.row-menu-descriptions { max-width: min(420px, calc(100vw - var(--space-4))); }
+.row-menu-descriptions .menu-item,
+.row-menu-descriptions .row-sheet-item,
+.row-menu-actions .menu-item:has(.menu-item-hint),
+.row-menu-actions .row-sheet-item:has(.row-sheet-hint) {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  min-height: 64px;
+  padding: var(--space-2);
+}
+.row-menu-descriptions .menu-item > svg,
+.row-menu-descriptions .row-sheet-item > svg,
+.row-menu-actions .menu-item:has(.menu-item-hint) > svg,
+.row-menu-actions .row-sheet-item:has(.row-sheet-hint) > svg { grid-column: 1; grid-row: 1 / 3; align-self: center; }
+.row-menu-descriptions .menu-item-main,
+.row-menu-descriptions .row-sheet-label,
+.row-menu-actions .menu-item:has(.menu-item-hint) .menu-item-main,
+.row-menu-actions .row-sheet-item:has(.row-sheet-hint) .row-sheet-label { grid-column: 2; grid-row: 1; min-width: 0; }
+.row-menu-descriptions .menu-item-hint,
+.row-menu-descriptions .row-sheet-hint,
+.row-menu-actions .menu-item-hint,
+.row-menu-actions .row-sheet-hint {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: var(--lh-prose);
+  text-align: left;
+}
+
+.row-menu-descriptions .row-sheet-item { flex: 0 0 auto; }
+
+.menu.row-menu-actions {
+  background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}

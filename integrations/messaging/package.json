@@ -1,0 +1,11 @@
+{
+  "name": "herdr-messaging-adapters",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "teleproto": "1.230.1"
+  },
+  "scripts": {
+    "test": "bun test ./telegram.test.ts ./whatsapp.test.ts"
+  }
+}

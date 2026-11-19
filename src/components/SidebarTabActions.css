@@ -1,0 +1,30 @@
+.fm-workspace-tabs > li { display: flex; align-items: center; border-radius: var(--radius-sm); }
+.fm-workspace-tabs > li:has(.is-active) { background: var(--bg-hover); }
+.fm-workspace-tabs .fm-workspace-tab { flex: 1; min-width: 0; width: auto; }
+.fm-workspace-tabs .fm-workspace-tab.is-active { background: transparent; }
+.fm-tab-actions { display: grid; place-items: center; width: var(--space-6); min-height: var(--space-8); padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-dim); cursor: pointer; }
+.fm-tab-actions svg { width: var(--icon-size); height: var(--icon-size); }
+.fm-tab-actions:hover, .fm-tab-actions[aria-expanded="true"] { background: var(--bg-hover); color: var(--text-strong); }
+.fm-tab-actions:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fm-rename-dialog { max-width: 440px; }
+.fm-rename-dialog input { font-size: var(--fs-chat); }
+.fm-rename-dialog .modal-footer { flex-wrap: wrap; }
+.fm-rename-dialog .modal-footer .btn { min-height: var(--touch-target); white-space: normal; }
+
+/* StatusSlot adapted from SISO AgentBase: one cell swaps state for row actions. */
+.fm-thread-slot { flex: none; display: grid; place-items: center; width: var(--space-8); }
+.fm-thread-slot .sidebar-status { position: static; width: var(--space-4); }
+.fm-thread-slot .fm-tab-actions { display: none; }
+.fm-workspace-tabs > li:hover .fm-thread-slot .sidebar-status,
+.fm-workspace-tabs > li:focus-within .fm-thread-slot .sidebar-status,
+.fm-thread-slot:has([aria-expanded="true"]) .sidebar-status { display: none; }
+.fm-workspace-tabs > li:hover .fm-tab-actions,
+.fm-workspace-tabs > li:focus-within .fm-tab-actions,
+.fm-tab-actions[aria-expanded="true"] { display: grid; }
+@media (hover: none), (pointer: coarse), (max-width: 768px) {
+  .fm-thread-slot { width: calc(var(--touch-target) + var(--space-4)); grid-template-columns: var(--space-4) var(--touch-target); }
+  .fm-thread-slot .fm-tab-actions { display: grid; width: var(--touch-target); min-height: var(--touch-target); }
+  .fm-workspace-tabs > li:hover .fm-thread-slot .sidebar-status,
+  .fm-workspace-tabs > li:focus-within .fm-thread-slot .sidebar-status,
+  .fm-thread-slot:has([aria-expanded="true"]) .sidebar-status { display: inline-flex; }
+}

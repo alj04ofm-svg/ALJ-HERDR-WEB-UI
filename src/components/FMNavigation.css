@@ -1,0 +1,20 @@
+.fm-navigation { display: flex; gap: var(--space-1); padding: var(--space-2) var(--side-gutter) var(--space-1); }
+.fm-navigation > button { display: flex; align-items: center; gap: var(--space-2); min-height: max(44px, var(--touch-target)); padding: 0 var(--space-2); color: var(--text-dim); border: 0; border-radius: var(--radius-md); background: transparent; font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; }
+.fm-navigation > button:first-child { flex: 1; color: var(--text-strong); font-weight: var(--fw-semibold); }
+.fm-navigation > button:hover, .fm-navigation > button[aria-expanded="true"] { color: var(--text-strong); background: var(--bg-hover); }
+@media (pointer: fine) { .fm-navigation > button { min-height: var(--control-h); } }
+.fm-navigation svg { width: var(--space-4); height: var(--space-4); flex: none; }
+.fm-tab-organizer { width: min(720px, calc(100vw - var(--space-6))); max-height: calc(100dvh - var(--space-8)); display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); }
+.fm-tab-organizer > header { display: flex; justify-content: space-between; align-items: center; }
+.fm-tab-organizer > .workflow-navigation { flex: none; max-height: 25dvh; overflow-y: auto; }
+.fm-tab-list { overflow-y: auto; min-height: 0; }
+.fm-organizer-row { display: flex; gap: var(--space-1); align-items: center; border-bottom: var(--hairline) solid var(--border); }
+.fm-organizer-select { flex: 1; min-width: 0; min-height: var(--touch-target); display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: var(--space-1); padding: var(--space-2); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.fm-organizer-select:hover, .fm-organizer-row:has([aria-expanded="true"]) { background: var(--bg-hover); }
+.fm-organizer-select:disabled { color: var(--text-dim); cursor: default; }
+.fm-organizer-row strong, .fm-organizer-row small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fm-organizer-row small { color: var(--text-dim); }
+.fm-organizer-row .fm-tab-actions { width: var(--touch-target); min-height: var(--touch-target); }
+
+.fm-task-dialog { width: min(1440px, 100%); height: 100%; max-height: 100%; }
+.fm-task-dialog .task-workspace-scrim { width: 100%; }

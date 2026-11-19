@@ -1,0 +1,100 @@
+.communications-scrim { position: fixed; inset: 0; z-index: var(--z-modal); background: var(--bg); }
+.communications { height: var(--app-height, 100dvh); display: flex; flex-direction: column; color: var(--text); background: var(--bg); outline: none; }
+.communications-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); padding: var(--space-5) var(--space-6); border-bottom: var(--hairline) solid var(--border); }
+.communications-header > div { display: grid; grid-template-columns: var(--space-6) minmax(0, 1fr); gap: var(--space-1) var(--space-3); align-items: center; }
+.communications-header > div > svg { color: var(--accent); width: var(--space-6); }
+.communications-header h2 { margin: 0; font-size: var(--fs-lg); color: var(--text-strong); }
+.communications-header span { grid-column: 2; color: var(--text-dim); font-size: var(--fs-sm); }
+.communications-providers { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-6); border-bottom: var(--hairline) solid var(--border); }
+.communications-providers button { display: flex; align-items: center; gap: var(--space-5); min-height: var(--touch-target); padding: var(--space-2) var(--space-4); font: inherit; color: var(--text-dim); background: transparent; border: var(--hairline) solid transparent; border-radius: var(--radius-md); cursor: pointer; }
+.communications-providers button[aria-pressed="true"] { color: var(--text-strong); background: var(--accent-tint); border-color: var(--accent); }
+.communications-providers svg { width: var(--space-4); color: var(--accent); }
+.communications-layout { display: grid; grid-template-columns: 20rem minmax(0, 1fr); min-height: 0; flex: 1; }
+.communications-list { min-height: 0; overflow-y: auto; padding: var(--space-5); background: var(--bg-panel); border-inline-end: var(--hairline) solid var(--border); }
+.communications-list > header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.communications h3 { color: var(--text-strong); margin: 0; font-size: var(--fs-lg); }
+.communications-content { min-width: 0; overflow-y: auto; padding: var(--space-6); overscroll-behavior: contain; }
+.communications-hint, .communications-empty p, .communications-setup > p, .communications-picker > p { color: var(--text-dim); font-size: var(--fs-sm); line-height: var(--lh-prose); }
+.communications-empty { max-width: 36rem; padding: var(--space-6) 0; }
+.communications-empty > svg, .communications-setup > svg { width: var(--space-8); height: var(--space-8); color: var(--accent); margin-bottom: var(--space-4); }
+.communications-empty strong { display: block; color: var(--text-strong); }
+.communications-welcome { margin: min(12vh, 6rem) auto; }
+.communications-welcome h3 { max-width: 22ch; font-size: clamp(1.5rem, 3vw, 2.5rem); line-height: 1.15; text-wrap: balance; }
+.communications-welcome > span { display: flex; align-items: center; gap: var(--space-2); color: var(--text-dim); font-size: var(--fs-xs); }
+.communications-welcome > span svg { width: var(--space-4); }
+.communications-accounts, .communications-chats, .communications-picker ul, .communications-messages { list-style: none; padding: 0; margin: var(--space-4) 0; }
+.communications-accounts li + li, .communications-chats li + li { margin-top: var(--space-1); }
+.communications-accounts button, .communications-chats button { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: 100%; min-height: var(--touch-target); padding: var(--space-3); border: var(--hairline) solid transparent; border-radius: var(--radius-md); font: inherit; text-align: start; background: transparent; color: var(--text); cursor: pointer; }
+.communications-accounts button[aria-pressed="true"], .communications-chats button[aria-pressed="true"] { background: var(--accent-tint); border-color: var(--border); }
+.communications-accounts button:hover, .communications-chats button:hover { background: var(--bg-hover); }
+.communications-accounts button > span, .communications-chats button > span { min-width: 0; }
+.communications-accounts strong, .communications-chats strong { display: block; overflow-wrap: anywhere; font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+.communications-accounts small, .communications-chats small, .communications-picker small { display: block; margin-top: var(--space-1); color: var(--text-dim); font-size: var(--fs-xs); }
+.communications-accounts svg, .communications-chats svg { width: var(--space-4); flex: none; }
+.communications-search { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: var(--hairline) solid var(--border); border-radius: var(--radius-md); background: var(--bg-input); }
+.communications-search svg { width: var(--space-4); flex: none; color: var(--text-dim); }
+.communications-search input { min-width: 0; width: 100%; min-height: var(--touch-target); background: transparent; color: var(--text); border: 0; font: inherit; font-size: var(--fs-sm); }
+.communications-setup { max-width: 36rem; margin-inline: auto; }
+.communications-setup a { color: var(--accent); }
+.communications-setup a svg { width: var(--space-3); height: var(--space-3); }
+.communications-setup form { display: grid; gap: var(--space-4); margin-top: var(--space-6); }
+.communications-challenge { display: grid; gap: var(--space-4); max-width: 30rem; margin-block: var(--space-6); }
+.communications-conversation-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); border-bottom: var(--hairline) solid var(--border); padding-bottom: var(--space-5); }
+.communications-conversation-heading p { color: var(--text-dim); font-size: var(--fs-xs); margin: var(--space-2) 0 0; }
+.communications-picker { max-width: 44rem; padding-block: var(--space-5); }
+.communications-picker li { border-bottom: var(--hairline) solid var(--border); }
+.communications-picker label { display: flex; align-items: center; min-height: var(--touch-target); gap: var(--space-3); padding: var(--space-3); cursor: pointer; overflow-wrap: anywhere; }
+.communications input[type="checkbox"] { accent-color: var(--accent); width: var(--space-5); height: var(--space-5); flex: none; }
+.communications-message-actions, .communications-message-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding-block: var(--space-4); }
+.communications-messages { max-width: 50rem; margin-inline: auto; }
+.communications-messages li { padding-block: var(--space-4); border-bottom: var(--hairline) solid var(--border); }
+.communications-messages label { display: flex; align-items: flex-start; gap: var(--space-3); cursor: pointer; }
+.communications-messages label > div { min-width: 0; flex: 1; }
+.communications-messages p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 var(--space-2); line-height: var(--lh-prose); }
+.communications-messages time, .communications-messages small, .communications-message-footer > span { color: var(--text-dim); font-size: var(--fs-xs); }
+.communications-messages small { display: block; margin-top: var(--space-2); }
+.communications-messages .is-outgoing p { color: var(--text-strong); }
+.communications-error { flex: none; max-height: 25vh; overflow-y: auto; padding: var(--space-3) var(--space-6); background: var(--status-blocked-tint); color: var(--text-strong); }
+.communications-error p { margin: 0; line-height: var(--lh-prose); font-size: var(--fs-sm); }
+.communications-error button { margin-top: var(--space-3); }
+.communications-notice { padding: var(--space-3); border-radius: var(--radius-md); background: var(--status-done-tint); color: var(--text-strong); font-size: var(--fs-sm); }
+.communications button:focus-visible, .communications a:focus-visible, .communications input:focus-visible { outline: var(--ring); outline-offset: var(--ring-offset); }
+.communications button:disabled { opacity: 0.55; cursor: not-allowed; }
+@media (max-width: 760px) {
+ .communications-header, .communications-providers { padding: var(--space-3) var(--space-4); }
+ .communications-header span { font-size: var(--fs-xs); }
+ .communications-layout { display: block; overflow-y: auto; overscroll-behavior: contain; }
+ .communications-list { overflow: visible; border-inline-end: 0; border-bottom: var(--hairline) solid var(--border); padding: var(--space-4); }
+ .communications-content { overflow: visible; padding: var(--space-4); }
+ .communications-welcome { margin-block: var(--space-6); }
+ .communications-accounts { display: flex; gap: var(--space-2); overflow-x: auto; margin-block: var(--space-2); }
+ .communications-accounts li { flex: 0 0 auto; max-width: 80%; }
+ .communications-accounts li + li { margin-top: 0; }
+ .communications-message-footer { padding-bottom: max(var(--space-6), env(safe-area-inset-bottom)); }
+}
+
+.communications-filters { display: flex; gap: var(--space-1); padding-block: var(--space-3); }
+.communications-filters button { flex: 1; min-height: var(--touch-target); border: var(--hairline) solid var(--border); border-radius: var(--radius-md); background: transparent; color: var(--text-dim); font: inherit; cursor: pointer; }
+.communications-filters button[aria-pressed="true"] { background: var(--accent-tint); color: var(--text-strong); border-color: var(--accent); }
+
+.communications-picker li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(10rem, 14rem); align-items: center; gap: var(--space-3); padding-block: var(--space-2); }
+@media (max-width: 760px) { .communications-picker li { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); } }
+
+@media (max-width: 760px) { .communications.is-reading .communications-list, .communications.is-linking .communications-list { display: none; } }
+
+.communications-pairing { max-width: 32rem; display: grid; gap: var(--space-4); padding-block: var(--space-6); }
+.communications-pairing code { font-family: var(--font-mono); font-size: var(--fs-xl); letter-spacing: 0.15em; color: var(--text-strong); overflow-wrap: anywhere; }
+.communications-pairing p { color: var(--text-dim); font-size: var(--fs-sm); line-height: var(--lh-prose); }
+
+.communications-discovery { display: grid; gap: var(--space-3); margin-block: var(--space-5); padding: var(--space-4); border: var(--hairline) solid var(--border); border-radius: var(--radius-lg); background: var(--fm-rail-atmosphere); }
+.communications-kind-filter { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.communications-kind-filter button { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-target); padding: var(--space-2) var(--space-3); background: var(--bg-panel); border: var(--hairline) solid var(--border); border-radius: var(--radius-md); color: var(--text); cursor: pointer; font: inherit; font-size: var(--fs-sm); }
+.communications-kind-filter button[aria-pressed="true"] { background: var(--accent-tint); border-color: var(--accent); }
+.communications-kind-filter span { color: var(--text-dim); font-size: var(--fs-xs); }
+.communications-discovery .communications-hint { margin: 0; }
+.communications-picker ul { border: var(--hairline) solid var(--border); border-radius: var(--radius-lg); padding: var(--space-2); background: var(--bg-panel); }
+.communications-picker select { max-width: 100%; }
+.communications-folder-tabs { display: flex; gap: var(--space-2); overflow-x: auto; padding-block: var(--space-3); scrollbar-color: var(--border-strong) transparent; }
+.communications-folder-tabs button { flex-shrink: 0; display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-target); max-width: 240px; overflow: hidden; border: var(--hairline) solid var(--border); border-radius: var(--radius-md); background: var(--bg-panel); color: var(--text); font: inherit; font-size: var(--fs-sm); padding: var(--space-2) var(--space-3); cursor: pointer; }
+.communications-folder-tabs button[aria-pressed="true"] { background: var(--accent-tint); border-color: var(--accent); box-shadow: var(--fm-control-glow); }
+.communications-folder-tabs span { color: var(--text-dim); font-size: var(--fs-xs); }
