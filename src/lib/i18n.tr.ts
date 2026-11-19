@@ -931,6 +931,8 @@ export const TR: Record<string, string> = {
   "A neon rabbit lights the old market roof.": "Eski pazarın çatısında neon bir tavşan parlıyor.",
   "A rubber duck has stowed away on the yacht.": "Bir lastik ördek yata gizlice binmiş.",
   "The marina telescope points to a rooftop garden.": "Marinanın teleskobu çatı bahçesine dönük.",
+  "The clock above the ferry steps is still set by hand.": "Feribot merdivenlerinin üzerindeki saat hâlâ elle ayarlanıyor.",
+  "Three amber dock lights mark the water taxi’s berth.": "Kehribar renkli üç iskele lambası su taksisinin yanaşma yerini gösteriyor.",
   "The promenade runners are halfway through their evening loop.": "Sahil yolundaki koşucular akşam parkurunun yarısını tamamladı.",
   "Files mentioned by tools": "Araçların belirttiği dosyalar",
   "No plan recorded for this turn yet.": "Bu tur için henüz bir plan kaydedilmedi.",

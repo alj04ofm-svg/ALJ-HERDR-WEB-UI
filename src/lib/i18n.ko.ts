@@ -976,6 +976,8 @@ export const KO: Record<string, string> = {
   "A neon rabbit lights the old market roof.": "오래된 시장 지붕에 네온 토끼가 빛납니다.",
   "A rubber duck has stowed away on the yacht.": "고무 오리 한 마리가 요트에 몰래 탔습니다.",
   "The marina telescope points to a rooftop garden.": "마리나의 망원경이 옥상 정원을 향하고 있습니다.",
+  "The clock above the ferry steps is still set by hand.": "페리 계단 위 시계는 여전히 손으로 시간을 맞춥니다.",
+  "Three amber dock lights mark the water taxi’s berth.": "호박색 부두등 세 개가 수상 택시의 정박 위치를 알려 줍니다.",
   "The promenade runners are halfway through their evening loop.": "산책로의 달리기 모임이 저녁 코스의 절반을 지났습니다.",
   "Files mentioned by tools": "도구가 언급한 파일",
   "No plan recorded for this turn yet.": "이 작업에 기록된 계획이 아직 없습니다.",

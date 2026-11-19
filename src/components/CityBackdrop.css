@@ -294,7 +294,6 @@
   position: absolute;
   inset: 0;
   --city-crane-paint: color-mix(in srgb, var(--accent) 76%, var(--bg));
-  --city-shift: -29%;
   animation: city-works var(--city-event-cycle) steps(160) infinite;
 }
 
@@ -321,64 +320,68 @@
 
 .city-crane {
   position: absolute;
-  bottom: 0;
-  right: -23%;
-  width: clamp(5px, 1.1vw, 10px);
-  height: 140%;
-  border-inline: 1px solid var(--city-crane-paint);
-  background:
-    repeating-linear-gradient(40deg, transparent 0 4px, var(--city-crane-paint) 4px 5px, transparent 5px 9px),
-    repeating-linear-gradient(-40deg, transparent 0 4px, var(--city-crane-paint) 4px 5px, transparent 5px 9px);
-  transform-origin: bottom;
+  inset: -27% -35% 0 -65%;
+  transform-origin: 97% 100%;
   animation: city-mast var(--city-event-cycle) steps(160) infinite;
 }
 
-.city-crane::before {
+.city-crane-mast {
+  position: absolute;
+  inset: 0 4% 0 auto;
+  width: clamp(5px, .8cqw, 10px);
+  border-inline: var(--hairline) solid var(--city-crane-paint);
+  background:
+    repeating-linear-gradient(42deg, transparent 0 4px, var(--city-crane-paint) 4px 5px, transparent 5px 9px),
+    repeating-linear-gradient(-42deg, transparent 0 4px, var(--city-crane-paint) 4px 5px, transparent 5px 9px);
+}
+.city-crane-mast::after {
   content: "";
   position: absolute;
-  right: -11px;
-  top: 8%;
-  width: clamp(35px, 8vw, 110px);
-  height: 7px;
-  background: var(--city-crane-paint);
-  clip-path: polygon(0 73%, 75% 0, 100% 43%, 100% 100%, 0 100%);
+  top: 4px;
+  left: 40%;
+  width: clamp(5px, 1.2cqw, 14px);
+  height: 5px;
+  background: linear-gradient(var(--accent), var(--city-roof));
 }
 
-.city-crane::after {
-  content: "";
+.city-crane-jib {
   position: absolute;
-  top: 12%;
-  left: 50%;
-  width: 12px;
-  height: 6px;
-  background: var(--city-roof);
-  box-shadow: inset 0 1px var(--city-crane-paint);
+  inset: 0 0 auto 0;
+  height: clamp(3px, .8cqh, 7px);
+  border-block-end: var(--hairline) solid var(--city-crane-paint);
+  background:
+    repeating-linear-gradient(-43deg, transparent 0 4px, var(--city-crane-paint) 4px 5px, transparent 5px 8px),
+    linear-gradient(90deg, transparent, var(--city-roof));
 }
 
-.city-crane > i {
+.city-site-truck {
   position: absolute;
-  inset: 12% auto auto -1px;
-  width: 2px;
-  height: 32%;
-  background: color-mix(in srgb, var(--text-dim) 62%, transparent);
-  transform-origin: top;
-  animation: city-crane-lift 3.8s steps(65) infinite;
+  bottom: 1%;
+  left: -34%;
+  width: clamp(13px, 3cqw, 31px);
+  aspect-ratio: 3.2;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, var(--city-roof) 0 69%, var(--city-crane-paint) 70%);
+  border-block-end: 2px solid var(--bg);
+  box-shadow: 0 1px 4px var(--bg);
+  animation: city-site-truck var(--city-event-cycle) steps(160) infinite;
 }
-.city-crane > i::after {
+.city-site-truck::before, .city-site-truck::after {
   content: "";
   position: absolute;
-  bottom: 0;
-  inset-inline-start: -2px;
-  width: 5px;
-  height: 4px;
-  border-bottom: 1px solid var(--city-crane-paint);
-  border-radius: var(--radius-pill);
+  bottom: -3px;
+  width: clamp(2px, .4cqw, 4px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: inset 0 0 0 var(--hairline) var(--text-dim);
 }
-@keyframes city-crane-lift {
-  0%, 100% { transform: translateX(-2px) scaleY(.77); }
-  32% { transform: translateX(-2px) scaleY(1.55); }
-  58% { transform: translateX(-18px) scaleY(.85); }
-  79% { transform: translateX(-18px) scaleY(1.07); }
+.city-site-truck::before { left: 16%; }
+.city-site-truck::after { right: 12%; }
+@keyframes city-site-truck {
+  0%, 36% { opacity: 0; transform: translateX(-170%); }
+  42%, 74% { opacity: 1; transform: translateX(-50%); }
+  83%, 100% { opacity: 0; transform: translateX(180%); }
 }
 .city-work-lights {
   position: absolute;
@@ -391,65 +394,94 @@
 
 .city-install {
   position: absolute;
-  inset: auto 0 calc(var(--city-floor) * 100% / 6);
-  height: calc(100% / 6);
-  --city-install-delay: calc(var(--city-floor) * 1.1s);
+  inset: 0;
+  --city-floor-height: calc(100% / 6);
+  --city-floor-top: calc(100% - (var(--city-floor) + 1) * var(--city-floor-height));
+  --city-install-delay: calc(var(--city-floor) * 1.64s);
 }
 
 .city-frame, .city-module {
   position: absolute;
-  inset: 0;
+  inset: var(--city-floor-top) 0 auto;
+  height: var(--city-floor-height);
   opacity: 0;
 }
 .city-frame {
-  border: 1px solid var(--city-roof);
-  border-top: 2px solid color-mix(in srgb, var(--accent) 55%, var(--city-roof));
+  border: var(--hairline) solid var(--city-roof);
+  border-block-start: 2px solid color-mix(in srgb, var(--accent) 55%, var(--city-roof));
   background:
     linear-gradient(27deg, transparent 47%, var(--city-roof) 49% 51%, transparent 53%),
     linear-gradient(-27deg, transparent 47%, var(--city-roof) 49% 51%, transparent 53%),
     repeating-linear-gradient(90deg, transparent 0 24%, var(--city-roof) 24% 26%, transparent 26% 50%);
-  animation: city-frame var(--city-event-cycle) steps(140) var(--city-install-delay) infinite;
+  animation: city-frame var(--city-event-cycle) steps(220) var(--city-install-delay) infinite;
 }
 .city-module {
   background: var(--city-architecture) center var(--city-module-offset) / 100% 600% no-repeat;
   filter: var(--city-facade-tone);
-  animation: city-place-module var(--city-event-cycle) steps(240) var(--city-install-delay) infinite;
+  animation: city-place-module var(--city-event-cycle) steps(260) var(--city-install-delay) infinite;
 }
-.city-module::before {
-  content: "";
+.city-hoist {
   position: absolute;
-  bottom: 100%;
+  top: -27%;
+  left: -34%;
+  width: clamp(2px, .21cqw, 3px);
+  opacity: 0;
+  background: linear-gradient(90deg, var(--text-dim), var(--bg));
+  animation: city-hoist var(--city-event-cycle) steps(540) var(--city-install-delay) infinite;
+}
+.city-hoist i {
+  position: absolute;
+  top: 2px;
   left: 50%;
-  width: 1px;
-  height: clamp(10px, 6vh, 56px);
-  background: linear-gradient(transparent, var(--city-crane-paint));
-  animation: city-cable var(--city-event-cycle) steps(120) var(--city-install-delay) infinite;
+  width: clamp(5px, 1.1cqw, 10px);
+  height: 4px;
+  transform: translateX(-50%);
+  background: linear-gradient(var(--city-crane-paint), var(--city-roof));
 }
-.city-module::after {
+.city-hoist b {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: clamp(10px, 3.8cqw, 49px);
+  aspect-ratio: 5;
+  transform: translateX(-50%);
+  border-top: var(--hairline) solid var(--city-crane-paint);
+  background:
+    repeating-linear-gradient(90deg, var(--city-roof) 0 15%, var(--border-strong) 15% 20%),
+    var(--bg-elevated);
+  animation: city-hoist-load var(--city-event-cycle) steps(400) var(--city-install-delay) infinite;
+}
+.city-hoist b::before {
   content: "";
   position: absolute;
-  inset: 0 12% auto;
-  border-top: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
-  animation: city-join var(--city-event-cycle) steps(120) var(--city-install-delay) infinite;
+  inset: auto 27% 100%;
+  height: 4px;
+  background: var(--city-crane-paint);
+  clip-path: polygon(49% 0, 100% 100%, 82% 100%, 49% 35%, 18% 100%, 0 100%);
+}
+
+/* The trolley and load share one carrier. Its length is measured from the jib to this floor. */
+@keyframes city-hoist {
+  0%, 43% { left: -34%; height: 119%; opacity: 0; }
+  43.5%, 44% { left: -34%; height: 119%; opacity: 1; }
+  44.9% { left: -34%; height: calc(21% + var(--city-floor-top)); opacity: 1; }
+  46.1% { left: 50%; height: calc(21% + var(--city-floor-top)); opacity: 1; }
+  47.1%, 47.3% { left: 50%; height: calc(27% + var(--city-floor-top)); opacity: 1; }
+  48% { left: 25%; height: 23%; opacity: .9; }
+  48.5%, 100% { left: -34%; height: 23%; opacity: 0; }
+}
+@keyframes city-hoist-load {
+  0%, 43% { opacity: 0; }
+  43.5%, 47.15% { opacity: 1; }
+  47.45%, 100% { opacity: 0; }
 }
 @keyframes city-frame {
-  0%, 39%, 55%, 100% { opacity: 0; }
-  42%, 51% { opacity: .88; }
+  0%, 42%, 51%, 100% { opacity: 0; }
+  44%, 48% { opacity: .85; }
 }
 @keyframes city-place-module {
-  0%, 43% { opacity: 0; transform: translate(var(--city-shift), 110%) scale(.78); }
-  44% { opacity: 1; transform: translate(var(--city-shift), 110%) scale(.78); }
-  47% { transform: translate(var(--city-shift), -32%) scale(.96); }
-  49% { transform: translate(0, -18%); }
-  50%, 89%, 100% { transform: none; opacity: 1; }
-}
-@keyframes city-cable {
-  0%, 43%, 50%, 100% { opacity: 0; }
-  44%, 49% { opacity: .9; }
-}
-@keyframes city-join {
-  0%, 49%, 53%, 100% { opacity: 0; }
-  50% { opacity: 1; }
+  0%, 47.1% { opacity: 0; }
+  47.45%, 100% { opacity: 1; }
 }
 @keyframes city-mast {
   0%, 35%, 89%, 100% { transform: scaleY(.1); opacity: 0; }
@@ -545,6 +577,93 @@
   41%, 81% { opacity: 1; }
 }
 @keyframes city-workers { to { transform: translateX(8px) translateY(-1px); } }
+
+.city-quay-clock {
+  position: absolute;
+  top: 53%;
+  left: 65%;
+  width: clamp(5px, .8cqw, 10px);
+  aspect-ratio: 1;
+  border: 1px solid var(--bg-elevated);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text-dim) 72%, var(--accent));
+  box-shadow: 0 1px 2px var(--bg);
+}
+.city-quay-clock i {
+  position: absolute;
+  inset: 23% 22% 47% 47%;
+  border-inline-start: var(--hairline) solid var(--bg);
+  border-block-end: var(--hairline) solid var(--bg);
+  transform-origin: left bottom;
+  rotate: -25deg;
+}
+
+.city-ferry-berth {
+  position: absolute;
+  top: 68%;
+  left: 51%;
+  display: flex;
+  gap: clamp(3px, .65cqw, 9px);
+}
+.city-ferry-berth i {
+  width: 2px;
+  height: clamp(3px, .65cqh, 6px);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(var(--accent) 0 33%, var(--bg-elevated) 33%);
+  box-shadow: 0 1px 3px var(--bg);
+}
+.city-ferry-berth i::after {
+  content: "";
+  position: absolute;
+  top: 130%;
+  width: 2px;
+  height: clamp(4px, 1.6cqh, 14px);
+  background: linear-gradient(var(--accent), transparent);
+  mask-image: repeating-linear-gradient(var(--text) 0 1px, transparent 1px 3px);
+  opacity: .48;
+}
+
+.city-water-taxi {
+  position: absolute;
+  top: 7%;
+  left: 51%;
+  width: clamp(24px, 5.3cqw, 66px);
+  aspect-ratio: 4.3;
+  opacity: .84;
+  filter: drop-shadow(0 2px 2px var(--bg));
+}
+.city-water-taxi i {
+  position: absolute;
+  inset: 6% 22% 37% 19%;
+  border-radius: 35% 52% 0 0;
+  border-block-start: 2px solid var(--text-dim);
+  background: repeating-linear-gradient(90deg, var(--bg-elevated) 0 16%, var(--accent) 17% 24%);
+}
+.city-water-taxi b {
+  position: absolute;
+  inset: 54% 0 0;
+  clip-path: polygon(0 0, 100% 0, 86% 81%, 16% 100%, 5% 70%);
+  background: linear-gradient(var(--text-dim) 0 20%, var(--bg-elevated) 20% 46%, var(--status-working) 47% 55%, var(--bg-panel) 56%);
+}
+.city-water-taxi::after {
+  content: "";
+  position: absolute;
+  inset: 67% 74% -40% -82%;
+  background: radial-gradient(ellipse at 72% 32%, var(--text-dim), transparent 70%);
+  clip-path: polygon(0 95%, 100% 0, 100% 35%, 0 100%);
+  opacity: 0;
+}
+.is-animated .city-water-taxi { animation: city-taxi-run 48s steps(540) -19s infinite; }
+.is-animated .city-water-taxi::after { animation: city-taxi-wash 48s steps(250) -19s infinite; }
+@keyframes city-taxi-run {
+  0% { transform: translateX(-70cqw); }
+  42%, 62% { transform: translateX(0); }
+  100% { transform: translateX(70cqw); }
+}
+@keyframes city-taxi-wash {
+  0%, 22%, 89%, 100% { opacity: .60; transform: scaleX(1); }
+  42%, 62% { opacity: 0; transform: scaleX(.2); }
+}
 
 .city-interactions {
   --marina-top: calc(var(--header-over, 0px) + var(--space-2));

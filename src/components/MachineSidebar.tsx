@@ -29,12 +29,6 @@ export const STATE_WORD: Readonly<Record<MachineState, string>> = {
 };
 
 interface Props { compact: boolean; usageOpen: boolean; onUsageOpenChange(open: boolean): void; machines: Machine[]; selectedMachineId: string; selectedPaneId: string | null; actions: AppActions; onSelect(machineId: string, paneId: string | null): void; onShowTabs(machineId: string, paneId: string): void; onNew(machineId: string): void; onSetup(machine: Machine, update?: boolean): void }
-function tabAbbreviation(name: string) {
-  const words = name.trim().split(/[\s/_-]+/u).filter(Boolean);
-  const characters = words.length > 1 ? words.slice(0, 3).map(word => Array.from(word)[0]) : Array.from(name.trim()).slice(0, 3);
-  return characters.join("").toLocaleUpperCase();
-}
-
 function SidebarRail(props: Pick<Props, "machines" | "selectedMachineId" | "selectedPaneId" | "actions" | "onSelect">) {
   const t = useT();
   return <section className="compact-tab-list" aria-label={t("Active tabs")}>
@@ -54,16 +48,14 @@ function SidebarRail(props: Pick<Props, "machines" | "selectedMachineId" | "sele
             const name = tabLabel(tab, t, place);
             const workspaceName = snapshot.workspaces.find(workspace => workspace.workspace_id === tab.workspace_id)?.label ?? machine.name;
             const customName = customTabLabel(tab, place);
-            const workspaceInitials = tabAbbreviation(workspaceName);
-            const abbreviation = customName ? tabAbbreviation(customName)
-              : workspaceTabs.length === 1 ? workspaceInitials
-              : Array.from(workspaceInitials).slice(0, Math.max(0, 3 - String(place).length)).join("") + place;
+            const label = customName ?? workspaceName;
+            const tabNumber = !customName && workspaceTabs.length > 1 ? name : null;
             const active = selected?.tab_id === tab.tab_id;
             const online = machine.state === "connected";
             return <SidebarTabActions key={tab.tab_id} tab={tab} name={name} workspaceName={workspaceName}
               lastTab={workspaceTabs.length === 1} online={online} panes={panes} actions={props.actions} renderRow={(handlers) =>
               <button type="button" className="compact-tab-row icon-button" aria-current={active ? "page" : undefined}
-                aria-label={name} aria-description={workspaceName} title={`${name} · ${workspaceName}`} disabled={!online}
+                aria-label={tabNumber ? `${label} · ${tabNumber}` : label} aria-description={workspaceName} title={`${name} · ${workspaceName}`} disabled={!online}
                 onContextMenu={event => { event.preventDefault(); handlers.menu(event.currentTarget); }}
                 onKeyDown={event => {
                   const key = event.key;
@@ -86,7 +78,10 @@ function SidebarRail(props: Pick<Props, "machines" | "selectedMachineId" | "sele
                   {pane.agent ? <AgentMark agent={pane.agent} /> : <Terminal />}
                   <span className="tab-strip-dot" data-status={status} />
                 </span>
-                <span className="compact-tab-label" aria-hidden="true">{abbreviation || tabAbbreviation(name)}</span>
+                <span className="compact-tab-copy" aria-hidden="true">
+                  <bdi className="compact-tab-label">{label}</bdi>
+                  {tabNumber && <span className="compact-tab-number">{tabNumber}</span>}
+                </span>
               </button>} />;
           })}
         </MachineContext.Provider>;

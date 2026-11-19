@@ -980,6 +980,8 @@ export const ZH: Record<string, string> = {
   "A neon rabbit lights the old market roof.": "老市场的屋顶亮着一只霓虹兔。",
   "A rubber duck has stowed away on the yacht.": "一只橡皮鸭偷偷溜上了游艇。",
   "The marina telescope points to a rooftop garden.": "码头的望远镜指向屋顶花园。",
+  "The clock above the ferry steps is still set by hand.": "渡轮码头台阶上方的时钟至今仍由人手校时。",
+  "Three amber dock lights mark the water taxi’s berth.": "三盏琥珀色的码头灯标出了水上出租车的泊位。",
   "The promenade runners are halfway through their evening loop.": "滨水步道上的跑者已经完成晚间路线的一半。",
   "Files mentioned by tools": "工具提及的文件",
   "No plan recorded for this turn yet.": "本轮尚未记录计划。",

@@ -978,6 +978,8 @@ export const JA: Record<string, string> = {
   "A neon rabbit lights the old market roof.": "旧市場の屋根にネオンのウサギが光っています。",
   "A rubber duck has stowed away on the yacht.": "ゴムのアヒルがヨットに忍び込みました。",
   "The marina telescope points to a rooftop garden.": "マリーナの望遠鏡は屋上庭園を向いています。",
+  "The clock above the ferry steps is still set by hand.": "フェリー乗り場の階段上にある時計は、今でも手で時刻を合わせています。",
+  "Three amber dock lights mark the water taxi’s berth.": "琥珀色の三つの桟橋灯が水上タクシーの乗り場を示しています。",
   "The promenade runners are halfway through their evening loop.": "遊歩道のランナーたちは夕方のコースの半分まで来ました。",
   "Files mentioned by tools": "ツールが参照したファイル",
   "No plan recorded for this turn yet.": "このターンの計画はまだ記録されていません。",

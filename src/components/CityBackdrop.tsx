@@ -1,6 +1,6 @@
 import { memo, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
-import { Binoculars, CloudSun, Flag, Footprints, Pause, Play, Rabbit, Sailboat, Ship, Waves } from "lucide-react";
+import { Binoculars, Clock3, CloudSun, Flag, Footprints, LampWallUp, Pause, Play, Rabbit, Sailboat, Ship, Waves } from "lucide-react";
 import { useT } from "../lib/i18n.ts";
 import { useMediaQuery } from "../lib/useMediaQuery.ts";
 import "./CityBackdrop.css";
@@ -30,6 +30,8 @@ const buoys = [
   { x: 21, y: 68, icon: Waves },
   { x: 86, y: 53, icon: Binoculars },
   { x: 78, y: 67, icon: Footprints },
+  { x: 65, y: 51, icon: Clock3 },
+  { x: 51, y: 63, icon: LampWallUp },
 ] as const;
 type Point = { x: number; y: number };
 const raceLanes = [73, 76] as const;
@@ -73,14 +75,16 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
             <div className="city-works">
               <span className="city-foundation" />
               <span className="city-site-fencing" />
-              <span className="city-crane"><i /></span>
+              <div className="city-crane"><span className="city-crane-mast" /><span className="city-crane-jib" /></div>
               <span className="city-work-lights" />
+              <span className="city-site-truck" />
               {constructionFloors.map(floor => <div className="city-install" key={floor} style={{
                 "--city-floor": floor,
                 "--city-module-offset": `${100 - floor * 20}%`,
               } as CSSProperties}>
                 <span className="city-frame" />
                 <span className="city-module" />
+                <span className="city-hoist"><i /><b /></span>
               </div>)}
               <span className="city-worker" />
               <span className="city-worker" />
@@ -90,6 +94,7 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
       })}
     </div>
     <Rabbit className="city-roof-sign" />
+    <div className="city-quay-clock"><i /></div>
     <div className="city-promenade">
       <span className="city-pedestrian" />
       <span className="city-pedestrian" />
@@ -98,11 +103,13 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
     </div>
     <div className="city-water-lights" />
     <div className="city-ripples" />
+    <div className="city-ferry-berth"><i /><i /><i /></div>
     <div className="city-river">
       {!manualBoats && <div className="city-vessel city-yacht" />}
       <div className="city-vessel city-yacht city-yacht-returning" />
       {!manualBoats && <div className="city-vessel city-jet-ski" />}
       <div className="city-vessel city-jet-ski city-jet-ski-second" />
+      <div className="city-water-taxi"><i /><b /></div>
     </div>
     <div className="city-bridge-traffic" />
     <div className="city-lantern" />
@@ -126,6 +133,8 @@ export function CityBackdrop({ animated, sceneHost }: { animated: boolean; scene
     t("A rubber duck has stowed away on the yacht."),
     t("The marina telescope points to a rooftop garden."),
     t("The promenade runners are halfway through their evening loop."),
+    t("The clock above the ferry steps is still set by hand."),
+    t("Three amber dock lights mark the water taxi’s berth."),
   ];
   const moving = animated && !reduceMotion;
   const controlId = useId();
