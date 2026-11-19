@@ -1,5 +1,5 @@
-import { memo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
-import { Binoculars, Building2, CloudSun, Flag, Footprints, LifeBuoy, Pause, Play, Rabbit, Ship, Waves, X } from "lucide-react";
+import { memo, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
+import { Binoculars, CloudSun, Flag, Footprints, Pause, Play, Rabbit, Sailboat, Ship, Waves } from "lucide-react";
 import { useT } from "../lib/i18n.ts";
 import { useMediaQuery } from "../lib/useMediaQuery.ts";
 import "./CityBackdrop.css";
@@ -11,7 +11,6 @@ const waterfront = [
   { x: 76, height: 48, width: 7.2, architecture: "stone" },
 ] as const;
 const rebuildOrder = [2, 1, 3, 0];
-const blockHeights = [50, 72, 63];
 const constructionFloors = [0, 1, 2, 3, 4, 5];
 const weatherModes = ["auto", "clear", "fog", "rain"] as const;
 type MarinaWeather = typeof weatherModes[number];
@@ -26,21 +25,24 @@ const rainRipples = [
   { left: "58%", top: "90%" }, { left: "77%", top: "82%" }, { left: "94%", top: "91%" },
 ];
 const buoys = [
-  { x: 8, y: 75, icon: LifeBuoy },
-  { x: 32, y: 53, icon: Waves },
-  { x: 81, y: 43, icon: Binoculars },
-  { x: 76, y: 66, icon: Footprints },
+  { x: 10, y: 46, icon: Rabbit },
+  { x: 21, y: 68, icon: Waves },
+  { x: 86, y: 53, icon: Binoculars },
+  { x: 78, y: 67, icon: Footprints },
 ] as const;
 type Point = { x: number; y: number };
-const raceLanes = [77, 89] as const;
-const initialBoats = [{ x: 30, y: raceLanes[0] }, { x: 44, y: raceLanes[1] }];
-const initialRabbit = { x: 16, y: 59 };
-const clampPoint = ({ x, y }: Point, boat: boolean): Point => ({
-  x: Math.max(7, Math.min(93, x)),
-  y: Math.max(boat ? 73 : 59, Math.min(boat ? 93 : 71, y)),
+const raceLanes = [73, 76] as const;
+const initialBoats = [{ x: 21, y: raceLanes[0] }, { x: 28, y: raceLanes[1] }];
+const finishLine = 88;
+const crowd = [0, 1, 2, 3, 4, 5];
+const clampPoint = ({ x, y }: Point): Point => ({
+  x: Math.max(9, Math.min(91, x)),
+  y: Math.max(73, Math.min(93, y)),
 });
 
-const CityScene = memo(function CityScene({ moving, weather, paused = false }: { moving: boolean; weather: MarinaWeather; paused?: boolean }) {
+const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats }: {
+  moving: boolean; weather: MarinaWeather; paused: boolean; manualBoats: boolean;
+}) {
   const [cycle, setCycle] = useState(0);
   const lot = rebuildOrder[cycle % rebuildOrder.length];
 
@@ -64,9 +66,12 @@ const CityScene = memo(function CityScene({ moving, weather, paused = false }: {
             <div className="city-impact-dust"><i /><i /></div>
             <div className="city-impact-glint" />
             <span className="city-rubble" />
-            <span className="city-evacuation"><i /><i /><i /></span>
+            {[-1, 1].map(direction => <div className="city-evacuation" key={direction} style={{ "--evac-direction": direction } as CSSProperties}>
+              {crowd.map(person => <span key={person} style={{ "--evac-person": person } as CSSProperties}><i /></span>)}
+            </div>)}
             <div className="city-works">
               <span className="city-foundation" />
+              <span className="city-site-fencing" />
               <span className="city-crane"><i /></span>
               <span className="city-work-lights" />
               {constructionFloors.map(floor => <div className="city-install" key={floor} style={{
@@ -83,6 +88,7 @@ const CityScene = memo(function CityScene({ moving, weather, paused = false }: {
         </div>;
       })}
     </div>
+    <Rabbit className="city-roof-sign" />
     <div className="city-promenade">
       <span className="city-pedestrian" />
       <span className="city-pedestrian" />
@@ -92,14 +98,14 @@ const CityScene = memo(function CityScene({ moving, weather, paused = false }: {
     <div className="city-water-lights" />
     <div className="city-ripples" />
     <div className="city-river">
-      <div className="city-vessel city-yacht" />
+      {!manualBoats && <div className="city-vessel city-yacht" />}
       <div className="city-vessel city-yacht city-yacht-returning" />
-      <div className="city-vessel city-jet-ski" />
+      {!manualBoats && <div className="city-vessel city-jet-ski" />}
       <div className="city-vessel city-jet-ski city-jet-ski-second" />
     </div>
     <div className="city-bridge-traffic" />
     <div className="city-lantern" />
-    <div className="city-plane"><span /></div>
+    <div className="city-plane"><span /><b className="city-plane-banner">ALJ</b></div>
     <div className="city-weather-fog"><i /><i /></div>
     <div className="city-weather-rain">
       {rainDrops.map((style, index) => <i key={index} className="city-rain-drop" style={style} />)}
@@ -115,13 +121,14 @@ export function CityBackdrop({ animated }: { animated: boolean }) {
   const t = useT();
   const racers = [t("Yacht"), t("Jet ski")] as const;
   const discoveries = [
-    t("An old tug rings the bridge bell."),
+    t("A neon rabbit lights the old market roof."),
     t("A rubber duck has stowed away on the yacht."),
     t("The marina telescope points to a rooftop garden."),
     t("The promenade runners are halfway through their evening loop."),
   ];
   const moving = animated && !reduceMotion;
-  const playground = useRef<HTMLDialogElement>(null);
+  const controlId = useId();
+  const toggle = useRef<HTMLButtonElement>(null);
   const playArea = useRef<HTMLDivElement>(null);
   const dragOffset = useRef<Point>({ x: 0, y: 0 });
   const [open, setOpen] = useState(false);
@@ -131,17 +138,13 @@ export function CityBackdrop({ animated }: { animated: boolean }) {
       return weatherModes.find(mode => mode === saved) ?? "auto";
     } catch { return "auto"; }
   });
-  const rabbitButton = useRef<HTMLButtonElement>(null);
-  const [rabbit, setRabbit] = useState(initialRabbit);
   const [boats, setBoats] = useState<Point[]>(initialBoats);
   const [paused, setPaused] = useState(() => {
     try { return localStorage.getItem("herdr-web-ui:marina-paused") === "1"; } catch { return false; }
   });
   const [race, setRace] = useState<{ winner: 0 | 1; finished: boolean } | null>(null);
-  const [bounce, setBounce] = useState(0);
   const [discovery, setDiscovery] = useState<number | null>(null);
   const [found, setFound] = useState<number[]>([]);
-  const [domino, setDomino] = useState(false);
   const [ferry, setFerry] = useState(0);
   const running = race !== null && !race.finished;
   const togglePause = () => {
@@ -149,71 +152,75 @@ export function CityBackdrop({ animated }: { animated: boolean }) {
     setPaused(next);
     try { localStorage.setItem("herdr-web-ui:marina-paused", next ? "1" : "0"); } catch {}
   };
-  const setBoat = (index: number, position: Point) => setBoats(previous => previous.map((boat, at) => index === at ? position : boat));
+  const placeBoat = (index: number, position: Point) => {
+    setRace(null);
+    setBoats(previous => previous.map((boat, at) => index === at ? position : boat));
+  };
   const beginDrag = (event: PointerEvent<HTMLButtonElement>, position: Point) => {
     const area = playArea.current?.getBoundingClientRect();
     if (!area?.width || !area.height || !event.isPrimary || event.button !== 0) return;
     dragOffset.current = {
-      x: position.x / 100 * area.width - (event.clientX - area.left),
-      y: position.y / 100 * area.height - (event.clientY - area.top),
+      x: position.x - (event.clientX - area.left) / area.width * 100,
+      y: position.y - (event.clientY - area.top) / area.height * 100,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
-  const target = (event: PointerEvent<HTMLButtonElement>, boat: boolean): Point | undefined => {
+  const moveBoat = (event: PointerEvent<HTMLButtonElement>, index: number) => {
     const area = playArea.current?.getBoundingClientRect();
     if (!area?.width || !area.height || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
-    return clampPoint({
-      x: (event.clientX - area.left + dragOffset.current.x) / area.width * 100,
-      y: (event.clientY - area.top + dragOffset.current.y) / area.height * 100,
-    }, boat);
+    placeBoat(index, clampPoint({
+      x: (event.clientX - area.left) / area.width * 100 + dragOffset.current.x,
+      y: (event.clientY - area.top) / area.height * 100 + dragOffset.current.y,
+    }));
   };
-  const step = (event: KeyboardEvent, point: Point, boat: boolean): Point | undefined => {
+  const step = (event: KeyboardEvent, index: number, point: Point) => {
     const offsets: Record<string, Point> = {
       ArrowLeft: { x: -4, y: 0 }, ArrowRight: { x: 4, y: 0 }, ArrowUp: { x: 0, y: -4 }, ArrowDown: { x: 0, y: 4 },
     };
     const offset = offsets[event.key];
     if (!offset) return;
     event.preventDefault();
-    return clampPoint({ x: point.x + offset.x, y: point.y + offset.y }, boat);
-  };
-  const showBunny = () => {
-    setRabbit(initialRabbit);
-    rabbitButton.current?.focus({ preventScroll: true });
-    setBounce(count => count + 1);
+    placeBoat(index, clampPoint({ x: point.x + offset.x, y: point.y + offset.y }));
   };
   const startRace = () => {
     setRace({ winner: Math.random() < .5 ? 0 : 1, finished: reduceMotion });
-    setBoats(raceLanes.map(y => ({ x: 10, y })));
+    setBoats(raceLanes.map(y => ({ x: reduceMotion ? finishLine : 10, y })));
+    setDiscovery(null);
   };
 
+  const result = race?.finished ? t("{boat} wins!", { boat: racers[race.winner] })
+    : running ? t("Race in progress")
+    : discovery !== null ? discoveries[discovery]
+    : ferry > 0 ? t("A ghost ferry has slipped out of the harbor.")
+    : open ? t("Drag either boat or move it with the arrow keys.") : "";
+  const manualBoats = open || running;
+
   return <>
-    <CityScene moving={moving} weather={weather} paused={paused || open} />
-    {animated && <div className="city-tools">
-      <button type="button" className="icon-button" aria-label={t("City playground")} title={t("City playground")} onClick={() => {
-        playground.current?.showModal();
-        setOpen(true);
-      }}><Building2 aria-hidden="true" /></button>
-      <button type="button" className="icon-button" aria-label={t(paused ? "Resume marina" : "Pause marina")} title={t(paused ? "Resume marina" : "Pause marina")}
-        onClick={togglePause} disabled={reduceMotion}>{paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}</button>
-    </div>}
-    {animated && <dialog ref={playground} className="city-playground" aria-label={t("City playground")} onClose={() => {
-      setOpen(false);
-      setDomino(false);
-      setRace(null);
-      setFerry(0);
+    <CityScene moving={moving} weather={weather} paused={paused} manualBoats={manualBoats} />
+    {animated && <div className={`city-interactions${paused ? " is-paused" : ""}`} ref={playArea} onKeyDown={event => {
+      if (open && event.key === "Escape") {
+        event.stopPropagation();
+        setOpen(false);
+        toggle.current?.focus();
+      }
     }}>
-      <header>
-        <h2>{t("City playground")}</h2>
-        <div className="city-discovery-progress">
-          <progress aria-label={t("Explore the marina")} value={found.length} max={buoys.length} />
-          <span aria-hidden="true">{found.length} / {buoys.length}</span>
-        </div>
-        <div className="city-playground-controls">
+      <div className="city-tools">
+        <button ref={toggle} type="button" className="icon-button" aria-label={t("Marina controls")} title={t("Marina controls")}
+          aria-expanded={open} aria-controls={open ? controlId : undefined} onClick={() => setOpen(value => !value)}><Sailboat aria-hidden="true" /></button>
+        <button type="button" className="icon-button" aria-label={t(paused ? "Resume marina" : "Pause marina")} title={t(paused ? "Resume marina" : "Pause marina")}
+          onClick={togglePause} disabled={reduceMotion}>{paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}</button>
+      </div>
+      {open && <div className="city-marina-controls" id={controlId} role="group" aria-label={t("Marina controls")}>
+        <div className="city-marina-actions">
+          <button type="button" className="btn" disabled={running || (paused && !reduceMotion)} onClick={startRace}>
+            <Flag aria-hidden="true" />{t("Race boats")}
+          </button>
+          <button type="button" className="icon-button" aria-label={t("Reset boats")} title={t("Reset boats")} disabled={running}
+            onClick={() => { setRace(null); setBoats(initialBoats); }}><Ship aria-hidden="true" /></button>
           <label className="city-weather-control">
             <CloudSun aria-hidden="true" />
             <select className="select" aria-label={t("Marina weather")} value={weather} onChange={event => {
-              const next = event.currentTarget.value;
-              const mode = weatherModes.find(option => option === next);
+              const mode = weatherModes.find(option => option === event.currentTarget.value);
               if (!mode) return;
               setWeather(mode);
               try { localStorage.setItem("herdr-web-ui:marina-weather", mode); } catch {}
@@ -224,62 +231,33 @@ export function CityBackdrop({ animated }: { animated: boolean }) {
               <option value="rain">{t("Rain showers")}</option>
             </select>
           </label>
-          <button type="button" className="icon-button" aria-label={t(paused ? "Resume marina" : "Pause marina")} title={t(paused ? "Resume marina" : "Pause marina")}
-            onClick={togglePause} disabled={reduceMotion}>{paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}</button>
-          <button className="icon-button" type="button" aria-label={t("Close")} onClick={() => playground.current?.close()}><X aria-hidden="true" /></button>
         </div>
-      </header>
-      <div className={`city-playground-map${paused ? " is-paused" : ""}`} ref={playArea}>
-        {open && <CityScene moving={moving} weather={weather} paused={paused} />}
-        <div className={`city-domino${domino ? " is-falling" : ""}`} aria-hidden="true">
-          {blockHeights.map((height, index) => <span key={height} style={{ "--drop-delay": `${index * 180}ms`, "--city-site-h": `${height}px` } as CSSProperties} onAnimationEnd={index === blockHeights.length - 1 ? () => setDomino(false) : undefined} />)}
-        </div>
-        {buoys.map(({ x, y, icon: Icon }, index) => <button key={index} className={`city-hotspot${found.includes(index) ? " is-found" : ""}`}
-          type="button" style={{ left: `${x}%`, top: `${y}%` }} aria-label={t("Explore the marina")} aria-pressed={found.includes(index)}
-          onClick={() => { setDiscovery(index); setFound(previous => previous.includes(index) ? previous : [...previous, index]); }}><Icon aria-hidden="true" /></button>)}
-        {found.length === buoys.length && <button type="button" className="city-hotspot city-ferry-signal"
-          aria-label={t("Signal the ghost ferry")} onClick={() => { setDiscovery(null); setFerry(n => n + 1); }}>
-          <Ship aria-hidden="true" />
-        </button>}
-        {ferry > 0 && <div key={ferry} className="city-vessel city-yacht city-ghost-ferry" aria-hidden="true" />}
-        {boats.map(({ x, y }, index) => <button type="button" key={index}
-          className={`city-racer city-racer-${index}${running ? " is-racing" : ""}${race?.winner === index ? " is-first" : ""}`}
-          aria-label={racers[index]} aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight" disabled={running}
-          style={{ top: `${y}%`, left: `${race?.finished ? 58 : x}%` }}
-          onAnimationEnd={() => { if (race && index !== race.winner) { setRace({ ...race, finished: true }); setBoats(raceLanes.map(y => ({ x: 58, y }))); } }}
-          onPointerDown={event => beginDrag(event, { x, y })}
-          onPointerMove={event => {
-            const point = target(event, true);
-            if (point) { setRace(null); setBoat(index, point); }
-          }}
-          onKeyDown={event => { const point = step(event, { x, y }, true); if (point) { setRace(null); setBoat(index, point); } }}>
-          <span className={`city-vessel ${index === 0 ? "city-yacht" : "city-jet-ski"}`} />
-        </button>)}
-        <button type="button" ref={rabbitButton} className="city-rabbit" aria-label={t("Move the bunny")} aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
-          style={{ left: `${rabbit.x}%`, top: `${rabbit.y}%` }}
-          onPointerDown={event => beginDrag(event, rabbit)}
-          onPointerMove={event => {
-            const point = target(event, false);
-            if (point) setRabbit(point);
-          }}
-          onPointerUp={() => setBounce(count => count + 1)}
-          onKeyDown={event => { const point = step(event, rabbit, false); if (point) setRabbit(point); }}
-          onClick={event => { if (event.detail === 0) setBounce(count => count + 1); }}>
-          <span key={bounce} className={bounce > 0 && moving && !paused ? "is-hopping" : ""}><Rabbit aria-hidden="true" /></span>
-        </button>
-      </div>
-      <footer>
-        <p aria-live="polite">{race?.finished ? t("{boat} wins!", { boat: racers[race.winner] })
-          : discovery !== null ? discoveries[discovery]
-          : ferry > 0 ? t("A ghost ferry has slipped out of the harbor.")
-          : t("Drag the boats on the water or the bunny along the dock.")}</p>
-        <div className="city-playground-controls">
-          <button type="button" className="btn" onClick={showBunny}><Rabbit aria-hidden="true" />{t("Find the bunny")}</button>
-          <button type="button" className="btn" disabled={running || (paused && !reduceMotion)} onClick={startRace}><Flag aria-hidden="true" />{t("Race boats")}</button>
-          <button type="button" className="icon-button" aria-label={t("Reset boats")} title={t("Reset boats")} disabled={running} onClick={() => { setRace(null); setBoats(initialBoats); }}><Ship aria-hidden="true" /></button>
-          <button type="button" className="btn" disabled={domino || paused} onClick={() => setDomino(true)}>{t("Tip the block towers")}</button>
-        </div>
-      </footer>
-    </dialog>}
+        <p aria-hidden="true">{result}</p>
+      </div>}
+      <span className="visually-hidden" role="status">{result}</span>
+      {open && buoys.map(({ x, y, icon: Icon }, index) => <button key={index} className={`city-hotspot${found.includes(index) ? " is-found" : ""}`}
+        type="button" style={{ left: `${x}%`, top: `${y}%` }} aria-label={t("Explore the marina")} aria-pressed={found.includes(index)} disabled={running}
+        onClick={() => { setRace(null); setDiscovery(index); setFound(previous => previous.includes(index) ? previous : [...previous, index]); }}>
+        <Icon aria-hidden="true" />
+      </button>)}
+      {open && found.length === buoys.length && <button type="button" className="city-hotspot city-ferry-signal"
+        aria-label={t("Signal the ghost ferry")} disabled={running} onClick={() => { setRace(null); setDiscovery(null); setFerry(n => n + 1); }}>
+        <Ship aria-hidden="true" />
+      </button>}
+      {ferry > 0 && <div key={ferry} className="city-vessel city-yacht city-ghost-ferry" aria-hidden="true" />}
+      {manualBoats && boats.map(({ x, y }, index) => <button type="button" key={index}
+        className={`city-racer city-racer-${index}${running ? " is-racing" : ""}${race?.winner === index ? " is-first" : ""}`}
+        aria-label={racers[index]} aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight" aria-hidden={!open || undefined}
+        disabled={running || !open} style={{ top: `${y}%`, left: `${x}%`, "--race-distance": `${finishLine - x}cqw` } as CSSProperties}
+        onAnimationEnd={event => {
+          if (event.animationName !== "city-race" || !race || race.finished || index === race.winner) return;
+          setRace({ ...race, finished: true });
+          setBoats(raceLanes.map(lane => ({ x: finishLine, y: lane })));
+        }}
+        onPointerDown={event => beginDrag(event, { x, y })} onPointerMove={event => moveBoat(event, index)}
+        onKeyDown={event => step(event, index, { x, y })}>
+        <span className={`city-vessel ${index === 0 ? "city-yacht" : "city-jet-ski"}`} aria-hidden="true" />
+      </button>)}
+    </div>}
   </>;
 }

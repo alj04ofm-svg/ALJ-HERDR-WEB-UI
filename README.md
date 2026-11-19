@@ -6,7 +6,7 @@ A self-hosted browser and phone interface for [herdr](https://github.com/herdrde
 
 - Switch between agent chat and the live terminal. Start a workspace with **New workspace** and choose an agent installed on your computer.
 - Expand the sidebar to see groups, workspaces, tab actions, and usage over frosted waterfront glass in Chat. Minimize it to a thin rail with agent icons and short tab labels, and move between them with the arrow keys.
-- In Chat, open **City playground** to explore the waterfront, race and drag the boats, or find the bunny. **Marina weather** switches between clear skies, coastal fog, rain showers, and an automatic weather cycle. **Pause marina** freezes the scene. The app also respects your system’s reduced-motion setting.
+- In Chat, select the sailboat icon to open **Marina controls** on the waterfront. Race the yacht and jet ski, drag them across the water, or use the arrow keys when a boat has focus. Waterfront markers reveal local details. Choose the weather or pause motion from Chat. The scene also respects your system’s reduced-motion setting.
 - Open **Settings → Remote PCs** to connect another computer over SSH.
 
 ## Install from source
