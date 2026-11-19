@@ -75,3 +75,55 @@
 .sidebar-mobile-density .btn svg { width: var(--icon-size); height: var(--icon-size); }
 .sidebar-compact .sidebar-mobile-density { display: flex; justify-content: center; padding-inline: 0; }
 .sidebar-compact .sidebar-mobile-density .btn { padding-inline: 0; width: var(--touch-target); justify-content: center; }
+
+/* Desktop chrome has its own crop of the waterfront. The phone drawer samples the live chat. */
+.has-sidebar-scene {
+  --sidebar-glass-top: color-mix(in srgb, var(--bg-panel) 91%, transparent);
+  --sidebar-glass-mid: color-mix(in srgb, var(--bg-panel) 76%, transparent);
+  --sidebar-glass-base: color-mix(in srgb, var(--bg-panel) 67%, transparent);
+  --sidebar-glass-line: color-mix(in srgb, var(--text) 12%, transparent);
+}
+[data-theme="light"] .has-sidebar-scene {
+  --sidebar-glass-top: color-mix(in srgb, var(--bg-panel) 95%, transparent);
+  --sidebar-glass-mid: color-mix(in srgb, var(--bg-panel) 88%, transparent);
+  --sidebar-glass-base: color-mix(in srgb, var(--bg-panel) 80%, transparent);
+}
+.has-sidebar-scene .sidebar {
+  background: linear-gradient(var(--sidebar-glass-top), var(--sidebar-glass-mid) 65%, var(--sidebar-glass-base));
+  border-inline-end-color: var(--sidebar-glass-line);
+}
+.has-sidebar-scene .sidebar .sidebar-shell { background: transparent; }
+.has-sidebar-scene .sidebar :is(.sidebar-footer, .machine-list, .sidebar-mobile-density) {
+  border-block-start-color: var(--sidebar-glass-line);
+  border-block-end-color: var(--sidebar-glass-line);
+}
+.has-sidebar-scene .sidebar .sidebar-footer {
+  background: linear-gradient(transparent, var(--sidebar-glass-mid));
+}
+@media (min-width: 769px) {
+  .app.has-sidebar-scene:not(.sidebar-collapsed) .header-side {
+    background: linear-gradient(145deg, var(--bg-elevated), var(--bg-panel));
+    border-inline-end-color: var(--sidebar-glass-line);
+  }
+  .has-sidebar-scene .sidebar {
+    background:
+      linear-gradient(var(--sidebar-glass-top), var(--sidebar-glass-mid) 65%, var(--sidebar-glass-base)),
+      url("./brand/city-harbor.webp") left center / max(930px, 82vw) 100% no-repeat var(--bg);
+  }
+}
+@media (max-width: 768px) {
+  .has-sidebar-scene {
+    --sidebar-glass-mid: color-mix(in srgb, var(--bg-panel) 66%, transparent);
+    --sidebar-glass-base: color-mix(in srgb, var(--bg-panel) 56%, transparent);
+  }
+  .has-sidebar-scene .sidebar.is-open {
+    -webkit-backdrop-filter: saturate(.95) blur(4px);
+    backdrop-filter: saturate(.95) blur(4px);
+  }
+  .has-sidebar-scene .scrim.is-open { opacity: .56; }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .app.has-sidebar-scene .sidebar { background: var(--bg-panel); }
+  .app.has-sidebar-scene .sidebar.is-open { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .app.has-sidebar-scene .scrim.is-open { opacity: 1; }
+}

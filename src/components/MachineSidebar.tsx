@@ -11,7 +11,7 @@ import { useInstallPrompt } from "../lib/install.ts";
 import { AgentMark } from "./AgentMark.tsx";
 import { Sidebar } from "./Sidebar.tsx";
 import { SidebarTabActions } from "./SidebarTabActions.tsx";
-import { tabLabel } from "../lib/tabName.ts";
+import { customTabLabel, tabLabel } from "../lib/tabName.ts";
 import { paneStatus, rollupStatus } from "../lib/status.ts";
 import { AgentSidebar } from "./AgentSidebar.tsx";
 import { SidebarActivityProvider, useSidebarActivityState } from "../lib/sidebarActivity.tsx";
@@ -50,16 +50,31 @@ function SidebarRail(props: Pick<Props, "machines" | "selectedMachineId" | "sele
             const show = selected?.workspace_id === tab.workspace_id || ["working", "waiting", "blocked"].includes(status);
             const pane = panes.find(entry => entry.pane_id === selected?.pane_id) ?? panes.find(entry => entry.focused) ?? panes[0];
             if (!pane || !show) return null;
-            const name = tabLabel(tab, t, workspaceTabs.indexOf(tab) + 1);
+            const place = workspaceTabs.indexOf(tab) + 1;
+            const name = tabLabel(tab, t, place);
             const workspaceName = snapshot.workspaces.find(workspace => workspace.workspace_id === tab.workspace_id)?.label ?? machine.name;
+            const customName = customTabLabel(tab, place);
+            const workspaceInitials = tabAbbreviation(workspaceName);
+            const abbreviation = customName ? tabAbbreviation(customName)
+              : workspaceTabs.length === 1 ? workspaceInitials
+              : Array.from(workspaceInitials).slice(0, Math.max(0, 3 - String(place).length)).join("") + place;
             const active = selected?.tab_id === tab.tab_id;
             const online = machine.state === "connected";
             return <SidebarTabActions key={tab.tab_id} tab={tab} name={name} workspaceName={workspaceName}
               lastTab={workspaceTabs.length === 1} online={online} panes={panes} actions={props.actions} renderRow={(handlers) =>
               <button type="button" className="compact-tab-row icon-button" aria-current={active ? "page" : undefined}
-                aria-label={name} title={`${name} · ${workspaceName}`} disabled={!online}
+                aria-label={name} aria-description={workspaceName} title={`${name} · ${workspaceName}`} disabled={!online}
                 onContextMenu={event => { event.preventDefault(); handlers.menu(event.currentTarget); }}
                 onKeyDown={event => {
+                  const key = event.key;
+                  if (key === "ArrowUp" || key === "ArrowDown" || key === "Home" || key === "End") {
+                    const rows = Array.from(event.currentTarget.closest(".compact-tab-list")?.querySelectorAll<HTMLButtonElement>(".compact-tab-row:not(:disabled)") ?? []);
+                    const current = rows.indexOf(event.currentTarget);
+                    const next = key === "Home" ? rows[0] : key === "End" ? rows.at(-1)
+                      : rows[current + (key === "ArrowUp" ? -1 : 1)];
+                    event.preventDefault();
+                    next?.focus();
+                  }
                   if (event.key === "F2") { event.preventDefault(); handlers.rename(); }
                   if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
                     event.preventDefault();
@@ -71,7 +86,7 @@ function SidebarRail(props: Pick<Props, "machines" | "selectedMachineId" | "sele
                   {pane.agent ? <AgentMark agent={pane.agent} /> : <Terminal />}
                   <span className="tab-strip-dot" data-status={status} />
                 </span>
-                <span className="compact-tab-label" aria-hidden="true">{tabAbbreviation(name)}</span>
+                <span className="compact-tab-label" aria-hidden="true">{abbreviation || tabAbbreviation(name)}</span>
               </button>} />;
           })}
         </MachineContext.Provider>;
