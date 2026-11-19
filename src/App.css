@@ -76,7 +76,19 @@
 .sidebar-compact .sidebar-mobile-density { display: flex; justify-content: center; padding-inline: 0; }
 .sidebar-compact .sidebar-mobile-density .btn { padding-inline: 0; width: var(--touch-target); justify-content: center; }
 
-/* Desktop chrome has its own crop of the waterfront. The phone drawer samples the live chat. */
+/* The selected chat paints one scene under the navigation and pane. */
+.app.has-sidebar-scene > .app-body { position: relative; }
+.app-city-scene { display: none; }
+.has-sidebar-scene .app-city-scene {
+  display: block;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.has-sidebar-scene .terminal-host:has(.has-shared-city),
+.has-sidebar-scene .pane-canvas:has(.has-shared-city),
+.has-sidebar-scene .pane-frame:has(.has-shared-city),
+.has-sidebar-scene .terminal-stack.has-shared-city { background: transparent; }
 .has-sidebar-scene {
   --sidebar-glass-top: color-mix(in srgb, var(--bg-panel) 91%, transparent);
   --sidebar-glass-mid: color-mix(in srgb, var(--bg-panel) 76%, transparent);
@@ -105,25 +117,15 @@
     background: linear-gradient(145deg, var(--bg-elevated), var(--bg-panel));
     border-inline-end-color: var(--sidebar-glass-line);
   }
-  .has-sidebar-scene .sidebar {
-    background:
-      linear-gradient(var(--sidebar-glass-top), var(--sidebar-glass-mid) 65%, var(--sidebar-glass-base)),
-      url("./brand/city-harbor.webp") left center / max(930px, 82vw) 100% no-repeat var(--bg);
-  }
 }
 @media (max-width: 768px) {
   .has-sidebar-scene {
     --sidebar-glass-mid: color-mix(in srgb, var(--bg-panel) 66%, transparent);
     --sidebar-glass-base: color-mix(in srgb, var(--bg-panel) 56%, transparent);
   }
-  .has-sidebar-scene .sidebar.is-open {
-    -webkit-backdrop-filter: saturate(.95) blur(4px);
-    backdrop-filter: saturate(.95) blur(4px);
-  }
   .has-sidebar-scene .scrim.is-open { opacity: .56; }
 }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   .app.has-sidebar-scene .sidebar { background: var(--bg-panel); }
-  .app.has-sidebar-scene .sidebar.is-open { -webkit-backdrop-filter: none; backdrop-filter: none; }
   .app.has-sidebar-scene .scrim.is-open { opacity: 1; }
 }

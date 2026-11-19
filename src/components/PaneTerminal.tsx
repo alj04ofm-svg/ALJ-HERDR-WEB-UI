@@ -92,6 +92,8 @@ export interface PaneTerminalProps {
   findRequest?: number;
   /** Only the selected tile may take keyboard focus after async work or a lens change. */
   active?: boolean;
+  /** The selected chat paints its city behind the full app body. */
+  citySceneHost?: HTMLElement | null;
   /** App selected this pane itself (the selected one closed): switching to it must not take the keyboard */
   autoSelected?: boolean;
   /** xterm font size (settings) */
@@ -143,6 +145,7 @@ export function PaneTerminal({
   cwd = null,
   machineName = "",
   view,
+  citySceneHost = null,
   findRequest = 0,
   active = true,
   autoSelected = false,
@@ -2262,7 +2265,7 @@ export function PaneTerminal({
   const hasCity = presented && paneId !== null && chatView && settings.atmosphere !== "off";
   return (
     // data-direct-typing: xterm's own field raises the soft keyboard here (lib/viewport.ts)
-    <div ref={stackRef} className={`terminal-stack${chatView ? " is-chat" : ""}${greeted ? " is-greeted" : ""}${hasCity ? " has-city" : ""}`} data-pane-owner={paneId === null ? undefined : paneStorageId(machineId, paneId)} data-direct-typing={coarse && directTyping && !chatView ? "" : undefined}>
+    <div ref={stackRef} className={`terminal-stack${chatView ? " is-chat" : ""}${greeted ? " is-greeted" : ""}${hasCity ? " has-city" : ""}${hasCity && citySceneHost ? " has-shared-city" : ""}`} data-pane-owner={paneId === null ? undefined : paneStorageId(machineId, paneId)} data-direct-typing={coarse && directTyping && !chatView ? "" : undefined}>
       {paneId === null && restoreError !== null && (
         <div className="terminal-placeholder is-restore-error" role="status">
           <div className="terminal-placeholder-inner">
@@ -2351,7 +2354,7 @@ export function PaneTerminal({
           onClose={() => { setFindOpen(false); if (activeRef.current && !coarse) termRef.current?.focus(); }} />
       )}
       {hasCity && (
-        <CityBackdrop animated={settings.atmosphere === "studio"} />
+        <CityBackdrop animated={settings.atmosphere === "studio"} sceneHost={citySceneHost} />
       )}
       <div className="terminal-surface">
         {/* xterm hides its rendered rows from assistive technology, so the region around the

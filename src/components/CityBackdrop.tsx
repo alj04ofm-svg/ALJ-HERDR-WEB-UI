@@ -1,4 +1,5 @@
 import { memo, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
+import { createPortal } from "react-dom";
 import { Binoculars, CloudSun, Flag, Footprints, Pause, Play, Rabbit, Sailboat, Ship, Waves } from "lucide-react";
 import { useT } from "../lib/i18n.ts";
 import { useMediaQuery } from "../lib/useMediaQuery.ts";
@@ -116,7 +117,7 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
   </div>;
 });
 
-export function CityBackdrop({ animated }: { animated: boolean }) {
+export function CityBackdrop({ animated, sceneHost }: { animated: boolean; sceneHost: HTMLElement | null }) {
   const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const t = useT();
   const racers = [t("Yacht"), t("Jet ski")] as const;
@@ -195,8 +196,10 @@ export function CityBackdrop({ animated }: { animated: boolean }) {
     : open ? t("Drag either boat or move it with the arrow keys.") : "";
   const manualBoats = open || running;
 
+  const scene = <CityScene moving={moving} weather={weather} paused={paused} manualBoats={manualBoats} />;
+
   return <>
-    <CityScene moving={moving} weather={weather} paused={paused} manualBoats={manualBoats} />
+    {sceneHost ? createPortal(scene, sceneHost) : scene}
     {animated && <div className={`city-interactions${paused ? " is-paused" : ""}`} ref={playArea} onKeyDown={event => {
       if (open && event.key === "Escape") {
         event.stopPropagation();
