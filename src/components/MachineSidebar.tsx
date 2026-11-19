@@ -1,5 +1,6 @@
 import { FMNavigation } from "./FMNavigation.tsx";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, Download, Monitor, Plus, Search, Settings, SlidersHorizontal, Terminal, X } from "lucide-react";
 import type { Machine, MachineState, MachineUpdate } from "../../shared/machines.ts";
 import { MachineContext } from "../lib/machineContext.tsx";
@@ -31,7 +32,37 @@ export const STATE_WORD: Readonly<Record<MachineState, string>> = {
 interface Props { compact: boolean; usageOpen: boolean; onUsageOpenChange(open: boolean): void; machines: Machine[]; selectedMachineId: string; selectedPaneId: string | null; actions: AppActions; onSelect(machineId: string, paneId: string | null): void; onShowTabs(machineId: string, paneId: string): void; onNew(machineId: string): void; onSetup(machine: Machine, update?: boolean): void }
 function SidebarRail(props: Pick<Props, "machines" | "selectedMachineId" | "selectedPaneId" | "actions" | "onSelect">) {
   const t = useT();
-  return <section className="compact-tab-list" aria-label={t("Active tabs")}>
+  const [tooltip, setTooltip] = useState<{ label: string; x: number; y: number; rtl: boolean } | null>(null);
+  const timer = useRef<number>(0);
+  const hideTooltip = () => {
+    window.clearTimeout(timer.current);
+    setTooltip(null);
+  };
+  const leaveTooltip = () => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setTooltip(null), 150);
+  };
+  const showTooltip = (anchor: HTMLElement, label: string, wait: number) => {
+    hideTooltip();
+    timer.current = window.setTimeout(() => {
+      if (!anchor.isConnected) return;
+      const box = anchor.getBoundingClientRect();
+      const rtl = getComputedStyle(anchor).direction === "rtl";
+      setTooltip({ label, x: rtl ? window.innerWidth - box.left : box.right, y: box.top + box.height / 2, rtl });
+    }, wait);
+  };
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  useEffect(() => {
+    const dismiss = () => { window.clearTimeout(timer.current); setTooltip(null); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") dismiss(); };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("resize", dismiss);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", dismiss);
+    };
+  }, []);
+  return <section className="compact-tab-list" aria-label={t("Active tabs")} onScroll={hideTooltip}>
       {props.machines.map(machine => {
         const snapshot = machine.snapshot;
         if (!snapshot) return null;
@@ -50,13 +81,19 @@ function SidebarRail(props: Pick<Props, "machines" | "selectedMachineId" | "sele
             const customName = customTabLabel(tab, place);
             const label = customName ?? workspaceName;
             const tabNumber = !customName && workspaceTabs.length > 1 ? name : null;
+            const fullTitle = label === workspaceName && !tabNumber ? label
+              : customName ? `${label} · ${workspaceName}` : `${label} · ${tabNumber}`;
             const active = selected?.tab_id === tab.tab_id;
             const online = machine.state === "connected";
             return <SidebarTabActions key={tab.tab_id} tab={tab} name={name} workspaceName={workspaceName}
               lastTab={workspaceTabs.length === 1} online={online} panes={panes} actions={props.actions} renderRow={(handlers) =>
               <button type="button" className="compact-tab-row icon-button" aria-current={active ? "page" : undefined}
-                aria-label={tabNumber ? `${label} · ${tabNumber}` : label} aria-description={workspaceName} title={`${name} · ${workspaceName}`} disabled={!online}
-                onContextMenu={event => { event.preventDefault(); handlers.menu(event.currentTarget); }}
+                aria-label={tabNumber ? `${label} · ${tabNumber}` : label} aria-description={customName ? workspaceName : undefined} disabled={!online}
+                onPointerEnter={event => { if (event.pointerType === "mouse") showTooltip(event.currentTarget, fullTitle, 1100); }}
+                onPointerLeave={leaveTooltip}
+                onFocus={event => { if (event.currentTarget.matches(":focus-visible")) showTooltip(event.currentTarget, fullTitle, 350); }}
+                onBlur={hideTooltip}
+                onContextMenu={event => { event.preventDefault(); hideTooltip(); handlers.menu(event.currentTarget); }}
                 onKeyDown={event => {
                   const key = event.key;
                   if (key === "ArrowUp" || key === "ArrowDown" || key === "Home" || key === "End") {
@@ -70,10 +107,11 @@ function SidebarRail(props: Pick<Props, "machines" | "selectedMachineId" | "sele
                   if (event.key === "F2") { event.preventDefault(); handlers.rename(); }
                   if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
                     event.preventDefault();
+                    hideTooltip();
                     handlers.menu(event.currentTarget);
                   }
                 }}
-                onDoubleClick={handlers.rename} onClick={() => props.onSelect(machine.id, pane.pane_id)}>
+                onDoubleClick={handlers.rename} onClick={() => { hideTooltip(); props.onSelect(machine.id, pane.pane_id); }}>
                 <span className="compact-tab-mark" aria-hidden="true">
                   {pane.agent ? <AgentMark agent={pane.agent} /> : <Terminal />}
                   <span className="tab-strip-dot" data-status={status} />
@@ -86,6 +124,9 @@ function SidebarRail(props: Pick<Props, "machines" | "selectedMachineId" | "sele
           })}
         </MachineContext.Provider>;
       })}
+      {tooltip && createPortal(<div className="compact-tab-tooltip" role="tooltip" aria-hidden="true" dir={tooltip.rtl ? "rtl" : "ltr"}
+        style={{ insetInlineStart: tooltip.x, top: tooltip.y }}
+        onPointerEnter={() => window.clearTimeout(timer.current)} onPointerLeave={leaveTooltip}><bdi>{tooltip.label}</bdi></div>, document.body)}
     </section>;
 }
 

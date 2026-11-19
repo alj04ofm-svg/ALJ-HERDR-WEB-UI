@@ -1350,9 +1350,9 @@ One set for both themes: the card is island black wherever it shows.
 - Status, loading and composer progress use `role="status"`; failures use `role="alert"`. Agent state
   has text plus color. Compact sidebar states add distinct glyphs and keep their text accessible;
   ready and unknown draw nothing there, and unknown uses a dashed badge edge elsewhere.
-- The compact rail is `clamp(148px, 14vw, 184px)`. Rows pair the agent mark with a
-  two-line tab title. An unnamed tab uses its workspace name and adds its tab number
-  when that workspace has several tabs. The full name remains in the accessible label.
+- The compact rail is `88px`. Rows stack the agent mark above a two-line tab title.
+  Unnamed tabs use their workspace name and add their tab number when needed. A
+  full-title tooltip waits 1.1 seconds on hover. The accessible label keeps the full name.
 - Touch targets grow to `--touch-target`; fields stay `--fs-input` where mobile zoom is a risk.
 - On a touch screen (`hover: none` and `pointer: coarse`) the app is an app, not a page: its
   chrome (header, sidebar, tab strip, key bar, menus, sheet heads and feet, buttons, tabs, labels)
