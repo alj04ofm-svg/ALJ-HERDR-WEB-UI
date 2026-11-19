@@ -29,6 +29,13 @@
   background: linear-gradient(var(--bg) 15%, color-mix(in srgb, var(--bg) 78%, transparent) 64%, color-mix(in srgb, var(--bg) 64%, transparent));
 }
 .city-playground-map .city-backdrop .city-panorama { background-size: 100% 100%; }
+.city-weather-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.city-weather-control > svg { flex: none; color: var(--text-dim); }
+.city-weather-control select { width: min(124px, 34vw); padding-inline: var(--space-1); }
 .city-playground-map .city-veil {
   background: linear-gradient(transparent 70%, color-mix(in srgb, var(--bg) 52%, transparent));
 }
@@ -182,11 +189,64 @@
 }
 .city-sequence[data-arrival="east"] .city-flight span { scale: -1 1; }
 .city-impact {
-  width: clamp(48px, 10cqw, 120px);
-  aspect-ratio: 1;
+  width: clamp(40px, 9cqw, 112px);
+  aspect-ratio: 1.15;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--accent) 0%, color-mix(in srgb, var(--status-blocked) 60%, transparent) 25%, transparent 68%);
-  animation: city-impact var(--city-event-cycle) steps(180) infinite;
+  background:
+    radial-gradient(ellipse at 45% 47%, var(--text-strong), var(--accent) 18%, transparent 42%),
+    radial-gradient(ellipse at 60% 55%, var(--status-blocked), transparent 54%);
+  animation: city-impact var(--city-event-cycle) steps(240) infinite;
+}
+.city-impact-glint {
+  position: absolute;
+  inset: 103% -55% -34%;
+  background: radial-gradient(ellipse at 50% 5%, var(--accent), transparent 64%);
+  mask-image: repeating-linear-gradient(to bottom, var(--text) 0 2px, transparent 2px 6px);
+  opacity: 0;
+  animation: city-impact-glint var(--city-event-cycle) steps(180) infinite;
+}
+.city-collapse {
+  position: absolute;
+  inset: 0;
+}
+.city-collapse i {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  clip-path: inset(var(--section-top) 0 var(--section-bottom));
+  background: var(--city-architecture) center bottom / 100% 100% no-repeat;
+  filter: var(--city-facade-tone);
+  transform-origin: 47% 92%;
+  animation: city-collapse var(--city-event-cycle) steps(200) infinite;
+}
+.city-collapse i:nth-child(1) { --section-top: 0%; --section-bottom: 69%; --section-drop: 54%; --section-lean: -11deg; }
+.city-collapse i:nth-child(2) { --section-top: 31%; --section-bottom: 33%; --section-drop: 41%; --section-lean: 7deg; }
+.city-collapse i:nth-child(3) { --section-top: 67%; --section-bottom: 0%; --section-drop: 20%; --section-lean: -3deg; }
+.city-impact-dust {
+  position: absolute;
+  inset: 0 -70%;
+  pointer-events: none;
+}
+.city-impact-dust i {
+  position: absolute;
+  width: 74%;
+  aspect-ratio: 2 / 1;
+  background: url("../brand/city-dust.webp") center / contain no-repeat;
+  opacity: 0;
+}
+.city-impact-dust i:first-child {
+  top: 10%;
+  left: 10%;
+  transform-origin: 53% 72%;
+  animation: city-smoke-loft var(--city-event-cycle) steps(240) infinite;
+}
+.city-impact-dust i:last-child {
+  bottom: -8%;
+  left: 10%;
+  width: 86%;
+  filter: brightness(.85);
+  transform-origin: 40% 75%;
+  animation: city-dust-roll var(--city-event-cycle) steps(240) infinite;
 }
 @keyframes city-reflect {
   0%, 20%, 83%, 100% { opacity: .36; }
@@ -253,6 +313,40 @@
   height: 6px;
   background: var(--city-roof);
   box-shadow: inset 0 1px var(--city-crane-paint);
+}
+
+.city-crane > i {
+  position: absolute;
+  inset: 12% auto auto -1px;
+  width: 2px;
+  height: 32%;
+  background: color-mix(in srgb, var(--text-dim) 62%, transparent);
+  transform-origin: top;
+  animation: city-crane-lift 3.8s steps(65) infinite;
+}
+.city-crane > i::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  inset-inline-start: -2px;
+  width: 5px;
+  height: 4px;
+  border-bottom: 1px solid var(--city-crane-paint);
+  border-radius: var(--radius-pill);
+}
+@keyframes city-crane-lift {
+  0%, 100% { transform: translateX(-2px) scaleY(.77); }
+  32% { transform: translateX(-2px) scaleY(1.55); }
+  58% { transform: translateX(-18px) scaleY(.85); }
+  79% { transform: translateX(-18px) scaleY(1.07); }
+}
+.city-work-lights {
+  position: absolute;
+  inset: auto -70% -8%;
+  height: 37%;
+  background: radial-gradient(ellipse 29% 20% at 27% 45%, var(--accent), transparent),
+    radial-gradient(ellipse 40% 48% at 69% 33%, var(--text-strong), transparent);
+  opacity: .22;
 }
 
 .city-install {
@@ -367,17 +461,37 @@
 }
 
 @keyframes city-impact {
-  0%, 19% { opacity: 0; transform: translate(-50%, 50%) scale(.25); }
-  21% { opacity: .94; transform: translate(-50%, 50%) scale(.69); }
-  29%, 100% { opacity: 0; transform: translate(-50%, 90%) scale(1.65); }
+  0%, 19% { opacity: 0; transform: translate(-52%, 51%) scale(.2); }
+  20.5% { opacity: .98; transform: translate(-49%, 49%) scale(.65); }
+  23% { opacity: .40; transform: translate(-43%, 39%) scale(.94); }
+  27%, 100% { opacity: 0; transform: translate(-44%, 45%) scale(1.32); }
 }
-
+@keyframes city-impact-glint {
+  0%, 19%, 26%, 100% { opacity: 0; }
+  21% { opacity: .63; }
+}
+@keyframes city-collapse {
+  0%, 20%, 33%, 100% { opacity: 0; }
+  20.4% { opacity: 1; transform: none; }
+  24.5% { opacity: .86; transform: translateY(calc(var(--section-drop) * .38)) rotate(calc(var(--section-lean) * .60)); }
+  31% { opacity: 0; transform: translateY(var(--section-drop)) rotate(var(--section-lean)); }
+}
+@keyframes city-smoke-loft {
+  0%, 20%, 50%, 100% { opacity: 0; }
+  22% { opacity: .72; transform: translate(-8%, -22%) scale(.56); }
+  27% { opacity: .86; transform: translate(2%, -49%) scale(.92); }
+  38% { opacity: .42; transform: translate(24%, -81%) scale(1.10); }
+  49% { opacity: .04; transform: translate(50%, -110%) scale(1.34); }
+}
+@keyframes city-dust-roll {
+  0%, 23%, 49%, 100% { opacity: 0; }
+  26% { opacity: .73; transform: translate(-7%, 3%) scale(.65, .60); }
+  32% { opacity: .93; transform: translate(3%, 14%) scale(1.22, .89); }
+  47% { opacity: .13; transform: translate(22%, 26%) scale(1.5, .81); }
+}
 @keyframes city-rebuild {
-  0%, 20%, 100% { transform: none; opacity: 1; }
-  26% { transform: translateY(10%) rotate(12deg) scaleY(.36); opacity: .76; }
-  31% { transform: translateY(15%) rotate(18deg) scaleY(.1); opacity: 0; }
-  32%, 78% { transform: none; opacity: 0; }
-  83% { transform: none; opacity: 1; }
+  0%, 20%, 83%, 100% { opacity: 1; }
+  20.5%, 78% { opacity: 0; }
 }
 
 @keyframes city-rubble {
@@ -477,6 +591,7 @@
   gap: 6px;
   pointer-events: none;
 }
+.city-domino:not(.is-falling) { display: none; }
 .city-domino span {
   width: clamp(18px, 6vw, 40px);
   height: min(var(--city-site-h), 12cqw);
@@ -647,11 +762,6 @@
   from { transform: translateX(-2%) scaleY(.94); opacity: .10; }
   to { transform: translateX(2%) scaleY(1.05); opacity: .28; }
 }
-.city-backdrop.is-animated.is-paused *,
-.city-backdrop.is-animated.is-paused *::before,
-.city-backdrop.is-animated.is-paused *::after {
-  animation-play-state: paused;
-}
 
 .city-sky-haze {
   position: absolute;
@@ -714,3 +824,86 @@
   font-variant-numeric: tabular-nums;
 }
 .city-discovery-progress progress { width: 42px; accent-color: var(--accent); }
+
+/* Keep weather between the scene and the transcription veil. */
+.city-weather-fog, .city-weather-rain { position: absolute; inset: 0; opacity: 0; }
+.city-weather-fog::before {
+  position: absolute;
+  inset: 22% 0 5%;
+  background: linear-gradient(transparent, color-mix(in srgb, var(--status-working) 12%, var(--text-dim)) 66%, transparent);
+  content: "";
+  opacity: .25;
+}
+.city-weather-fog i {
+  position: absolute;
+  inset: 36% -15% 28% -15%;
+  background: url("../brand/city-dust.webp") center / 100% 100% no-repeat;
+  filter: blur(14px) grayscale(.9);
+  opacity: .55;
+}
+.city-weather-fog i + i { inset: 60% -25% 8% 2%; opacity: .38; scale: -1 1; }
+.is-animated .city-weather-fog i { animation: city-fog-drift 31s steps(150) infinite alternate; }
+.is-animated .city-weather-fog i + i { animation-direction: alternate-reverse; animation-duration: 41s; }
+@keyframes city-fog-drift { to { transform: translate(13cqw, -2.5cqh) scale(1.08); } }
+
+.city-weather-rain::before {
+  position: absolute;
+  inset: 4% 0 0;
+  background: linear-gradient(155deg, var(--bg) 16%, var(--status-working) 70%, transparent);
+  opacity: .14;
+  content: "";
+}
+.city-rain-drop {
+  position: absolute;
+  top: -28px;
+  width: 1px;
+  height: var(--rain-length);
+  background: linear-gradient(transparent, color-mix(in srgb, var(--status-working) 45%, var(--text-strong)));
+  opacity: .34;
+}
+.city-rain-ring {
+  position: absolute;
+  width: clamp(4px, 1.4cqw, 23px);
+  aspect-ratio: 3.2;
+  border: var(--hairline) solid var(--text-dim);
+  border-radius: 50%;
+  opacity: .25;
+}
+.is-animated .city-rain-drop {
+  animation: city-raindrop var(--rain-duration) steps(40) var(--rain-delay) infinite;
+}
+.is-animated .city-rain-ring {
+  animation: city-rain-ring 1.65s steps(24) var(--rain-delay) infinite;
+}
+@keyframes city-raindrop {
+  from { transform: translateX(0) rotate(10deg); }
+  to { transform: translate(-16cqh, 108cqh) rotate(10deg); }
+}
+@keyframes city-rain-ring {
+  0% { opacity: .6; transform: scale(.2); }
+  71%, 100% { opacity: 0; transform: scale(1.3); }
+}
+.city-backdrop[data-weather="fog"] .city-weather-fog { opacity: .65; }
+.city-backdrop[data-weather="rain"] .city-weather-rain { opacity: .80; }
+.city-backdrop[data-weather="rain"] .city-weather-fog { opacity: .23; }
+.city-backdrop.is-animated[data-weather="auto"] .city-weather-rain { animation: city-weather-showers 112s steps(200) infinite; }
+.city-backdrop.is-animated[data-weather="auto"] .city-weather-fog { animation: city-weather-coast 112s steps(200) infinite; }
+.city-backdrop:not(.is-animated) .city-rain-drop { display: none; }
+@keyframes city-weather-coast {
+  0%, 14%, 100% { opacity: 0; }
+  28%, 40% { opacity: .64; }
+  59%, 75% { opacity: .23; }
+  84% { opacity: 0; }
+}
+@keyframes city-weather-showers {
+  0%, 43%, 92%, 100% { opacity: 0; }
+  60%, 73% { opacity: .78; }
+}
+.city-backdrop[data-weather="clear"] :is(.city-weather-fog, .city-weather-rain),
+.city-backdrop[data-weather="fog"] .city-weather-rain { display: none; }
+
+.city-backdrop.is-animated[data-weather].is-paused *,
+.city-backdrop.is-animated[data-weather].is-paused *::before,
+.city-backdrop.is-animated[data-weather].is-paused *::after {
+  animation-play-state: paused;
+}

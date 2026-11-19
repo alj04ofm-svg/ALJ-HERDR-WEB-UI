@@ -1,5 +1,5 @@
 import { memo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
-import { Binoculars, Building2, Flag, Footprints, LifeBuoy, Pause, Play, Rabbit, Ship, Waves, X } from "lucide-react";
+import { Binoculars, Building2, CloudSun, Flag, Footprints, LifeBuoy, Pause, Play, Rabbit, Ship, Waves, X } from "lucide-react";
 import { useT } from "../lib/i18n.ts";
 import { useMediaQuery } from "../lib/useMediaQuery.ts";
 import "./CityBackdrop.css";
@@ -13,6 +13,18 @@ const waterfront = [
 const rebuildOrder = [2, 1, 3, 0];
 const blockHeights = [50, 72, 63];
 const constructionFloors = [0, 1, 2, 3, 4, 5];
+const weatherModes = ["auto", "clear", "fog", "rain"] as const;
+type MarinaWeather = typeof weatherModes[number];
+const rainDrops = Array.from({ length: 22 }, (_, index) => ({
+  left: `${(index * 37 + 7) % 101}%`,
+  "--rain-duration": `${580 + index % 6 * 125}ms`,
+  "--rain-delay": `-${index * 113 % 910}ms`,
+  "--rain-length": `${11 + index % 5 * 4}px`,
+} as CSSProperties));
+const rainRipples = [
+  { left: "12%", top: "83%" }, { left: "27%", top: "94%" }, { left: "46%", top: "76%" },
+  { left: "58%", top: "90%" }, { left: "77%", top: "82%" }, { left: "94%", top: "91%" },
+];
 const buoys = [
   { x: 8, y: 75, icon: LifeBuoy },
   { x: 32, y: 53, icon: Waves },
@@ -28,11 +40,11 @@ const clampPoint = ({ x, y }: Point, boat: boolean): Point => ({
   y: Math.max(boat ? 73 : 59, Math.min(boat ? 93 : 71, y)),
 });
 
-const CityScene = memo(function CityScene({ moving, paused = false }: { moving: boolean; paused?: boolean }) {
+const CityScene = memo(function CityScene({ moving, weather, paused = false }: { moving: boolean; weather: MarinaWeather; paused?: boolean }) {
   const [cycle, setCycle] = useState(0);
   const lot = rebuildOrder[cycle % rebuildOrder.length];
 
-  return <div className={`city-backdrop${moving ? " is-animated" : ""}${paused ? " is-paused" : ""}`} aria-hidden="true">
+  return <div className={`city-backdrop${moving ? " is-animated" : ""}${paused ? " is-paused" : ""}`} data-weather={weather} aria-hidden="true">
     <div className="city-panorama" />
     <div className="city-sky-haze" />
     <div className="city-gulls"><i /><i /><i /></div>
@@ -48,11 +60,15 @@ const CityScene = memo(function CityScene({ moving, paused = false }: { moving: 
           {working && <div className="city-sequence" key={cycle} data-arrival={cycle % 2 === 0 ? "west" : "east"}>
             <div className="city-flight"><span /></div>
             <div className="city-impact" />
+            <div className="city-collapse"><i /><i /><i /></div>
+            <div className="city-impact-dust"><i /><i /></div>
+            <div className="city-impact-glint" />
             <span className="city-rubble" />
             <span className="city-evacuation"><i /><i /><i /></span>
             <div className="city-works">
               <span className="city-foundation" />
-              <span className="city-crane" />
+              <span className="city-crane"><i /></span>
+              <span className="city-work-lights" />
               {constructionFloors.map(floor => <div className="city-install" key={floor} style={{
                 "--city-floor": floor,
                 "--city-module-offset": `${100 - floor * 20}%`,
@@ -84,6 +100,12 @@ const CityScene = memo(function CityScene({ moving, paused = false }: { moving: 
     <div className="city-bridge-traffic" />
     <div className="city-lantern" />
     <div className="city-plane"><span /></div>
+    <div className="city-weather-fog"><i /><i /></div>
+    <div className="city-weather-rain">
+      {rainDrops.map((style, index) => <i key={index} className="city-rain-drop" style={style} />)}
+      {rainRipples.map((style, index) => <i key={index} className="city-rain-ring"
+        style={{ ...style, "--rain-delay": `-${index * 275}ms` } as CSSProperties} />)}
+    </div>
     <div className="city-veil" />
   </div>;
 });
@@ -103,6 +125,12 @@ export function CityBackdrop({ animated }: { animated: boolean }) {
   const playArea = useRef<HTMLDivElement>(null);
   const dragOffset = useRef<Point>({ x: 0, y: 0 });
   const [open, setOpen] = useState(false);
+  const [weather, setWeather] = useState<MarinaWeather>(() => {
+    try {
+      const saved = localStorage.getItem("herdr-web-ui:marina-weather");
+      return weatherModes.find(mode => mode === saved) ?? "auto";
+    } catch { return "auto"; }
+  });
   const rabbitButton = useRef<HTMLButtonElement>(null);
   const [rabbit, setRabbit] = useState(initialRabbit);
   const [boats, setBoats] = useState<Point[]>(initialBoats);
@@ -159,7 +187,7 @@ export function CityBackdrop({ animated }: { animated: boolean }) {
   };
 
   return <>
-    <CityScene moving={moving} paused={paused || open} />
+    <CityScene moving={moving} weather={weather} paused={paused || open} />
     {animated && <div className="city-tools">
       <button type="button" className="icon-button" aria-label={t("City playground")} title={t("City playground")} onClick={() => {
         playground.current?.showModal();
@@ -181,13 +209,28 @@ export function CityBackdrop({ animated }: { animated: boolean }) {
           <span aria-hidden="true">{found.length} / {buoys.length}</span>
         </div>
         <div className="city-playground-controls">
+          <label className="city-weather-control">
+            <CloudSun aria-hidden="true" />
+            <select className="select" aria-label={t("Marina weather")} value={weather} onChange={event => {
+              const next = event.currentTarget.value;
+              const mode = weatherModes.find(option => option === next);
+              if (!mode) return;
+              setWeather(mode);
+              try { localStorage.setItem("herdr-web-ui:marina-weather", mode); } catch {}
+            }}>
+              <option value="auto">{t("Auto")}</option>
+              <option value="clear">{t("Clear skies")}</option>
+              <option value="fog">{t("Coastal fog")}</option>
+              <option value="rain">{t("Rain showers")}</option>
+            </select>
+          </label>
           <button type="button" className="icon-button" aria-label={t(paused ? "Resume marina" : "Pause marina")} title={t(paused ? "Resume marina" : "Pause marina")}
             onClick={togglePause} disabled={reduceMotion}>{paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}</button>
           <button className="icon-button" type="button" aria-label={t("Close")} onClick={() => playground.current?.close()}><X aria-hidden="true" /></button>
         </div>
       </header>
       <div className={`city-playground-map${paused ? " is-paused" : ""}`} ref={playArea}>
-        {open && <CityScene moving={moving} paused={paused} />}
+        {open && <CityScene moving={moving} weather={weather} paused={paused} />}
         <div className={`city-domino${domino ? " is-falling" : ""}`} aria-hidden="true">
           {blockHeights.map((height, index) => <span key={height} style={{ "--drop-delay": `${index * 180}ms`, "--city-site-h": `${height}px` } as CSSProperties} onAnimationEnd={index === blockHeights.length - 1 ? () => setDomino(false) : undefined} />)}
         </div>
