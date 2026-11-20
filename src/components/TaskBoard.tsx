@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { Archive, ArrowLeft, CalendarDays, Check, CheckCheck, ChevronRight, Columns3, Folder, List, Radio, Sparkles, Maximize2, Minimize2, Plus, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
+import { Archive, ArrowLeft, CalendarDays, Check, CheckCheck, ChevronRight, Columns3, List, Radio, Sparkles, Maximize2, Minimize2, Plus, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 import { TASK_STAGES, TASK_STAGE_LABELS, type TaskStage, type WorkspaceTask } from "../../shared/tasks.ts";
 import type { Machine } from "../../shared/machines.ts";
 import { sidebarAgents, agentNavigationLabel } from "../lib/sidebarAgents.ts";
@@ -12,6 +12,8 @@ import { usePhoneSheetBack } from "../lib/sheetHistory.ts";
 import { useSheetSwipe } from "../lib/sheets.ts";
 import { nativeModalOver, useFocusTrap } from "../lib/useFocusTrap.ts";
 import { createTaskStore, localTaskDay, taskId, type TaskStore, useTaskStore } from "../lib/workspaceTasks.ts";
+import { archivedProject, changeTaskProjects, inProject, taskProjects, type ProjectChange } from "../lib/taskProjects.ts";
+import { TaskProjectActions, TaskProjectRail, type ProjectPanel } from "./TaskProjectRail.tsx";
 import "./TaskBoard.css";
 
 const VIEW_OPTIONS = [
@@ -78,10 +80,10 @@ function BoardCard({ task, today, canMove, disabled, onEdit }: {
   </article>;
 }
 
-function NotesEditor({ editor, projects, itemText, setItemText, patch, onBack, onSave, onReload, busy, conflict, externallyChanged }: {
+function NotesEditor({ editor, projects, itemText, setItemText, patch, onBack, onSave, onReload, busy, conflict, externallyChanged, projectArchived }: {
   editor: Editor; projects: string[]; itemText: string; setItemText(value: string): void;
   patch(values: Partial<WorkspaceTask>): void; onBack(): void; onSave(task: WorkspaceTask): void;
-  onReload(): void; busy: boolean; conflict: boolean; externallyChanged: boolean;
+  onReload(): void; busy: boolean; conflict: boolean; externallyChanged: boolean; projectArchived: boolean;
 }) {
   const { draft, isNew } = editor;
   const title = useRef<HTMLInputElement>(null);
@@ -133,6 +135,7 @@ function NotesEditor({ editor, projects, itemText, setItemText, patch, onBack, o
         </div>
       </fieldset>
     </fieldset>
+    {projectArchived && <p className="task-status">This task is in an archived project. Restore the project to return its tasks to active views.</p>}
     <footer className="task-editor-footer">
       {!isNew && <button className="btn btn-ghost" type="button" disabled={busy || conflict || externallyChanged || !draft.title.trim()} onClick={() => onSave({ ...draft, archived: !draft.archived })}>
         {draft.archived ? <RotateCcw aria-hidden="true" /> : <Archive aria-hidden="true" />}
@@ -172,7 +175,9 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   const [inlineTitle, setInlineTitle] = useState("");
   const inlineField = useRef<HTMLInputElement>(null);
   const filterButton = useRef<HTMLButtonElement>(null);
-  const projectButton = useRef<HTMLButtonElement>(null);
+  const projectOrigin = useRef<HTMLElement | null>(null);
+  const [projectPanel, setProjectPanel] = useState<ProjectPanel | null>(null);
+  const [busyProject, setBusyProject] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [dropStage, setDropStage] = useState<TaskStage | null>(null);
   const heading = useId();
@@ -212,6 +217,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   }
   function attemptExit(intent: "close" | "board") {
     if (store.read().pending === "save") return false;
+    if (projectPanel) { closeProjectPanel(); return false; }
     if ((intent === "close" ? unsaved : dirty)) { setConfirm(intent); return false; }
     if (intent === "close") onClose();
     else exitEditor();
@@ -281,15 +287,16 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   const today = localTaskDay();
   const tasks = snapshot?.tasks ?? [];
   const queryText = query.trim().toLocaleLowerCase();
-  const visible = tasks.filter(task => task.archived === (view === "archive")
+  const visible = tasks.filter(task => (task.archived || Boolean(archivedProject(snapshot, task.project))) === (view === "archive")
     && (scope === "all" || task.scope === scope)
     && (!project || (task.project === project || task.project.startsWith(`${project} / `)))
     && (!queryText || `${task.title} ${task.notes} ${task.project}`.toLocaleLowerCase().includes(queryText))
     && (view !== "today" || (task.stage !== "done" && (task.stage === "doing" || task.priority === "urgent" || Boolean(task.due && task.due <= today))))
     && (view !== "waiting" || task.stage === "needs-you" || task.stage === "review"));
-  const projects = [...new Set([...(snapshot?.projects ?? []), ...tasks.map(task => task.project).filter(Boolean)])].sort((a, b) => a.localeCompare(b));
+  const projects = taskProjects(snapshot);
+  const activeProjects = projects.filter(path => !archivedProject(snapshot, path));
   const count = visible.length;
-  const projectTasks = tasks.filter(task => !task.archived
+  const projectTasks = tasks.filter(task => !task.archived && !archivedProject(snapshot, task.project)
     && (!project || task.project === project || task.project.startsWith(`${project} / `))
     && (scope === "all" || task.scope === scope));
   const completed = projectTasks.filter(task => task.stage === "done").length;
@@ -303,6 +310,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   const addingInline = inlineStage !== null;
 
   function escapePanel() {
+    if (projectPanel) { if (!busy) closeProjectPanel(); return; }
     if (editor) { attemptExit("board"); return; }
     if (capture) { closeCapture(); return; }
     if (inlineStage) {
@@ -312,7 +320,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     }
     if (createProject && !folderName.trim()) {
       setCreateProject(false);
-      projectButton.current?.focus();
+      surface.current?.querySelector<HTMLElement>(".task-project-add")?.focus();
       return;
     }
     if (showFilters && !createProject) { setShowFilters(false); filterButton.current?.focus(); return; }
@@ -337,11 +345,44 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     } else requestAnimationFrame(() => inlineField.current?.focus());
   }
   function clearFilters() { setScope("all"); setView("all"); setQuery(""); }
+  function chooseProject(path: string) {
+    setProject(path);
+    setView(archivedProject(snapshot, path) ? "archive" : "all");
+  }
+  function closeProjectPanel() {
+    setProjectPanel(null);
+    requestAnimationFrame(() => {
+      const origin = projectOrigin.current;
+      (origin?.isConnected && origin.getClientRects().length ? origin : surface.current?.querySelector<HTMLElement>(".task-project-add"))?.focus({ preventScroll: true });
+    });
+  }
+  async function organizeProject(change: ProjectChange) {
+    if (!snapshot || !canMove || addingInline || editor) return;
+    const next = changeTaskProjects(snapshot, change);
+    if (typeof next === "string") { setStatus(next); return; }
+    setStatus("");
+    setBusyProject(change.path);
+    const saved = await store.organize(next);
+    setBusyProject("");
+    if (!saved) return;
+    if ((change.kind === "rename" || change.kind === "merge") && inProject(project, change.path)) {
+      const destination = change.target + project.slice(change.path.length);
+      setProject(destination);
+      setView(archivedProject(next, destination) ? "archive" : "all");
+    }
+    if (change.kind === "archive" || change.kind === "delete") {
+      if (inProject(project, change.path)) setProject("");
+      if (change.kind === "archive") { setProject(change.path); setView("archive"); }
+    }
+    if (change.kind === "restore") { setProject(change.path); setView("all"); }
+    setStatus({ rename: "Project renamed.", merge: "Projects merged.", move: "Project order saved.", archive: "Project archived.", restore: "Project restored.", delete: "Empty project deleted." }[change.kind]);
+    if (projectPanel) closeProjectPanel();
+  }
   function startTask(stage: TaskStage = "inbox") {
     if (view !== "all") setView("all");
     if (layout === "agents") chooseLayout("list");
     setPhoneStage(stage);
-    edit(newTask(scope === "personal" ? "personal" : "business", project, stage), true);
+    edit(newTask(scope === "personal" ? "personal" : "business", archivedProject(snapshot, project) ? "" : project, stage), true);
   }
   function closeCapture() {
     setCapture(false);
@@ -357,6 +398,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     const name = folderName.trim();
     const path = parent ? `${parent} / ${name}` : name;
     if (!name || path.length > 120) { setStatus("Use a project path of up to 120 characters."); return; }
+    if (archivedProject(snapshot, path)) { setStatus("Restore that project from Archive first."); return; }
     if (name.includes("/")) { setStatus("Use the parent project field to create a subproject."); return; }
     if (projects.includes(path) || await store.addProject(path)) {
       setProject(path); setView("all"); setFolderName(""); setParent(""); setCreateProject(false);
@@ -373,7 +415,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   return createPortal(<div className="modal-scrim task-scrim" onClick={event => { if (event.currentTarget === event.target) attemptExit("close"); }}>
     <section className="modal task-workspace" ref={surface} data-expanded={expanded} data-editing={Boolean(editor)} role="dialog"
       aria-modal="true" aria-labelledby={heading} tabIndex={-1} onKeyDown={onKeyDown}>
-      <header className="task-header">
+      <header className="task-header" ref={node => { if (node) node.inert = Boolean(projectPanel); }}>
         <div className="task-heading">
           <h2 id={heading}>{t("Tasks")}</h2>
         </div>
@@ -389,25 +431,18 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
         <button type="button" ref={keepEditing} className="btn" onClick={keepEdit}>Keep editing</button>
         <button type="button" className="btn" onClick={discard}>Discard edit</button>
       </div>}
-      {error && <div className="task-feedback" role="alert">
+      {error && !projectPanel && <div className="task-feedback" role="alert">
         <span>{error}{unsaved ? " Your edit is still here." : ""}</span>
         {error && <button type="button" className="btn" disabled={Boolean(pending)} onClick={() => void refreshBoard()}>Load latest board</button>}
       </div>}
-      {(status || pending) && <p className="task-status" role="status">{pending === "save" ? "Saving task…" : pending === "load" && snapshot ? "Refreshing tasks…" : status}</p>}
-      <div className="task-workspace-body">
-        <nav className="task-projects" aria-label="Projects">
-          <div className="task-project-heading">
-            <h3>Projects</h3>
-            <button ref={projectButton} className="icon-button task-project-add" type="button" aria-label="New project" title="New project" aria-expanded={createProject} disabled={!snapshot || !canMove || addingInline} onClick={() => { if (layout === "agents") chooseLayout("list"); setCreateProject(value => !value); setParent(project); }}><Plus aria-hidden="true" /></button>
-          </div>
-          <div className="task-project-links">
-            <button type="button" aria-pressed={!project} disabled={addingInline} onClick={() => setProject("")}><Folder aria-hidden="true" /><span>All projects</span></button>
-            {projects.map(name => <button type="button" key={name} aria-pressed={project === name} title={name} disabled={addingInline} onClick={() => setProject(name)}>
-              <Folder aria-hidden="true" /><span>{name}</span>
-            </button>)}
-          </div>
-          <select className="select task-project-mobile" aria-label="Project" value={project} disabled={addingInline} onChange={event => setProject(event.target.value)}><option value="">All projects</option>{projects.map(name => <option key={name} value={name}>{name}</option>)}</select>
-        </nav>
+      {!projectPanel && (status || pending) && <p className="task-status" role="status">{pending === "save" ? busyProject ? "Saving project…" : "Saving task…" : pending === "load" && snapshot ? "Refreshing tasks…" : status}</p>}
+      <div className="task-workspace-body" aria-hidden={projectPanel ? true : undefined} ref={node => { if (node) node.inert = Boolean(projectPanel); }}>
+        <TaskProjectRail snapshot={snapshot} projects={projects} selected={project} archived={view === "archive" && (!project || Boolean(archivedProject(snapshot, project)))} open={createProject}
+          busyProject={busyProject} canChange={Boolean(snapshot && canMove && !addingInline && !editor)} disabled={addingInline || Boolean(editor)}
+          onSelect={chooseProject} onArchive={() => { setProject(""); setView("archive"); if (layout === "agents") chooseLayout("list"); }}
+          onCreate={() => { if (layout === "agents") chooseLayout("list"); setCreateProject(value => !value); setParent(activeProjects.includes(project) ? project : ""); }}
+          onPanel={(next, origin) => { if (origin) projectOrigin.current = origin; setStatus(""); setProjectPanel(next); }}
+          onCommit={change => void organizeProject(change)} />
         <div className="task-content">
           <div className="task-controls">
             <div className="task-views" role="group" aria-label="Task views">
@@ -426,7 +461,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
                 <span data-state={state}>{state === "blocked" ? "Needs input" : "Working"}</span>
                 {onSelect && <button type="button" className="btn" disabled={unsaved || busy} onClick={() => { onClose(); onSelect(machine.id, entry.pane.pane_id); }}>Open agent</button>}
                 <button type="button" className="btn" disabled={!snapshot || !canMove} onClick={() => edit({
-                  ...newTask("business", project, state === "blocked" ? "needs-you" : "inbox"),
+                  ...newTask("business", archivedProject(snapshot, project) ? "" : project, state === "blocked" ? "needs-you" : "inbox"),
                   title: (entry.pane.plan?.current || title).slice(0, 240),
                   notes: `From ${title} in ${entry.workspace.label} (${machine.name}).`,
                 }, true)}><Plus aria-hidden="true" /> Add to tasks</button>
@@ -435,12 +470,12 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
           </div> : <>
           {showFilters && <div className="task-filters">
             <label className="task-search"><Search aria-hidden="true" /><input className="input" type="search" aria-label="Search tasks" disabled={addingInline} placeholder="Search tasks" value={query} onChange={event => setQuery(event.target.value)} /></label>
-            <select className="select" aria-label="Task filter" disabled={addingInline} value={view} onChange={event => setView(event.target.value as TaskFilter)}><option value="all">All tasks</option>{VIEW_OPTIONS.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}</select>
+            <select className="select" aria-label="Task filter" disabled={addingInline} value={view} onChange={event => { const next = event.target.value as TaskFilter; if (next !== "archive" && archivedProject(snapshot, project)) setProject(""); setView(next); }}><option value="all">All tasks</option>{VIEW_OPTIONS.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}</select>
             <select className="select" aria-label="Task area" disabled={addingInline} value={scope} onChange={event => setScope(event.target.value as typeof scope)}><option value="all">All areas</option><option value="business">Business</option><option value="personal">Personal</option></select>
           </div>}
           {createProject && <form className="task-project-form" onSubmit={event => void addProject(event)}>
             <input autoFocus className="input" aria-label="Project name" placeholder="Project name" value={folderName} onChange={event => setFolderName(event.target.value)} maxLength={120} required />
-            <select className="select" aria-label="Parent project" value={parent} onChange={event => setParent(event.target.value)}><option value="">Top level</option>{projects.map(name => <option key={name}>{name}</option>)}</select>
+            <select className="select" aria-label="Parent project" value={parent} onChange={event => setParent(event.target.value)}><option value="">Top level</option>{activeProjects.map(name => <option key={name}>{name}</option>)}</select>
             <button className="btn btn-primary" type="submit" disabled={!canMove}>Create project</button>
           </form>}
           <div className="task-lens">
@@ -502,7 +537,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
           </>}
           {!editor && capture && snapshot && <div className="task-capture-dock">
             <TaskCapture note={captureNote} onNote={setCaptureNote} onClose={closeCapture} onDraft={(fields, question) => {
-              const task = { ...newTask(scope === "personal" ? "personal" : "business", project, "inbox"), ...fields };
+              const task = { ...newTask(scope === "personal" ? "personal" : "business", archivedProject(snapshot, project) ? "" : project, "inbox"), ...fields };
               setCapture(false); setCaptureTask(task.id); edit(task, true);
               setStatus(question || "Review the draft and save when it’s ready.");
               if (layout === "agents") chooseLayout("list");
@@ -510,12 +545,15 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
             }} />
           </div>}
         </div>
-        {editor && <NotesEditor editor={editor} projects={projects} itemText={itemText} setItemText={setItemText}
+        {editor && <NotesEditor editor={editor} projects={activeProjects} itemText={itemText} setItemText={setItemText}
           patch={values => { setEditor(previous => previous && ({ ...previous, draft: { ...previous.draft, ...values } })); setConfirm(null); }}
           onBack={() => attemptExit("board")} onSave={task => void update(task, true)}
           onReload={() => { if (dirty) setConfirm("reload"); else if (activeTask) setEditor({ original: activeTask, draft: { ...activeTask }, isNew: false }); else exitEditor(); }}
-          busy={busy} conflict={conflict || pending === "load"} externallyChanged={externallyChanged} />}
+          busy={busy} conflict={conflict || pending === "load"} externallyChanged={externallyChanged} projectArchived={Boolean(archivedProject(snapshot, editor.draft.project))} />}
       </div>
+      {projectPanel && snapshot && <TaskProjectActions key={projectPanel.path + projectPanel.mode} panel={projectPanel}
+        snapshot={snapshot} projects={projects} busy={busy} blocked={conflict} feedback={conflict ? `${error} Close this panel to reload.` : error || (busy ? "Saving project…" : status)} onPanel={setProjectPanel}
+        onClose={closeProjectPanel} onCommit={change => void organizeProject(change)} />}
     </section>
   </div>, document.body);
 }

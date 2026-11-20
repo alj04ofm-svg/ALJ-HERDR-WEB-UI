@@ -17,7 +17,7 @@ async function requestTasks(body?: TaskSnapshot): Promise<TaskSnapshot> {
   if (!response.ok) {
     throw new TaskResponseError(response.status, data?.error?.message ?? "Tasks are unavailable. Check your connection and try again.");
   }
-  if (typeof data?.revision !== "string" || !isTaskList(data.tasks) || (data.projects !== undefined && !isTaskProjects(data.projects))) {
+  if (typeof data?.revision !== "string" || !isTaskList(data.tasks) || (data.projects !== undefined && !isTaskProjects(data.projects)) || (data.archived_projects !== undefined && !isTaskProjects(data.archived_projects))) {
     throw new Error("The bridge returned an unreadable task board.");
   }
   return data;
@@ -131,6 +131,15 @@ export function createTaskStore() {
       const projects = [...new Set([...(snapshot.projects ?? []), project])];
       if (!isTaskProjects(projects)) { publish({ error: "The project name or project limit is invalid." }); return false; }
       return persist({ ...snapshot, projects });
+    },
+    async organize(next: TaskSnapshot) {
+      const { snapshot, pending, conflict } = state;
+      if (!snapshot || snapshot.revision !== next.revision || pending || conflict) return false;
+      if (!isTaskProjects(next.projects) || (next.archived_projects !== undefined && !isTaskProjects(next.archived_projects)) || !isTaskList(next.tasks)) {
+        publish({ error: "A project path or the board size exceeds its limit." });
+        return false;
+      }
+      return persist(next);
     },
     dismissError() { publish({ error: "" }); },
   };

@@ -46,6 +46,7 @@ import { SnapshotRequests } from "./lib/snapshotRequests.ts";
 import { alertPrefs, useSettings } from "./lib/settings.ts";
 import { useShortcuts } from "./lib/shortcuts.ts";
 import { useMediaQuery } from "./lib/useMediaQuery.ts";
+import { usePhoneSheetBack } from "./lib/sheetHistory.ts";
 import { PaneLenses } from "./lib/paneLens.ts";
 import type { AppActions, PaneView } from "./lib/actions.ts";
 import {
@@ -1116,7 +1117,17 @@ export function App() {
 
   const [healthAnchor, setHealthAnchor] = useState<HTMLElement | null>(null);
   const closeHealth = useCallback(() => setHealthAnchor(null), []);
+  // Claim the menu's history entry before the lazy health panel finishes loading.
+  usePhoneSheetBack(closeHealth, healthAnchor !== null);
+  const headerHasTabs = view === "chat" && tabsOpen && Boolean(snapshot && selectedPane && selectedWorkspace);
   const moreItems: RowMenuItem[] = [
+    ...(!wideScreen && headerHasTabs ? [
+      { id: "terminal", label: t("Terminal"), icon: SquareTerminal, run: () => { setTabsOpen(false); setView("terminal"); } },
+      { id: "health", label: t("VPS health"), icon: Activity, run: () => {
+        const anchor = document.querySelector<HTMLElement>(".header-more-button");
+        if (anchor) setHealthAnchor(anchor);
+      } },
+    ] : []),
     ...(tinyHeader && selectedWorkspace ? [{ id: "new-tab", label: t("New tab"), icon: Plus, run: () => actions.openNewTab() }] : []),
     { id: "usage", label: t("Usage"), icon: Gauge, run: () => setUsageOpen(true) },
     ...(selectedPane && !selectedPane.restore_error ? [{ id: "find", label: t("Find in terminal"), icon: Search, run: actions.openFind }] : []),
@@ -1164,7 +1175,6 @@ export function App() {
   }
   if (locked) return <AccessGate reason={lockReason} initialCode={pairCode} onUnlocked={unlock} />;
 
-  const headerHasTabs = view === "chat" && tabsOpen && Boolean(snapshot && selectedPane && selectedWorkspace);
   const workspaceTabs = snapshot && selectedPane && selectedWorkspace ? (
     <div id="workspace-tabs" className="workspace-tabs"><TabStrip explicitlyOpened={tabsOpen} snapshot={snapshot} workspace={selectedWorkspace} selectedPane={selectedPane} onSelectPane={selectPane} onNewTab={() => actions.openNewTab()} onCloseTab={(tabId) => actions.closeTab(selectedMachineId, tabId)}
             paneActions={(paneId) => {
@@ -1240,7 +1250,7 @@ export function App() {
             </button>
           </div>
         )}
-        {view === "chat" && selectedWorkspace && <button type="button" className="shell-view-button" aria-label={t("View tabs")} aria-expanded={tabsOpen} aria-controls="workspace-tabs" onClick={() => setTabsOpen(open => !open)}><Grid2X2 aria-hidden="true" /><span>{t("Tabs")}</span></button>}
+        {view === "chat" && selectedWorkspace && <button type="button" className="shell-view-button" aria-label={t("View tabs")} aria-expanded={tabsOpen} aria-controls={headerHasTabs ? "workspace-tabs" : undefined} onClick={() => setTabsOpen(open => !open)}><Grid2X2 aria-hidden="true" /><span>{t("Tabs")}</span></button>}
         <div className="header-meta">
           <button type="button" className="icon-button header-health" aria-haspopup="dialog" aria-expanded={healthAnchor !== null}
             aria-label={t("VPS health")} title={t("VPS health")} onClick={event => setHealthAnchor(event.currentTarget)}><Activity aria-hidden="true" /></button>

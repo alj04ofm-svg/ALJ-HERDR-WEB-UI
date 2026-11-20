@@ -5,7 +5,6 @@ import type { ServerHealth as Health } from "../../shared/protocol.ts";
 import { fetchServerHealth } from "../lib/api.ts";
 import { useT } from "../lib/i18n.ts";
 import { useFocusTrap } from "../lib/useFocusTrap.ts";
-import { usePhoneSheetBack } from "../lib/sheetHistory.ts";
 import "./ServerHealth.css";
 
 const size = (bytes: number) => `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
@@ -18,7 +17,6 @@ export function ServerHealth({ anchor, onClose }: { anchor: HTMLElement; onClose
   const refresh = useRef<() => void>(() => {});
   const [top, setTop] = useState(52);
   const [right, setRight] = useState(8);
-  usePhoneSheetBack(onClose);
   useLayoutEffect(() => {
     const position = () => {
       const rect = anchor.getBoundingClientRect();

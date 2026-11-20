@@ -28,7 +28,7 @@ import panesFixture from "./fixtures/panes.json";
 import terminalFixture from "./fixtures/terminal.json";
 
 const DEMO_VERSION = "demo";
-let taskSnapshot: TaskSnapshot = { revision: "0", tasks: [], projects: [] };
+let taskSnapshot: TaskSnapshot = { revision: "0", tasks: [], projects: [], archived_projects: [] };
 /** Only an explicit `demo logs` command starts this fictional retained history. */
 const histories = new Map<string, DemoHistory>();
 const terminalGrids = new Map<string, { cols: number; rows: number }>();
@@ -585,8 +585,8 @@ async function route(url: URL, method: string, init: RequestInit | undefined, in
     if (method !== "PUT") return error("method_not_allowed", "Use GET or PUT", 405);
     const body = await bodyOf(init, input);
     if (body.revision !== taskSnapshot.revision) return error("tasks_changed", "Reload the task board", 409);
-    if (!isTaskList(body.tasks) || (body.projects !== undefined && !isTaskProjects(body.projects))) return error("invalid_request", "Invalid task board", 400);
-    taskSnapshot = { revision: String(Number(taskSnapshot.revision) + 1), tasks: body.tasks, projects: body.projects ?? taskSnapshot.projects };
+    if (!isTaskList(body.tasks) || (body.projects !== undefined && !isTaskProjects(body.projects)) || (body.archived_projects !== undefined && !isTaskProjects(body.archived_projects))) return error("invalid_request", "Invalid task board", 400);
+    taskSnapshot = { revision: String(Number(taskSnapshot.revision) + 1), tasks: body.tasks, projects: body.projects ?? taskSnapshot.projects, archived_projects: body.archived_projects ?? taskSnapshot.archived_projects };
     return json(taskSnapshot);
   }
   if (path === "/api/prompt/refine") return method === "GET" ? json({ configured: false }) : error("refine_not_configured", "Connect a host to use Codex", 409);

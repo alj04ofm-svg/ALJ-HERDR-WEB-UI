@@ -1,3 +1,4 @@
+import { archivedProject } from "../lib/taskProjects.ts";
 import { useContext, useEffect, useState } from "react";
 import { ClipboardList } from "lucide-react";
 import { createTaskStore, taskClock, taskElapsed, useTaskStore } from "../lib/workspaceTasks.ts";
@@ -13,7 +14,7 @@ export function TaskSidebarButton({ compact = false }: { compact?: boolean }) {
   const open = Boolean(context?.mode);
   const [now, setNow] = useState(Date.now);
   const { snapshot, started, pending, unavailable } = useTaskStore(store);
-  const tasks = snapshot?.tasks.filter(task => !task.archived && task.stage !== "done") ?? [];
+  const tasks = snapshot?.tasks.filter(task => !task.archived && !archivedProject(snapshot, task.project) && task.stage !== "done") ?? [];
   const active = tasks
     .filter(task => task.stage === "doing")
     .reduce<(typeof tasks)[number] | null>((best, task) => {

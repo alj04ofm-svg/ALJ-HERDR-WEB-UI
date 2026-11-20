@@ -17,7 +17,7 @@ export interface WorkspaceTask {
   created_at: string;
   updated_at: string;
 }
-export interface TaskSnapshot { revision: string; tasks: WorkspaceTask[]; projects?: string[] }
+export interface TaskSnapshot { revision: string; tasks: WorkspaceTask[]; projects?: string[]; archived_projects?: string[] }
 export const TASK_MAX_BYTES = 2 * 1024 * 1024;
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
 const text = (v: unknown, max: number): v is string => typeof v === "string" && v.length <= max;

@@ -18,16 +18,16 @@ test("projects, times and archives survive reload and stale writes cannot replac
     method: "PUT", headers: { "content-type": "application/json", "x-herdr-tasks": "1" }, body: JSON.stringify(body),
   }), new TaskStore(state));
   try {
-    expect(new TaskStore(state).read()).toEqual({ revision: "old", tasks: [task] });
+    expect(new TaskStore(state).read()).toEqual({ revision: "old", tasks: [task], archived_projects: [] });
     const projects = ["Studio", "Studio / Editing", "Empty project"];
     const archived = { ...task, due_time: "15:30", archived: true, project: projects[1]! };
-    const saved = await put({ revision: "old", tasks: [archived], projects });
+    const saved = await put({ revision: "old", tasks: [archived], projects, archived_projects: ["Empty project"] });
     expect(saved.status).toBe(200);
     expect(saved.headers.get("cache-control")).toBe("no-store");
     const { revision } = await saved.json() as { revision: string };
     const next = await put({ revision, tasks: [archived] });
     expect(next.status).toBe(200);
-    expect(new TaskStore(state).read()).toMatchObject({ tasks: [archived], projects });
+    expect(new TaskStore(state).read()).toMatchObject({ tasks: [archived], projects, archived_projects: ["Empty project"] });
     const original = readFileSync(path, "utf8");
     expect((await put({ revision, tasks: [] })).status).toBe(409);
     expect((await put({ revision, tasks: [{ ...archived, due_time: "25:30" }] })).status).toBe(400);
