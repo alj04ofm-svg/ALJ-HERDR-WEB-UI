@@ -19,12 +19,18 @@ const weatherModes = ["auto", "clear", "fog", "rain"] as const;
 type MarinaWeather = typeof weatherModes[number];
 type LiveWeather = "clear" | "cloudy" | "rain" | "fog" | "storm";
 const bannerMessages = [
-  "ALJ",
+  "Do what matters first.",
+  "One priority at a time.",
+  "Make the next step clear.",
+  "Small steps still count.",
+  "Finish what moves the work.",
+  "Protect your focus.",
+  "Pick the next useful step.",
   "Reproduce it first.",
-  "ALJ",
-  "Give AI a runnable example.",
-  "ALJ",
+  "Make it work, then polish.",
+  "Leave it easier to use.",
   "Read the diff before shipping.",
+  "Take a breath. Start again.",
 ] as const;
 
 // The façade sprites provide the edge of each building. Each slot covers a small part of its window grid.
@@ -179,7 +185,7 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
       }
     }}>
       <span />
-      <b className="city-plane-banner" data-tip={bannerPass % 2 === 1}>{bannerMessages[bannerPass]}</b>
+      <b className="city-plane-banner">{bannerMessages[bannerPass]}</b>
     </div>
     <div className="city-weather-fog"><i /><i /></div>
     <div className="city-weather-rain">

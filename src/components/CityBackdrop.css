@@ -243,6 +243,7 @@
   opacity: .9;
   display: none;
 }
+[data-theme="light"] .city-plane { z-index: 1; opacity: .82; }
 .city-plane span, .city-flight span {
   display: block;
   width: 100%;
@@ -252,26 +253,20 @@
 .city-plane span { transform: rotate(-8deg); }
 .is-animated .city-plane {
   display: block;
-  animation: city-banner-pass 40s steps(500) -12s infinite;
+  animation: city-banner-pass 40s steps(500) -20s infinite;
 }
 .city-plane-banner {
   position: absolute;
   right: calc(100% + 4px);
   top: 45%;
-  min-width: clamp(21px, 3.9cqw, 55px);
-  padding: 1px 4px;
-  color: var(--primary-text);
-  background: color-mix(in srgb, var(--pdf-page) 86%, var(--accent));
-  font: var(--fw-bold) clamp(7px, 1.2cqw, 14px)/1.25 var(--font-ui);
-  letter-spacing: .06em;
+  padding: 2px var(--space-2);
+  color: light-dark(var(--text-strong), var(--bg));
+  background: color-mix(in srgb, var(--pdf-page) 92%, var(--accent));
+  font: var(--fw-bold) clamp(12px, 1.1cqw, 16px)/1.25 var(--font-ui);
   text-align: center;
   white-space: nowrap;
   transform-origin: right center;
   animation: city-banner-tow 1.7s steps(17) infinite alternate;
-}
-.city-plane-banner[data-tip="true"] {
-  font-size: clamp(8px, .85cqw, 12px);
-  letter-spacing: 0;
 }
 .city-plane-banner::after {
   content: "";
