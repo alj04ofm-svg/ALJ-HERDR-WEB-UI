@@ -97,6 +97,7 @@ export interface PaneTerminalProps {
   cityToolsHost?: HTMLElement | null;
   onShowUsage?: () => void;
   onOpenTerminal?: () => void;
+  onOpenVoiceSettings?: () => void;
   liveWeather?: ComponentProps<typeof CityBackdrop>["liveWeather"];
   /** App selected this pane itself (the selected one closed): switching to it must not take the keyboard */
   autoSelected?: boolean;
@@ -153,6 +154,7 @@ export function PaneTerminal({
   cityToolsHost = null,
   onShowUsage,
   onOpenTerminal,
+  onOpenVoiceSettings,
   liveWeather,
   findRequest = 0,
   active = true,
@@ -2516,6 +2518,7 @@ export function PaneTerminal({
           paneId={paneId}
           onShowUsage={onShowUsage}
           onOpenTerminal={onOpenTerminal}
+          onOpenVoiceSettings={onOpenVoiceSettings}
           autoFocus={active && !autoSelected && !coarse}
           active={active}
           agent={agent}
@@ -2542,7 +2545,7 @@ export function PaneTerminal({
           onUploadImage={uploadImage}
         />
       )}
-      {presented && paneId !== null && !secretActive && !observing && !ended && inputLine && <TerminalInput key={paneId} active={active} owner={paneStorageId(machineId, paneId)} onComposing={setComposing} connected={connected && !held} onSend={sendTerminalLine} onEnter={pressEnter} />}
+      {presented && paneId !== null && !secretActive && !observing && !ended && inputLine && <TerminalInput key={paneId} active={active} owner={paneStorageId(machineId, paneId)} onComposing={setComposing} connected={connected && !held} onSend={sendTerminalLine} onEnter={pressEnter} onOpenVoiceSettings={onOpenVoiceSettings} />}
       {presented && paneId !== null && !secretActive && !observing && !chatView && <KeyBar disabled={composing || !connected || !inputReady || held || ended} onKey={pressKey}
         holdScope={`${paneStorageId(machineId, paneId)}:${view}`}
         modifiers={modifiers} onToggleModifier={toggleModifier} items={settings.keyBarItems}

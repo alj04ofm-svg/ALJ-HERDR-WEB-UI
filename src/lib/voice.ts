@@ -322,7 +322,7 @@ interface SpeechRecognitionLike {
 }
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
-function speechRecognitionCtor(): SpeechRecognitionCtor | null {
+export function speechRecognitionCtor(): SpeechRecognitionCtor | null {
   if (typeof window === "undefined") return null;
   const speech = window as unknown as { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor };
   return speech.SpeechRecognition ?? speech.webkitSpeechRecognition ?? null;

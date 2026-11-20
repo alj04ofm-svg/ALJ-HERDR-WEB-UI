@@ -7,7 +7,7 @@ import type { AppActions } from "../lib/actions.ts";
 import { useInstallPrompt } from "../lib/install.ts";
 import { SHORTCUTS, formatKeys, isMacPlatform, shortcutDisplayKeys, shortcutKeys, shortcutConflict } from "../lib/shortcuts.ts";
 import { isReservedShortcutKey } from "../lib/shortcutBindings.ts";
-import { CHAT_FONT_MAX, CHAT_FONT_MIN, CHAT_WIDTHS, chatFontSize, DEFAULT_SETTINGS, QUICK_REPLIES_MAX, QUICK_REPLY_MAX_CHARS, TERMINAL_FONT_MAX, TERMINAL_FONT_MIN, TERMINAL_WHEEL_SPEED_MAX, TERMINAL_WHEEL_SPEED_MIN, TERMINAL_CURSOR_STYLES, DICTATION_LANGUAGES, VOICE_BUTTONS, useSettings, forgetPaneViews, type DictationLanguage, type TerminalCursorStyle, type VoiceButton } from "../lib/settings.ts";
+import { CHAT_FONT_MAX, CHAT_FONT_MIN, CHAT_WIDTHS, chatFontSize, DEFAULT_SETTINGS, QUICK_REPLIES_MAX, QUICK_REPLY_MAX_CHARS, TERMINAL_FONT_MAX, TERMINAL_FONT_MIN, TERMINAL_WHEEL_SPEED_MAX, TERMINAL_WHEEL_SPEED_MIN, TERMINAL_CURSOR_STYLES, DICTATION_LANGUAGES, VOICE_BUTTONS, useSettings, forgetPaneViews, type DictationLanguage, type TerminalCursorStyle } from "../lib/settings.ts";
 import { LANGUAGE_NAMES, LANGUAGE_SETTINGS, useLocale, useT } from "../lib/i18n.ts";
 import { useFocusTrap } from "../lib/useFocusTrap.ts";
 import { KeyBarSettings } from "./KeyBarSettings.tsx";
@@ -22,7 +22,7 @@ import type { AgentIntegration, HealthAuth, PluginActions, ProviderUsage, Remote
 import { useMachineApi, useMachineId } from "../lib/machineContext.tsx";
 import { loadIntegrations, outcomeFor, type IntegrationsResult } from "../lib/integrations.ts";
 import type { VoiceStatus } from "../../shared/voice.ts";
-import { dictationLocale, VOICE_CONFIG_EVENT } from "../lib/voice.ts";
+import { dictationLocale, speechRecognitionCtor, VOICE_CONFIG_EVENT } from "../lib/voice.ts";
 import { moveInOrder, orderProviders, PROVIDER_MARK, PROVIDER_NAME, usageName, useUsage } from "../lib/usage.ts";
 import { AgentMark } from "./AgentMark.tsx";
 import { DevicesPanel } from "./DevicesPanel.tsx";
@@ -368,15 +368,21 @@ function VoicePage() {
   const [voiceKey, setVoiceKey] = useState("");
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
-  const [micDenied, setMicDenied] = useState(false);
+  const [micCheck, setMicCheck] = useState<"checking" | "confirmed" | "permission" | "missing" | "failed" | null>(null);
+  const secure = window.isSecureContext;
+  const browserDictation = secure && Boolean(speechRecognitionCtor());
+  const canTest = secure && typeof navigator.mediaDevices?.getUserMedia === "function";
   useEffect(() => { fetchVoiceStatus().then(setVoice, () => setVoice(null)); }, []);
-  /** On asks now, so the first dictation does not stop at the browser's permission prompt */
-  const chooseVoiceInput = async (voiceInput: VoiceButton) => {
-    update({ voiceInput });
-    setMicDenied(false);
-    if (voiceInput !== "on" || !window.isSecureContext || !navigator.mediaDevices?.getUserMedia) return;
-    try { (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((track) => track.stop()); }
-    catch { setMicDenied(true); }
+  const testMicrophone = async () => {
+    setMicCheck("checking");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      setMicCheck("confirmed");
+    } catch (error) {
+      const name = error instanceof DOMException ? error.name : null;
+      setMicCheck(name === "NotAllowedError" || name === "SecurityError" ? "permission" : name === "NotFoundError" ? "missing" : "failed");
+    }
   };
   const changeVoiceKey = async (api_key: string | null) => {
     setVoiceBusy(true);
@@ -390,13 +396,24 @@ function VoicePage() {
     } catch (e) { setVoiceError(e instanceof Error ? e.message : String(e)); }
     finally { setVoiceBusy(false); }
   };
-  const micProblem = settings.voiceInput === "off" ? null : !window.isSecureContext ? t("Voice input needs HTTPS") : micDenied ? t("Microphone permission was denied") : null;
+  const micMessage = !secure ? t("Voice input needs HTTPS")
+    : !canTest ? t("This browser cannot record audio")
+    : micCheck === "checking" ? t("Checking microphone…")
+    : micCheck === "confirmed" ? t("Microphone access confirmed")
+    : micCheck === "permission" ? t("Microphone permission was denied")
+    : micCheck === "missing" ? t("No microphone found")
+    : micCheck === "failed" ? t("Could not access the microphone")
+    : null;
   return (
     <>
       <SettingsGroup>
-        <SettingsRow label={t("Microphone button")} description={<>{t("Auto: in the chat on a desktop, where dictation can work. On: on a phone and in the terminal input line too.")}{micProblem !== null && <span className="voice-error">{micProblem}</span>}</>} wide>
-          <Segmented label={t("Microphone button")} value={settings.voiceInput} onChange={(voiceInput) => void chooseVoiceInput(voiceInput)} options={VOICE_BUTTONS.map((voiceInput) => ({ value: voiceInput, label: t(voiceInput === "auto" ? "Auto" : voiceInput === "on" ? "On" : "Off") }))} />
+        <SettingsRow label={t("Microphone button")} description={t("Auto: in the chat on a desktop, where dictation can work. On: on a phone and in the terminal input line too.")} wide>
+          <Segmented label={t("Microphone button")} value={settings.voiceInput} onChange={(voiceInput) => update({ voiceInput })} options={VOICE_BUTTONS.map((voiceInput) => ({ value: voiceInput, label: t(voiceInput === "auto" ? "Auto" : voiceInput === "on" ? "On" : "Off") }))} />
         </SettingsRow>
+        <div className="settings-item">
+          <button className="btn" type="button" disabled={!canTest || micCheck === "checking"} onClick={() => void testMicrophone()}><Mic aria-hidden="true" />{t("Test microphone")}</button>
+          <p className="settings-hint" role="status">{micMessage}</p>
+        </div>
         {settings.voiceInput !== "off" && (
           <SettingsRow label={t("Dictation language")} description={t("Auto listens for the app's language, or for the browser's when the app is not translated into it")} htmlFor="settings-voice-language">
             <DictationLanguageSelect />
@@ -419,7 +436,7 @@ function VoicePage() {
         <div className="settings-item">
           {voice && (
             <p className="settings-label voice-status">
-              {voice.configured ? t(voice.source === "env" ? "OpenAI key set by HERDR_WEB_OPENAI_API_KEY" : "OpenAI key saved on this PC") : t("No OpenAI key: the browser's speech recognition is used")}
+              {voice.configured ? t(voice.source === "env" ? "OpenAI key set by HERDR_WEB_OPENAI_API_KEY" : "OpenAI key saved on this PC") : browserDictation ? t("No OpenAI key: the browser's speech recognition is used") : t("Browser dictation is unavailable. Add an OpenAI API key to transcribe.")}
             </p>
           )}
           {voice && voice.source !== "env" && (
@@ -441,11 +458,11 @@ function VoicePage() {
             </form>
           )}
           {voiceError && <p className="settings-hint voice-error" role="alert">{voiceError}</p>}
-          <p className="settings-hint voice-privacy">
-            {voice && !voice.configured
+          {voice && (voice.configured || browserDictation) && <p className="settings-hint voice-privacy">
+            {!voice.configured
               ? t("Without a key the browser recognizes the speech: Chrome and Edge send the audio to Google or Microsoft. Nothing is recorded until you press the mic.")
               : t("Audio is sent to OpenAI with your key. Nothing is recorded until you press the mic.")}
-          </p>
+          </p>}
         </div>
       </SettingsGroup>
     </>

@@ -113,13 +113,13 @@
 .task-filter-dot { width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--accent); }
 .task-filters, .task-project-form {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2);
   padding: var(--space-3) var(--task-edge) 0;
 }
 .task-project-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
 .task-filters .select, .task-project-form :is(input, select), .task-search input { min-width: 0; width: 100%; }
-.task-search { min-width: 0; position: relative; }
+.task-search { flex: 1; min-width: 0; max-width: 21rem; margin-inline-start: auto; position: relative; }
 .task-search svg { position: absolute; inset-inline-start: var(--space-3); inset-block-start: 50%; transform: translateY(-50%); color: var(--text-dim); pointer-events: none; }
 .task-search input { padding-inline-start: calc(var(--space-3) + 20px); }
 .task-lens {
@@ -252,7 +252,10 @@
   .task-views button { padding-inline: var(--space-2); }
   .task-views svg { display: none; }
   .task-filters, .task-project-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .task-search, .task-project-form .btn { grid-column: 1 / -1; }
+  .task-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .task-views { grid-column: 1 / -1; }
+  .task-search { width: 100%; max-width: none; margin: 0; }
+  .task-project-form .btn { grid-column: 1 / -1; }
   .task-lens { padding-block: var(--space-3) var(--space-2); }
   .task-phone-lane { display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--task-edge) var(--space-2); font-size: var(--fs-xs); color: var(--text-dim); }
   .task-phone-lane .select { flex: 1; min-width: 0; }

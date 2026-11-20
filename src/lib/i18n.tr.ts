@@ -1272,4 +1272,9 @@ export const TR: Record<string, string> = {
   "Quick task capture": "Hızlı görev ekleme",
   "Input tokens": "Giriş belirteçleri",
   "Results": "Sonuçlar",
+  "Test microphone": "Mikrofonu test et",
+  "Checking microphone…": "Mikrofon kontrol ediliyor…",
+  "Microphone access confirmed": "Mikrofon erişimi doğrulandı",
+  "Could not access the microphone": "Mikrofona erişilemedi",
+  "Browser dictation is unavailable. Add an OpenAI API key to transcribe.": "Tarayıcıda dikte kullanılamıyor. Yazıya dökmek için bir OpenAI API anahtarı ekleyin.",
 };

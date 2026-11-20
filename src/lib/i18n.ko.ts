@@ -1317,4 +1317,9 @@ export const KO: Record<string, string> = {
   "Quick task capture": "작업 빠른 추가",
   "Input tokens": "입력 토큰",
   "Results": "순위",
+  "Test microphone": "마이크 테스트",
+  "Checking microphone…": "마이크 확인 중…",
+  "Microphone access confirmed": "마이크 접근 확인 완료",
+  "Could not access the microphone": "마이크에 접근할 수 없습니다",
+  "Browser dictation is unavailable. Add an OpenAI API key to transcribe.": "브라우저 받아쓰기를 사용할 수 없습니다. 음성을 텍스트로 변환하려면 OpenAI API 키를 추가하세요.",
 };

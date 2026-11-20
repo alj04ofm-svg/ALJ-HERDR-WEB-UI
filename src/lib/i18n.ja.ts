@@ -1319,4 +1319,9 @@ export const JA: Record<string, string> = {
   "Quick task capture": "タスクをすばやく追加",
   "Input tokens": "入力トークン",
   "Results": "順位",
+  "Test microphone": "マイクをテスト",
+  "Checking microphone…": "マイクを確認しています…",
+  "Microphone access confirmed": "マイクへのアクセスを確認しました",
+  "Could not access the microphone": "マイクにアクセスできませんでした",
+  "Browser dictation is unavailable. Add an OpenAI API key to transcribe.": "ブラウザーの音声入力を利用できません。文字起こしには OpenAI API キーを追加してください。",
 };

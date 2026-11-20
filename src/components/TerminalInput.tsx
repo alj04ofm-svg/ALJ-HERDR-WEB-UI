@@ -12,6 +12,7 @@ export interface TerminalInputProps {
   owner: string;
   active?: boolean;
   onComposing?: (active: boolean) => void;
+  onOpenVoiceSettings?: () => void;
   connected: boolean;
   /** true: sent, clear the line; a string: keep the text and say why; false: not sent (offline) */
   onSend: (text: string) => false | Promise<true | string>;
@@ -28,7 +29,7 @@ const MAX_ROWS = 4;
  * cannot take back keys it already sent: every revision arrived as more text. Here the line
  * is written with the keyboard's own editing and goes to the pane whole, then Enter.
  */
-export function TerminalInput({ owner, active = true, connected, onSend, onEnter, onComposing }: TerminalInputProps) {
+export function TerminalInput({ owner, active = true, connected, onSend, onEnter, onComposing, onOpenVoiceSettings }: TerminalInputProps) {
   const t = useT();
   const text = useSyncExternalStore(subscribeTerminalDraft, () => readTerminalDraft(owner));
   const setText = useCallback((value: string | ((previous: string) => string)) => {
@@ -131,7 +132,7 @@ export function TerminalInput({ owner, active = true, connected, onSend, onEnter
         onChange={(event) => { setText(event.target.value); setNote(null); }}
         onKeyDown={onKeyDown}
       />
-      {dictation.shown && <MicButton dictation={dictation} className="terminal-input-mic" />}
+      {dictation.shown && <MicButton dictation={dictation} className="terminal-input-mic" onOpenSettings={onOpenVoiceSettings} />}
       <button
         type="button"
         className="terminal-input-send"

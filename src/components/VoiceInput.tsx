@@ -236,12 +236,13 @@ export function useDictation(options: DictationOptions): Dictation {
 }
 
 /** The mic: press to talk, held (release finishes) or tapped (tap again to finish). */
-export function MicButton({ dictation, className = "" }: { dictation: Dictation; className?: string }) {
+export function MicButton({ dictation, className = "", onOpenSettings }: { dictation: Dictation; className?: string; onOpenSettings?: () => void }) {
   const t = useT();
   const { voice, connected, press } = dictation;
   const recording = voice.state === "starting" || voice.state === "recording";
   const reason = voice.unavailableReason ? errorNote(t, voice.unavailableReason) : null;
-  const label = recording ? t("Insert dictation") : t("Dictate (hold)");
+  const settingsAction = voice.unavailableReason === "not_configured" || voice.error === "provider_auth" ? onOpenSettings : undefined;
+  const label = settingsAction ? t("Voice input") : recording ? t("Insert dictation") : t("Dictate (hold)");
   // a pointer already acted on pointerdown, so the click that follows its release is skipped;
   // a touch tap's click has detail 0 like a keyboard's, so detail cannot tell them apart
   const pointerUpAt = useRef(-Infinity);
@@ -252,19 +253,20 @@ export function MicButton({ dictation, className = "" }: { dictation: Dictation;
         type="button"
         className="voice-mic"
         aria-label={label}
-        aria-pressed={recording}
+        aria-haspopup={settingsAction ? "dialog" : undefined}
+        aria-pressed={settingsAction ? undefined : recording}
         title={reason ?? label}
-        disabled={!connected}
+        disabled={!connected && !settingsAction}
         onPointerDown={(event) => {
-          if (event.button !== 0) return;
+          if (event.button !== 0 || settingsAction) return;
           // focus and the soft keyboard stay where they are
           event.preventDefault();
           event.currentTarget.setPointerCapture(event.pointerId);
           press();
         }}
-        onPointerUp={() => { pointerUpAt.current = performance.now(); voice.release(); }}
+        onPointerUp={() => { if (!settingsAction) { pointerUpAt.current = performance.now(); voice.release(); } }}
         onPointerCancel={() => voice.release()}
-        onClick={() => { if (performance.now() - pointerUpAt.current > 500) press(); }}
+        onClick={() => { if (settingsAction) settingsAction(); else if (performance.now() - pointerUpAt.current > 500) press(); }}
       >
         {recording ? <Square aria-hidden="true" /> : <Mic aria-hidden="true" />}
       </button>

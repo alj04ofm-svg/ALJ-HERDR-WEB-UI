@@ -1321,4 +1321,9 @@ export const ZH: Record<string, string> = {
   "Quick task capture": "快速记录任务",
   "Input tokens": "输入令牌",
   "Results": "排名",
+  "Test microphone": "测试麦克风",
+  "Checking microphone…": "正在检查麦克风…",
+  "Microphone access confirmed": "已确认可以访问麦克风",
+  "Could not access the microphone": "无法访问麦克风",
+  "Browser dictation is unavailable. Add an OpenAI API key to transcribe.": "浏览器听写不可用。请添加 OpenAI API 密钥以转写音频。",
 };

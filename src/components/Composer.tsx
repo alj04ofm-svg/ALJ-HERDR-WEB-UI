@@ -87,6 +87,7 @@ export interface ComposerProps {
   onUploadImage: (file: File, options?: import("../lib/attachmentUpload.ts").UploadOptions) => Promise<string>;
   onShowUsage?: () => void;
   onOpenTerminal?: () => void;
+  onOpenVoiceSettings?: () => void;
 }
 
 const MAX_IMAGES_PER_ACTION = 100;
@@ -250,6 +251,7 @@ export function Composer({
   onUploadImage,
   onShowUsage,
   onOpenTerminal,
+  onOpenVoiceSettings,
 }: ComposerProps) {
   const t = useT();
   const taskBoard = useContext(TaskBoardContext);
@@ -1104,7 +1106,7 @@ export function Composer({
 
             </div>
           </details>
-          {dictation.shown && <MicButton dictation={dictation} />}
+          {dictation.shown && <MicButton dictation={dictation} onOpenSettings={onOpenVoiceSettings} />}
           <BackgroundTasks paneId={paneId} count={backgroundTasks} omo={agent === "omo"} claude={agent === "claude"} plan={plan} />
         </div>
         {/* between the two control groups of the card's last row. The agent's name, its separator and the

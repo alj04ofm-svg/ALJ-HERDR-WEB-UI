@@ -365,6 +365,13 @@ export function App() {
   // set by a button that points at one section of Settings, for that opening alone
   const [settingsSection, setSettingsSection] = useState<"updates" | null>(null);
   const closeSettings = useCallback(() => { setSettingsOpen(false); setSettingsSection(null); setSettingsLinkPage(null); setSettingsLinkSection(null); setSettingsPage(null); }, []);
+  const openVoiceSettings = useCallback(() => {
+    setDrawerOpen(false);
+    setSettingsSection(null);
+    setSettingsLinkPage("voice");
+    setSettingsLinkSection(null);
+    setSettingsOpen(true);
+  }, []);
   const settingsLinkPageRef = useRef(settingsLinkPage); settingsLinkPageRef.current = settingsLinkPage;
   const onSettingsPage = useCallback((page: string | null) => {
     setSettingsPage(page);
@@ -1357,6 +1364,7 @@ export function App() {
                 cityToolsHost={active && showCity ? cityToolsHost : null}
                 onShowUsage={active ? () => setUsageOpen(true) : undefined}
                 onOpenTerminal={active ? () => setView("terminal") : undefined}
+                onOpenVoiceSettings={active ? openVoiceSettings : undefined}
                 liveWeather={active && showCity ? liveWeather : null}
                 findRequest={findRequest.paneId === item?.pane_id ? findRequest.serial : 0}
                 autoSelected={autoSelected}

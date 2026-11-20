@@ -102,9 +102,12 @@ function NotesEditor({ editor, projects, itemText, setItemText, patch, onBack, o
     patch({ checklist: [...draft.checklist, createItem()] });
     setItemText("");
   };
+  const save = (archived = draft.archived) => {
+    onSave({ ...draft, archived, checklist: canAdd ? [...draft.checklist, createItem()] : draft.checklist });
+  };
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    onSave(canAdd ? { ...draft, checklist: [...draft.checklist, createItem()] } : draft);
+    save();
   };
   useEffect(() => { title.current?.focus(); }, [draft.id]);
   return <form className="task-editor" aria-label={isNew ? "New task" : "Task details"} onSubmit={submit}>
@@ -144,7 +147,7 @@ function NotesEditor({ editor, projects, itemText, setItemText, patch, onBack, o
     </fieldset>
     {projectArchived && <p className="task-status">This task is in an archived project. Restore the project to return its tasks to active views.</p>}
     <footer className="task-editor-footer">
-      {!isNew && <button className="btn btn-ghost" type="button" disabled={busy || conflict || externallyChanged || !draft.title.trim()} onClick={() => onSave({ ...draft, archived: !draft.archived })}>
+      {!isNew && <button className="btn btn-ghost" type="button" disabled={busy || conflict || externallyChanged || !draft.title.trim()} onClick={() => save(!draft.archived)}>
         {draft.archived ? <RotateCcw aria-hidden="true" /> : <Archive aria-hidden="true" />}
         {draft.archived ? "Restore" : "Archive task"}
       </button>}
@@ -502,8 +505,9 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
             <div className="task-views" role="group" aria-label="Task views">
               {LAYOUTS.map(({ id, label, Icon }) => <button type="button" key={id} aria-pressed={layout === id} disabled={addingInline} onClick={() => chooseLayout(id)}><Icon aria-hidden="true" /><span>{label}</span>{layout === id && pending && <WorkingRing />}</button>)}
             </div>
+            {layout !== "agents" && <label className="task-search"><Search aria-hidden="true" /><input className="input" type="search" aria-label="Search tasks" disabled={addingInline} placeholder="Search tasks" value={query} onChange={event => setQuery(event.target.value)} /></label>}
             {layout !== "agents" && <button ref={filterButton} type="button" className="btn task-filter-toggle" aria-expanded={showFilters} disabled={addingInline} onClick={() => setShowFilters(value => !value)}>
-              <SlidersHorizontal aria-hidden="true" /> Filters {hasFilters && <span className="task-filter-dot" aria-label="active" />}
+              <SlidersHorizontal aria-hidden="true" /> Filters {(scope !== "all" || view !== "all") && <span className="task-filter-dot" aria-label="active" />}
             </button>}
           </div>
           {layout === "agents" ? <div className="task-list task-live">
@@ -523,7 +527,6 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
             }) : <div className="task-empty"><h3>No agents need attention</h3><p>Working agents and requests for input appear here.</p></div>}
           </div> : <>
           {showFilters && <div className="task-filters">
-            <label className="task-search"><Search aria-hidden="true" /><input className="input" type="search" aria-label="Search tasks" disabled={addingInline} placeholder="Search tasks" value={query} onChange={event => setQuery(event.target.value)} /></label>
             <select className="select" aria-label="Task filter" disabled={addingInline} value={view} onChange={event => { const next = event.target.value as TaskFilter; if (next !== "archive" && archivedProject(snapshot, project)) setProject(""); setView(next); }}><option value="all">All tasks</option>{VIEW_OPTIONS.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}</select>
             <select className="select" aria-label="Task area" disabled={addingInline} value={scope} onChange={event => setScope(event.target.value as typeof scope)}><option value="all">All areas</option><option value="business">Business</option><option value="personal">Personal</option></select>
           </div>}
