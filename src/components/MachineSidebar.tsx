@@ -16,6 +16,7 @@ import { customTabLabel, tabLabel } from "../lib/tabName.ts";
 import { paneStatus, rollupStatus } from "../lib/status.ts";
 import { AgentSidebar } from "./AgentSidebar.tsx";
 import { SidebarActivityProvider, useSidebarActivityState } from "../lib/sidebarActivity.tsx";
+import { TaskSidebarButton } from "./TaskSidebarButton.tsx";
 import { UsageMeters } from "./UsageMeters.tsx";
 import "./Machines.css";
 import { useT } from "../lib/i18n.ts";
@@ -149,9 +150,10 @@ export function MachineSidebar(props: Props) {
     </>}
     <footer className="sidebar-footer">
       {!props.compact && !installed && !canInstall && installHelpOpen && <p className="sidebar-install-help" role="status">{help}</p>}
+      <TaskSidebarButton compact={props.compact} />
       <div className="sidebar-footer-row">
         {props.compact && <button type="button" className="icon-button sidebar-utility" aria-label={t("Command palette")} title={t("Command palette (⌘⇧K)")} onClick={props.actions.openPalette}><Search aria-hidden="true" /></button>}
-        <UsageMeters open={props.usageOpen} onOpenChange={props.onUsageOpenChange} />
+        <UsageMeters compact={props.compact} open={props.usageOpen} onOpenChange={props.onUsageOpenChange} />
         {!props.compact && !installed && <button type="button" className="icon-button sidebar-utility" aria-label={t("Install app")} title={t("Install app")} aria-expanded={canInstall ? undefined : installHelpOpen} onClick={() => { if (canInstall) void install(); else setInstallHelpOpen(!installHelpOpen); }}><Download aria-hidden="true" /></button>}
         <button type="button" className="icon-button sidebar-utility" aria-label={t("Settings")} title={t("Settings (⌘⇧,)")} onClick={props.actions.openSettings}><Settings aria-hidden="true" /></button>
       </div>

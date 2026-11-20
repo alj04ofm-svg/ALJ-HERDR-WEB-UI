@@ -87,6 +87,7 @@ export function watchDrawerSwipe(isOpen: () => boolean, setOpen: (open: boolean)
     // it began on left the page and took its touches with it). It lets go where it was first
     const open = follow !== null ? onEnd() : isOpen();
     start = event.touches.length === 1 && touch && narrow.matches && document.querySelector(MODAL) === null && (open || !scrolledAside(event.target))
+      && !(event.target instanceof Element && event.target.closest(".sidebar-resizer"))
       && !editable(event.target) && !selecting()
       ? { x: touch.clientX, y: touch.clientY, open, at: event.timeStamp } : null;
     claimed = false;

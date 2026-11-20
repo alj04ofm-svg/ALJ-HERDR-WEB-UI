@@ -1,11 +1,10 @@
 import { Suspense, lazy, useState, useCallback } from "react";
-import { Activity, ClipboardList, Grid2X2, LayoutDashboard, MessageCircle, Pin, Plus, Wrench, X } from "lucide-react";
+import { Activity, Grid2X2, LayoutDashboard, MessageCircle, Pin, Plus, Wrench, X } from "lucide-react";
 import type { Machine } from "../../shared/machines.ts";
 import { MachineContext } from "../lib/machineContext.tsx";
 const WorkspaceOverview = lazy(() => import("./WorkspaceOverview.tsx").then(module => ({ default: module.WorkspaceOverview })));
 const WorkspaceTools = lazy(() => import("./WorkspaceTools.tsx").then(module => ({ default: module.WorkspaceTools })));
 const Communications = lazy(() => import("./Communications.tsx").then(module => ({ default: module.Communications })));
-const TaskBoard = lazy(() => import("./TaskBoard.tsx").then(module => ({ default: module.TaskBoard })));
 const ServerHealth = lazy(() => import("./ServerHealth.tsx").then(module => ({ default: module.ServerHealth })));
 import { WorkspaceSync } from "./WorkspaceSync.tsx";
 import { SidebarTabActions } from "./SidebarTabActions.tsx";
@@ -23,7 +22,6 @@ export function FMNavigation({ machines, selectedMachineId, selectedPaneId, acti
   const closeTools = useCallback(() => setToolsAnchor(null), []);
   const t = useT();
   const organizer = useFocusTrap<HTMLElement>(surface === "tabs");
-  const taskDialog = useFocusTrap<HTMLElement>(surface === "tasks");
   const [query, setQuery] = useState("");
   const select = (machine: string, pane: string) => { onSelect(machine, pane); setSurface(""); };
   return <><nav className="fm-navigation" aria-label={t("Workspace tools")}>
@@ -32,7 +30,6 @@ export function FMNavigation({ machines, selectedMachineId, selectedPaneId, acti
   </nav>
     {toolsAnchor && <RowMenu anchor={toolsAnchor} align="start" title={t("Tools")} onClose={closeTools} items={[
       { id: "overview", label: t("Workspace overview"), icon: LayoutDashboard, run: () => setSurface("overview") },
-      { id: "tasks", label: t("Tasks"), icon: ClipboardList, run: () => setSurface("tasks") },
       { id: "communications", label: t("Comms"), icon: MessageCircle, run: () => setSurface("communications") },
       { id: "tabs", label: t("Organize tabs"), icon: Pin, run: () => setSurface("tabs") },
       { id: "tools", label: t("Workspace tools"), icon: Grid2X2, run: () => setSurface("tools") },
@@ -41,7 +38,6 @@ export function FMNavigation({ machines, selectedMachineId, selectedPaneId, acti
 
     <Suspense fallback={<p role="status">Loading workspace tools…</p>}>
     {surface === "overview" && <WorkspaceOverview machines={machines} onSelect={select} onClose={() => setSurface("")} />}
-    {surface === "tasks" && createPortal(<div className="modal-scrim"><section className="modal fm-task-dialog" role="dialog" aria-modal="true" aria-labelledby="tasks-title" ref={taskDialog} tabIndex={-1}><TaskBoard onClose={() => setSurface("")} /></section></div>, document.body)}
     {surface === "communications" && <Communications onClose={() => setSurface("")} />}
     {surface === "health" && <ServerHealth onClose={() => setSurface("")} />}
     {surface === "tools" && <WorkspaceTools paneId={selectedPaneId} onClose={() => setSurface("")} onOpened={pane => { actions.refresh(); select(selectedMachineId, pane); }} onAllActions={() => { setSurface(""); actions.openPalette(); }} />}

@@ -1,0 +1,91 @@
+.sky-widget {
+  --sky-offset: calc(var(--space-2) + var(--header-over, 0px));
+  --sky-icon: var(--space-5);
+  --sky-time: var(--fs-lg);
+  position: absolute;
+  z-index: 3;
+  inset-block-start: calc(var(--sky-offset) + var(--touch-target) + var(--space-2));
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-inline-size: min(13rem, 29%);
+  min-block-size: 44px;
+  padding: var(--space-1) var(--space-3);
+  border: var(--hairline) solid color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--card-glass);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-card);
+  color: var(--text-strong);
+  cursor: pointer;
+  text-align: start;
+  font: inherit;
+}
+
+.sky-widget[data-position="left"] { inset-inline-start: var(--space-3); }
+.sky-widget[data-position="right"] { inset-inline-end: var(--space-3); }
+.terminal-host:has(.city-marina-controls) > .sky-widget[data-position="right"] {
+  inset-block-start: calc(var(--sky-offset) + var(--touch-target) * 3);
+}
+.sky-widget[data-size="small"] { --sky-icon: var(--space-4); --sky-time: var(--fs-sm); }
+.sky-widget[data-size="large"] { --sky-icon: var(--space-6); --sky-time: var(--fs-display); }
+.sky-widget[data-font="mono"] { font-family: var(--font-mono); }
+.sky-widget[data-style="sky"] {
+  background: color-mix(in srgb, var(--bg-panel) 59%, transparent);
+  border-color: transparent;
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.sky-widget:hover, .sky-widget:focus-visible { background: var(--bg-hover); }
+.sky-widget > svg { flex: none; inline-size: var(--sky-icon); block-size: var(--sky-icon); color: var(--accent); }
+.sky-widget-copy { display: grid; gap: 2px; min-width: 0; }
+.sky-widget-values {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  font-size: var(--sky-time);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--lh-tight);
+}
+.sky-widget-temp { font-size: var(--fs-xs); }
+.sky-widget-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-2xs); color: var(--text); }
+[data-keyboard] .sky-widget { visibility: hidden; }
+
+.weather-dialog { width: min(100%, 33rem); }
+.weather-dialog-body { display: grid; gap: var(--space-5); }
+.weather-dialog-section { display: grid; gap: var(--space-2); min-inline-size: 0; }
+.weather-dialog-section h3, .weather-fields legend { margin: 0; color: var(--text-strong); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.weather-dialog-section p { margin: 0; color: var(--text-dim); font-size: var(--fs-xs); line-height: var(--lh-base); }
+.weather-dialog-section p.weather-error { color: var(--status-blocked); }
+.weather-search, .weather-location-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.weather-search .input { flex: 1; inline-size: auto; min-inline-size: 6rem; }
+.weather-search .btn, .weather-location-actions .btn { display: inline-flex; align-items: center; gap: var(--space-2); }
+.weather-search svg, .weather-location-actions svg { inline-size: var(--icon-size); block-size: var(--icon-size); }
+.weather-results { display: grid; gap: var(--space-1); padding: 0; margin: 0; list-style: none; }
+.weather-results .btn { inline-size: 100%; justify-content: flex-start; text-align: start; }
+.weather-attribution a { color: var(--text); text-underline-offset: 2px; }
+.weather-appearance, .weather-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2) var(--space-3); }
+.weather-dialog-section label { min-inline-size: 0; color: var(--text); font-size: var(--fs-sm); }
+.weather-appearance label { display: grid; gap: var(--space-1); }
+.weather-fields { padding: var(--space-2) 0 0; margin: 0; border: 0; }
+.weather-fields label { display: flex; align-items: center; gap: var(--space-2); min-block-size: var(--control-h); }
+.weather-fields input { accent-color: var(--accent); }
+.weather-scene-toggle, .weather-unit { grid-column: 1 / -1; }
+.weather-unit .select { inline-size: auto; }
+
+@media (max-width: 820px) {
+  .sky-widget, .terminal-host:has(.city-marina-controls) > .sky-widget[data-position="right"] { inset-block-start: var(--sky-offset); }
+  .sky-widget { max-inline-size: 66%; }
+  :root:not([data-keyboard]) .terminal-host:has(> .sky-widget) .terminal-stack.has-shared-city .chat-view {
+    padding-block-start: calc(var(--header-over, 0px) + 60px);
+  }
+}
+@media (pointer: coarse) {
+  .weather-dialog-section :is(.btn, .select, .input), .weather-fields label { min-block-size: var(--touch-target); }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .sky-widget { transition: background-color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out); }
+}

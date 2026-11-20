@@ -3,18 +3,58 @@ import { createPortal } from "react-dom";
 import { Binoculars, Clock3, CloudSun, Flag, Footprints, LampWallUp, Pause, Play, Rabbit, Sailboat, Ship, Waves } from "lucide-react";
 import { useT } from "../lib/i18n.ts";
 import { useMediaQuery } from "../lib/useMediaQuery.ts";
+import { usePageVisible } from "../lib/visibility.ts";
 import "./CityBackdrop.css";
 
 const waterfront = [
-  { x: 18, height: 53, width: 6.7, architecture: "brick" },
-  { x: 34, height: 76, width: 5.2, architecture: "glass" },
-  { x: 56, height: 85, width: 5.7, architecture: "deco" },
-  { x: 76, height: 48, width: 7.2, architecture: "stone" },
+  { x: 18, height: 53, width: 6.7, architecture: "brick", columns: 6, rows: 7 },
+  { x: 34, height: 76, width: 5.2, architecture: "glass", columns: 8, rows: 15 },
+  { x: 56, height: 85, width: 5.7, architecture: "deco", columns: 6, rows: 12 },
+  { x: 76, height: 48, width: 7.2, architecture: "stone", columns: 7, rows: 6 },
 ] as const;
 const rebuildOrder = [2, 1, 3, 0];
 const constructionFloors = [0, 1, 2, 3, 4, 5];
 const weatherModes = ["auto", "clear", "fog", "rain"] as const;
 type MarinaWeather = typeof weatherModes[number];
+type LiveWeather = "clear" | "cloudy" | "rain" | "fog" | "storm";
+const bannerMessages = [
+  "ALJ",
+  "Reproduce it first.",
+  "ALJ",
+  "Give AI a runnable example.",
+  "ALJ",
+  "Read the diff before shipping.",
+] as const;
+
+// The façade sprites provide the edge of each building. Each slot covers a small part of its window grid.
+const windowLights = waterfront.map(({ columns, rows }, lot) => Array.from({ length: 9 }, (_, index) => {
+  const column = (index * 3 + Math.floor(index / 2) + lot) % columns;
+  const row = (index * 4 + Math.floor(index / 2) + lot) % rows;
+  return {
+    "--city-room-x": `${(column + .5) / columns * 100}%`,
+    "--city-room-y": `${20 + (row + .5) / rows * 70}%`,
+    "--city-room-w": `${48 / columns}%`,
+    "--city-room-h": `${35 / rows}%`,
+    "--city-room-period": `${29 + (index * 11 + lot * 7) % 43}s`,
+    "--city-room-delay": `-${(index * 23 + lot * 11) % 37}s`,
+  } as CSSProperties;
+}));
+
+// Positions and sizes match the lit windows in the panorama's 1536×1024 source image.
+const skylineLights = ([
+  [52, 496, 5, 9], [137, 434, 7, 10], [228, 431, 5, 14], [297, 451, 4, 7],
+  [471, 517, 6, 11], [579, 472, 6, 10], [642, 529, 6, 11], [778, 354, 5, 9],
+  [753, 467, 7, 12], [784, 497, 5, 10], [909, 474, 5, 8], [1139, 590, 7, 16],
+  [1175, 448, 6, 10], [1198, 438, 6, 12], [1285, 506, 6, 11], [1345, 444, 5, 7],
+  [1433, 587, 5, 14], [1508, 448, 5, 9],
+] as const).map(([x, y, width, height], index) => ({
+  "--city-room-x": `${x / 1536 * 100}%`,
+  "--city-room-y": `${y / 1024 * 100}%`,
+  "--city-room-w": `${width / 1536 * 100}%`,
+  "--city-room-h": `${height / 1024 * 100}%`,
+  "--city-room-period": `${51 + index * 7 % 29}s`,
+  "--city-room-delay": `-${index * 13 % 41}s`,
+} as CSSProperties));
 const rainDrops = Array.from({ length: 22 }, (_, index) => ({
   left: `${(index * 37 + 7) % 101}%`,
   "--rain-duration": `${580 + index % 6 * 125}ms`,
@@ -44,13 +84,18 @@ const clampPoint = ({ x, y }: Point): Point => ({
 });
 
 const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats }: {
-  moving: boolean; weather: MarinaWeather; paused: boolean; manualBoats: boolean;
+  moving: boolean; weather: MarinaWeather | LiveWeather; paused: boolean; manualBoats: boolean;
 }) {
   const [cycle, setCycle] = useState(0);
+  const [bannerPass, setBannerPass] = useState(0);
   const lot = rebuildOrder[cycle % rebuildOrder.length];
 
   return <div className={`city-backdrop${moving ? " is-animated" : ""}${paused ? " is-paused" : ""}`} data-weather={weather} aria-hidden="true">
-    <div className="city-panorama" />
+    <div className="city-panorama">
+      <span className="city-skyline-lights">
+        {skylineLights.map((style, index) => <i key={index} style={style} />)}
+      </span>
+    </div>
     <div className="city-sky-haze" />
     <div className="city-gulls"><i /><i /><i /></div>
     <div className="city-site-clock" onAnimationIteration={event => {
@@ -60,7 +105,12 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
         const working = moving && index === lot;
         return <div className="city-site" key={index} data-target={working} data-architecture={architecture}
           style={{ "--city-lot": `${x}%`, "--city-height": `${height}%`, "--city-width": `${width}cqw` } as CSSProperties}>
-          <span className="city-building"><span className="city-facade" /></span>
+          <span className="city-building">
+            <span className="city-facade" />
+            <span className="city-room-lights">
+              {windowLights[index]?.map((style, room) => <i key={room} style={style} />)}
+            </span>
+          </span>
           <span className="city-reflection" />
           {working && <div className="city-sequence" key={cycle} data-arrival={cycle % 2 === 0 ? "west" : "east"}>
             <div className="city-flight"><span /></div>
@@ -75,7 +125,10 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
             <div className="city-works">
               <span className="city-foundation" />
               <span className="city-site-fencing" />
-              <div className="city-crane"><span className="city-crane-mast" /><span className="city-crane-jib" /></div>
+              <div className="city-excavator"><i /><b /><em /></div>
+              <div className="city-crane">
+                <span className="city-crane-mast" /><span className="city-crane-jib" /><span className="city-crane-counterweight" />
+              </div>
               <span className="city-work-lights" />
               <span className="city-site-truck" />
               {constructionFloors.map(floor => <div className="city-install" key={floor} style={{
@@ -85,9 +138,10 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
                 <span className="city-frame" />
                 <span className="city-module" />
                 <span className="city-hoist"><i /><b /></span>
+                <span className="city-floor-crew"><i /><i /></span>
               </div>)}
-              <span className="city-worker" />
-              <span className="city-worker" />
+              <span className="city-inspection-lift"><i /><b /></span>
+              <span className="city-ground-crew"><i /><i /><i /></span>
             </div>
           </div>}
         </div>;
@@ -109,11 +163,19 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
       <div className="city-vessel city-yacht city-yacht-returning" />
       {!manualBoats && <div className="city-vessel city-jet-ski" />}
       <div className="city-vessel city-jet-ski city-jet-ski-second" />
+      <div className="city-vessel city-yacht city-docked-yacht"><i /></div>
       <div className="city-water-taxi"><i /><b /></div>
     </div>
     <div className="city-bridge-traffic" />
     <div className="city-lantern" />
-    <div className="city-plane"><span /><b className="city-plane-banner">ALJ</b></div>
+    <div className="city-plane" onAnimationIteration={event => {
+      if (event.target === event.currentTarget && event.animationName === "city-banner-pass") {
+        setBannerPass(pass => (pass + 1) % bannerMessages.length);
+      }
+    }}>
+      <span />
+      <b className="city-plane-banner" data-tip={bannerPass % 2 === 1}>{bannerMessages[bannerPass]}</b>
+    </div>
     <div className="city-weather-fog"><i /><i /></div>
     <div className="city-weather-rain">
       {rainDrops.map((style, index) => <i key={index} className="city-rain-drop" style={style} />)}
@@ -124,8 +186,13 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
   </div>;
 });
 
-export function CityBackdrop({ animated, sceneHost }: { animated: boolean; sceneHost: HTMLElement | null }) {
+export function CityBackdrop({ animated, sceneHost, liveWeather }: {
+  animated: boolean;
+  sceneHost: HTMLElement | null;
+  liveWeather?: LiveWeather | null;
+}) {
   const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const pageVisible = usePageVisible();
   const t = useT();
   const racers = [t("Yacht"), t("Jet ski")] as const;
   const discoveries = [
@@ -205,11 +272,12 @@ export function CityBackdrop({ animated, sceneHost }: { animated: boolean; scene
     : open ? t("Drag either boat or move it with the arrow keys.") : "";
   const manualBoats = open || running;
 
-  const scene = <CityScene moving={moving} weather={weather} paused={paused} manualBoats={manualBoats} />;
+  const scene = <CityScene moving={moving} weather={weather === "auto" ? liveWeather ?? weather : weather}
+    paused={paused || !pageVisible} manualBoats={manualBoats} />;
 
   return <>
     {sceneHost ? createPortal(scene, sceneHost) : scene}
-    {animated && <div className={`city-interactions${paused ? " is-paused" : ""}`} ref={playArea} onKeyDown={event => {
+    {animated && <div className={`city-interactions${paused || !pageVisible ? " is-paused" : ""}`} ref={playArea} onKeyDown={event => {
       if (open && event.key === "Escape") {
         event.stopPropagation();
         setOpen(false);

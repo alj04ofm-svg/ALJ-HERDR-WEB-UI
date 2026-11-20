@@ -1059,11 +1059,6 @@ button {
     background: var(--term-bg);
   }
 
-  .app-header.is-zoned.is-chat {
-    border-bottom-color: transparent;
-    background: var(--bg);
-  }
-
   .app:not(.sidebar-collapsed) .app-header.is-zoned {
     padding-left: 0;
   }
@@ -1685,7 +1680,7 @@ button {
     bottom: 0;
     left: 0;
     z-index: var(--z-drawer);
-    width: min(88vw, var(--sidebar-w));
+    width: min(calc(100vw - 44px), var(--sidebar-user-w, var(--sidebar-w)));
     transform: translateX(-100%);
     visibility: hidden;
     touch-action: pan-y;
@@ -1695,7 +1690,7 @@ button {
       visibility 0s linear var(--dur-base);
   }
 
-  .app.sidebar-compact .sidebar { width: var(--sidebar-rail-w); }
+  .app.sidebar-compact .sidebar { width: var(--sidebar-user-w, var(--sidebar-rail-w)); }
 
   .sidebar.is-open {
     transform: translateX(0);
@@ -1869,15 +1864,11 @@ button, a, [role="button"] {
 }
 
 @media (min-width: 769px) {
-  .app.sidebar-compact { --sidebar-shown-w: var(--sidebar-rail-w); }
+  .app.sidebar-compact { --sidebar-shown-w: min(var(--sidebar-user-w, var(--sidebar-rail-w)), 50vw); }
   .app.sidebar-compact:not(.sidebar-collapsed) .header-side {
     justify-content: center;
     padding-inline: env(safe-area-inset-left, 0px) 0;
   }
   .app.sidebar-compact:not(.sidebar-collapsed) .header-side .palette-button { display: none; }
-  .app-header.is-zoned.is-chat {
-    background: linear-gradient(110deg, var(--bg-panel), var(--bg));
-    border-bottom-color: color-mix(in srgb, var(--border) 62%, transparent);
-  }
 
 }

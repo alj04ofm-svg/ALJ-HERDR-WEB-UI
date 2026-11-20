@@ -1066,6 +1066,10 @@ async function route(url: URL, method: string, init: RequestInit | undefined, in
     structureChanged();
     return json({ workspace_id: id, pane_id: pane.pane_id, agent_started: agent !== null } satisfies WorkspaceCreated);
   }
+  // The public demo keeps its clock local and does not forward anyone's location.
+  if (path === "/api/weather/search" || path === "/api/weather/current") {
+    return error("weather_demo", "Live weather is available on connected apps", 409);
+  }
   // no key in the demo: the app falls back to the browser's own speech recognition
   if (path === "/api/voice") return json({ configured: false, source: null, ...VOICE_DEFAULTS } satisfies VoiceStatus, 200, { "cache-control": "no-store" });
   if (path === "/api/voice/config") return error("demo", "the demo saves no OpenAI key", 409);

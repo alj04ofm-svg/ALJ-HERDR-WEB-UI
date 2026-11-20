@@ -12,6 +12,7 @@ import type { AlertPrefs, DoneAlerts } from "../../shared/notify-policy.ts";
 import { chatFontStack, sanitizeFontFamily } from "./fontFamily.ts";
 import { sanitizeKeyBarExtras, type KeyBarExtra } from "./keys.ts";
 import { DEFAULT_KEY_BAR_ITEMS, migrateKeyBarItems, sanitizeKeyBarItems, type KeyBarItem } from "./keyBar.ts";
+import { DEFAULT_WEATHER, sanitizeWeatherPreferences, type WeatherPreferences } from "./weatherPreferences.ts";
 
 export type ThemeSetting = "dark" | "light" | "system";
 export type ResolvedTheme = "dark" | "light";
@@ -104,6 +105,7 @@ export interface Settings {
    *  (chatLaneWidth, written by PaneTerminal); a narrower pane is never affected */
   chatWidth: ChatWidth;
   atmosphere: "off" | "soft" | "studio";
+  weatherWidget: WeatherPreferences;
   /** true: Enter sends in the composer, Shift+Enter breaks the line; false: Ctrl/Cmd+Enter sends */
   enterSends: boolean;
   /** true: a message sent while the agent works goes by itself when the turn ends; false: it waits for Send now */
@@ -183,6 +185,7 @@ export const DEFAULT_SETTINGS: Settings = {
   chatFontFamily: "",
   chatWidth: "default",
   atmosphere: "studio",
+  weatherWidget: DEFAULT_WEATHER,
   enterSends: true,
   autoSendQueued: true,
   showThinking: false,
@@ -347,6 +350,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     narrowPaneFont: typeof record["narrowPaneFont"] === "boolean" ? record["narrowPaneFont"] : DEFAULT_SETTINGS.narrowPaneFont,
     chatFontFamily: sanitizeFontFamily(record["chatFontFamily"]),
     atmosphere: record["atmosphere"] === "off" || record["atmosphere"] === "soft" ? record["atmosphere"] : "studio",
+    weatherWidget: sanitizeWeatherPreferences(record["weatherWidget"]),
     chatWidth: CHAT_WIDTHS.includes(record["chatWidth"] as ChatWidth) ? record["chatWidth"] as ChatWidth : DEFAULT_SETTINGS.chatWidth,
     enterSends: typeof record["enterSends"] === "boolean" ? record["enterSends"] : DEFAULT_SETTINGS.enterSends,
     autoSendQueued: typeof record["autoSendQueued"] === "boolean" ? record["autoSendQueued"] : DEFAULT_SETTINGS.autoSendQueued,

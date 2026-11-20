@@ -1,5 +1,3 @@
-/* The sidebar's right edge, a grip centred on its seam. Only where the sidebar is a column
-   (from 769px): a phone's drawer keeps its own width. */
 .sidebar-resizer {
   position: absolute;
   top: 0;
@@ -30,13 +28,27 @@
   .sidebar-resizer:hover::after { background: var(--border-strong); }
 }
 
-.sidebar-resizer.is-dragging::after,
-.sidebar-resizer:focus-visible::after { background: var(--accent); }
-
 @media (min-width: 769px) {
   .sidebar-resizer { display: block; }
+}
+
+@media (max-width: 768px) {
+  .sidebar.is-open .sidebar-resizer {
+    display: block;
+    right: calc(-1 * var(--space-3));
+    width: calc(var(--space-3) * 2);
+  }
+  .sidebar-resizer::after {
+    top: calc(50% - var(--space-5));
+    bottom: auto;
+    height: calc(var(--space-5) * 2);
+    border-radius: var(--radius-pill);
+    background: var(--border-strong);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .sidebar-resizer::after { transition: none; }
 }
+
+.sidebar-resizer.is-dragging::after, .sidebar-resizer:focus-visible::after { background: var(--accent); }

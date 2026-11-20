@@ -43,6 +43,31 @@ afterAll(() => {
 
 const base = () => `http://localhost:${server.port}`;
 
+describe("weather lookups", () => {
+  it("requires an authorized same-origin request and rejects invalid inputs without contacting a provider", async () => {
+    const path = "/api/weather/current";
+    const state = mkdtempSync(join(tmpdir(), "herdr-weather-http-"));
+    const app = createServer({ port: 0, stateDir: state, token: "isolated-test-weather", tailscaleOwner: null, machines: false });
+    const origin = `http://127.0.0.1:${app.port}`;
+    const headers = { authorization: "Bearer isolated-test-weather", origin, "x-herdr-weather": "1", "content-type": "application/json" };
+    const post = (route: string, body: object, overrides: Record<string, string> = {}) =>
+      fetch(origin + route, { method: "POST", headers: { ...headers, ...overrides }, body: JSON.stringify(body) });
+    try {
+      expect((await post(path, { latitude: 0, longitude: 0 }, { authorization: "" })).status).toBe(401);
+      expect((await post(path, { latitude: 0, longitude: 0 }, { origin: "https://other.example" })).status).toBe(403);
+      expect((await post(path, { latitude: 0, longitude: 0 }, { "x-herdr-weather": "" })).status).toBe(403);
+      const malformed = await post(path, { latitude: 120, longitude: 0 });
+      expect(malformed.status).toBe(400);
+      expect(malformed.headers.get("cache-control")).toBe("no-store");
+      expect(await malformed.json()).toEqual({ error: { code: "invalid_request", message: "Valid weather coordinates are required" } });
+      expect((await post("/api/weather/search", { query: "https://other.example", language: "en" })).status).toBe(400);
+    } finally {
+      app.stop();
+      rmSync(state, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("native model settings HTTP", () => {
   it("requires authentication, same origin and explicit settings intent, and accepts one field only", async () => {
     const root = mkdtempSync(join(tmpdir(), "herdr-model-http-"));

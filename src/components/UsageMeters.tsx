@@ -99,7 +99,30 @@ function Provider({ usage, now, count, paced }: { usage: ProviderUsage; now: num
  * provider its logo and the limit chosen in Settings (week or session); the whole strip opens every limit
  * with its reset time.
  */
-export function UsageMeters({ open, onOpenChange }: { open: boolean; onOpenChange(open: boolean): void }) {
+const RAIL_WINDOW = { session: "5h", day: "24h", week: "7d", month: "1mo" } as const;
+
+function RailMeter({ usage, count, glance }: { usage: ProviderUsage; count: UsageCount; glance: UsageGlance }) {
+  const t = useT();
+  const name = usage.id === "opencode" ? "OpenCode Go" : PROVIDER_NAME[usage.id];
+  const window = glanceWindow(usage, glance);
+  const windows = (usage.id === "opencode" || usage.id === "codex") && usage.windows.length > 0
+    ? usage.windows
+    : window ? [window] : [];
+  return <span className="usage-rail-provider">
+    <span className="usage-rail-name" title={usageName(usage)}>
+      <AgentMark agent={PROVIDER_MARK[usage.id]} size={11} /><span>{name}</span>
+    </span>
+    {usage.problem && <span className="usage-rail-stale" aria-hidden="true" />}
+    {windows.length > 0 ? windows.map((item, index) =>
+      <span key={index} className={`usage-rail-limit${level(item)}`} title={`${windowLabel(item)} · ${meterText(item, count)}`}
+        aria-label={`${windowLabel(item)} · ${meterText(item, count)}`}>
+        <span>{item.scope ?? RAIL_WINDOW[item.kind]}</span><strong>{formatPercent(meterPercent(item, count))}</strong>
+      </span>) : <span className="usage-rail-limit">—</span>}
+    {usage.problem && <span className="usage-rail-problem">{problemText(t, usage)}</span>}
+  </span>;
+}
+
+export function UsageMeters({ open, onOpenChange, compact = false }: { open: boolean; onOpenChange(open: boolean): void; compact?: boolean }) {
   const t = useT();
   const { settings, update } = useSettings();
   const { report, loading, refresh } = useUsage(settings.showUsage);
@@ -165,7 +188,7 @@ export function UsageMeters({ open, onOpenChange }: { open: boolean; onOpenChang
   }).join(", ");
 
   return (
-    <div className="usage">
+    <div className={`usage${compact ? " is-rail" : ""}`}>
       <button
         type="button"
         className="usage-strip"
@@ -173,12 +196,20 @@ export function UsageMeters({ open, onOpenChange }: { open: boolean; onOpenChang
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={t("Subscription usage")}
-        title={summary || t("Subscription usage")}
+        aria-describedby={compact && shown.length > 0 ? `${headingId}-rail` : undefined}
+        title={compact && shown.length > 0 ? undefined : summary || t("Subscription usage")}
         onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); onOpenChange(true); }}
       >
+        {compact && shown.length > 0 ? <>
+          <span className="usage-rail-header"><Gauge aria-hidden="true" />{t(count === "left" ? "Remaining" : "Used")}</span>
+          <span className="usage-rail-meters" id={`${headingId}-rail`}>
+            {shown.map(usage => <RailMeter key={usage.key} usage={usage} count={count} glance={settings.usageGlance} />)}
+          </span>
+        </> : <>
         <Gauge aria-hidden="true" /><span className="usage-label">{t("Usage")}</span>
         {chips.map((usage) => <Chip key={usage.key} usage={usage} count={count} glance={settings.usageGlance} now={now} paced={settings.usagePace} />)}
         {folded > 0 && <span className="usage-more">+{folded}</span>}
+        </>}
       </button>
       {open && createPortal(
         <dialog

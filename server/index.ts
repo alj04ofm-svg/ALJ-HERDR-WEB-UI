@@ -1,5 +1,6 @@
 import { MAX_ATTACHMENT_REQUEST_BYTES } from "../shared/attachments.ts";
 import { TaskStore, handleTasks } from "./tasks.ts";
+import { WeatherService } from "./weather.ts";
 import { MessagingService } from "./messaging.ts";
 import { WhatsAppAdapter } from "../integrations/messaging/whatsapp.ts";
 import { TelegramAdapter } from "../integrations/messaging/telegram.ts";
@@ -545,6 +546,7 @@ export function createServer(
   const devices = new DeviceStore(options.stateDir ?? defaultStateDir());
   const attachmentUploads = new AttachmentUploads(join(options.stateDir ?? defaultStateDir(), "attachment-uploads"));
   const tasks = new TaskStore(options.stateDir ?? defaultStateDir());
+  const weather = new WeatherService();
   const workspacePreferences = new WorkspacePreferencesStore(options.stateDir ?? defaultStateDir());
   const messagingDir = join(options.stateDir ?? defaultStateDir(), "messaging");
   const messaging = options.messaging ?? new MessagingService(messagingDir, (options.messagingEnabled ?? process.env["HERDR_WEB_MESSAGING"] === "1") ? { telegram: id => new TelegramAdapter(join(messagingDir, "sessions"), id), ...(process.env["HERDR_WEB_WACLI_PATH"] ? { whatsapp: (id: string) => new WhatsAppAdapter(join(messagingDir, "whatsapp"), id, process.env["HERDR_WEB_WACLI_PATH"]!) } : {}) } : {});
@@ -1754,6 +1756,7 @@ export function createServer(
 
       if (pathname === "/api/messaging" || pathname.startsWith("/api/messaging/")) return messaging.handle(request);
       if (pathname === "/api/tasks") return handleTasks(request, tasks);
+      if (pathname === "/api/weather/search" || pathname === "/api/weather/current") return weather.handle(request, pathname);
       if (pathname === "/api/workspace-preferences") return handleWorkspacePreferences(request, workspacePreferences);
       if (pathname === "/api/auth") return handleAuthRequest(request, token, client);
       if (pathname === "/api/devices" || pathname.startsWith("/api/devices/")) {

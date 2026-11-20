@@ -1,8 +1,7 @@
 import "./App.css";
 import fmBrand from "./brand/freak-media.svg";
-import { ActivityRail } from "./components/ActivityRail.tsx";
 import { type CSSProperties, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Bell, Ellipsis, FolderInput, FolderOpen, Gauge, Grid2X2, Link, Lock, Menu, MessageSquare, PanelLeft, PanelLeftDashed, Plus, Search, SquareTerminal, Activity, X } from "lucide-react";
+import { Bell, Ellipsis, FolderInput, FolderOpen, Gauge, Grid2X2, Link, Lock, Menu, MessageSquare, PanelLeft, PanelLeftDashed, Plus, Search, SquareTerminal, X } from "lucide-react";
 
 import type { AgentStatus, ServerMessage, AccessRefusal, HealthAuth, HerdrPane } from "../shared/protocol.ts";
 import { ApiError, authenticate, closeTab, fetchHealth, fetchBridgeHealth, fetchMachines, fetchSession, pairDevice, routeMissing, sendTestPush, signOut, splitPane, zoomPane, type HealthInfo } from "./lib/api.ts";
@@ -11,6 +10,7 @@ import { agentNavigationLabel, sidebarAgents } from "./lib/sidebarAgents.ts";
 import { displayPaneTitle } from "./components/Sidebar.tsx";
 import { PaneCanvas } from "./components/PaneCanvas.tsx";
 import { MachineSessionsProvider } from "./lib/machineSessionContext.tsx";
+import { WeatherWidget, type SceneWeather } from "./components/WeatherWidget.tsx";
 import { PaneTerminal } from "./components/PaneTerminal.tsx";
 import { PANE_TABPANEL_ID, paneTabPanelLabel } from "./lib/paneRegion.ts";
 import { AccessGate } from "./components/AccessGate.tsx";
@@ -28,7 +28,7 @@ import { CommandPalette } from "./components/CommandPalette.tsx";
 import { MachineContext } from "./lib/machineContext.tsx";
 import { MachineActionBanner, MachineSidebar } from "./components/MachineSidebar.tsx";
 import { SidebarResizer } from "./components/SidebarResizer.tsx";
-import { storedSidebarWidth } from "./lib/sidebarWidth.ts";
+import { SIDEBAR_EXPANDED_WIDTH, storedSidebarWidth, storeSidebarWidth } from "./lib/sidebarWidth.ts";
 import { MachineDialog } from "./components/MachineDialog.tsx";
 import { RowMenu, type RowMenuItem } from "./components/RowMenu.tsx";
 import { focusWorkspaceListToggle, modalOpen } from "./lib/focus.ts";
@@ -253,7 +253,7 @@ export function App() {
   // from 769px the drawer is a plain sidebar column and its toggle is hidden, so a drawer a
   // narrow window opened must not come back (with its scrim) the next time the window narrows
   const wideScreen = useMediaQuery("(min-width: 769px)");
-  const compactHeader = useMediaQuery("(max-width: 560px)");
+  const tinyHeader = useMediaQuery("(max-width: 360px)");
   const phoneDrawerOpen = drawerOpen && !wideScreen;
   useEffect(() => { if (wideScreen) setDrawerOpen(false); }, [wideScreen]);
   useEffect(() => {
@@ -278,11 +278,9 @@ export function App() {
   useEffect(() => watchDrawerSwipe(() => drawerOpenRef.current, setDrawerOpen), []);
   // a desktop opened by a link that says so starts with the sidebar collapsed, and the address says so while it is
   const [tabsOpen, setTabsOpen] = useState(false);
-  const [teamOpen, setTeamOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const openSignOut = useCallback(() => setSignOutOpen(true), []);
   const closeSignOut = useCallback(() => setSignOutOpen(false), []);
-  const activeTeamCount = machines.filter(machine => machine.state === "connected").flatMap(machine => machine.snapshot?.panes ?? []).filter(pane => pane.agent && (pane.agent_status === "working" || pane.agent_status === "blocked" || (pane as HerdrPane).background_wait)).length;
   const [sidebarCompact, setSidebarCompact] = useState(() => {
     try { return localStorage.getItem("herdr-web-ui:sidebar-compact") === "1"; } catch { return false; }
   });
@@ -297,7 +295,22 @@ export function App() {
   }, [sidebarCollapsed, toggleSidebarCompact]);
   const sidebarToggleLabel = t(sidebarCompact ? "Expand sidebar" : "Minimize sidebar");
   // the width the sidebar's edge was dragged to on this device; null is the density's own
-  const [sidebarWidth, setSidebarWidth] = useState(storedSidebarWidth);
+  const [expandedWidth, setExpandedWidth] = useState(() => storedSidebarWidth());
+  const [compactWidth, setCompactWidth] = useState(() => storedSidebarWidth(true));
+  const [draggedWidth, setDraggedWidth] = useState<number | null>(null);
+  const sidebarWidth = draggedWidth ?? (sidebarCompact ? compactWidth : expandedWidth);
+  const resizeSidebar = (width: number) => {
+    setDraggedWidth(width);
+    setSidebarCompact(width < SIDEBAR_EXPANDED_WIDTH);
+  };
+  const commitSidebarWidth = (width: number | null) => {
+    const compact = width === null ? sidebarCompact : width < SIDEBAR_EXPANDED_WIDTH;
+    setDraggedWidth(null);
+    setSidebarCompact(compact);
+    (compact ? setCompactWidth : setExpandedWidth)(width);
+    storeSidebarWidth(width, compact);
+  };
+  const [liveWeather, setLiveWeather] = useState<SceneWeather | null>(null);
   const [citySceneHost, setCitySceneHost] = useState<HTMLDivElement | null>(null);
   const [lens, setLens] = useState<{ key: string; view: PaneView }>({ key: "", view: "terminal" });
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -1089,8 +1102,8 @@ export function App() {
   const closeNewSession = useCallback(() => { setNewSessionOpen(false); setNewPrefill(null); setNewFields(null); }, []);
 
   const moreItems: RowMenuItem[] = [
+    ...(tinyHeader && selectedWorkspace ? [{ id: "new-tab", label: t("New tab"), icon: Plus, run: () => actions.openNewTab() }] : []),
     { id: "usage", label: t("Usage"), icon: Gauge, run: () => setUsageOpen(true) },
-    ...(compactHeader ? [{ id: "team", label: t("Team activity"), icon: Activity, checked: teamOpen, run: () => setTeamOpen(open => !open) }] : []),
     ...(selectedPane && !selectedPane.restore_error ? [{ id: "find", label: t("Find in terminal"), icon: Search, run: actions.openFind }] : []),
     ...(selectedPane ? [{ id: "move-pane", label: t("Move pane to…"), icon: FolderInput, run: () => {
       const anchor = document.querySelector<HTMLElement>(".header-more-button");
@@ -1201,7 +1214,6 @@ export function App() {
           </div>
         )}
         {view === "chat" && selectedWorkspace && <button type="button" className="shell-view-button" aria-label={t("View tabs")} aria-expanded={tabsOpen} aria-controls="workspace-tabs" onClick={() => setTabsOpen(open => !open)}><Grid2X2 aria-hidden="true" /><span>{t("Tabs")}</span></button>}
-        <button type="button" className="shell-team-button" aria-label={t("Team activity")} aria-expanded={teamOpen} aria-controls="team-widget" onClick={() => setTeamOpen(open => !open)}><Activity aria-hidden="true" /><span>{t("Team activity")}</span><span className="shell-team-count" title={t("Active agents")}>{activeTeamCount}</span></button>
         <div className="header-meta">
           {selectedWorkspace && <button type="button" className="shell-new-tab" aria-label={t("New tab")} title={t("New tab in {workspace}", { workspace: selectedWorkspace.label })} onClick={() => actions.openNewTab()}><Plus aria-hidden="true" /><span>{t("New tab")}</span></button>}
           {/* speaks only while the bridge is not live; live, it stays in the document for a screen
@@ -1260,7 +1272,7 @@ export function App() {
             </button>
           </div>}
           <MachineSidebar compact={sidebarCompact} usageOpen={usageOpen} onUsageOpenChange={setUsageOpen} machines={machines} selectedMachineId={selectedMachineId} selectedPaneId={selectedPaneId} actions={actions} onSelect={selectTarget} onShowTabs={(machineId, paneId) => { selectTarget(machineId, paneId); setTabsOpen(true); }} onSetup={(machine, update = false) => { setUpdateRemote(update); setMachineDialog(machine); }} onNew={(id) => { setNewSessionMachineId(id); setNewTab(null); setNewSessionOpen(true); setDrawerOpen(false); }} />
-          {!sidebarCompact && <SidebarResizer width={sidebarWidth} onResize={setSidebarWidth} />}
+          <SidebarResizer width={sidebarWidth} onResize={resizeSidebar} onCommit={commitSidebarWidth} />
         </aside>
 
         {/* kept on the page closed (styles.css): a swipe that begins on it closes the drawer */}
@@ -1287,6 +1299,7 @@ export function App() {
         {/* the tab strip's panel: its id is what each tab's aria-controls points at. No tabIndex -
             the terminal (PaneTerminal) and the composer are the focusable things inside it. */}
         <main className="terminal-host">
+          {showCity && <WeatherWidget onSceneWeather={setLiveWeather} />}
           {/* the panel sits inside main, so the page keeps its main landmark; it draws no box */}
           <div id={PANE_TABPANEL_ID} className="terminal-tabpanel" role={tabPanelLabel === null || (view !== "terminal" && !tabsOpen) ? undefined : "tabpanel"} aria-label={tabPanelLabel ?? undefined}>
           <PaneCanvas key={selectedMachineId} snapshot={snapshot} pane={selectedPane} selectedPaneId={selectedPaneId} onSelect={selectPane} onChanged={actions.refresh} actionsRef={paneActionsRef}
@@ -1309,6 +1322,7 @@ export function App() {
                 view={active ? view : storedView(lenses, item!.pane_id, selectedMachineId, item!.agent != null, terminalAttach)}
                 active={active}
                 citySceneHost={active && showCity ? citySceneHost : null}
+                liveWeather={active && showCity ? liveWeather : null}
                 findRequest={findRequest.paneId === item?.pane_id ? findRequest.serial : 0}
                 autoSelected={autoSelected}
                 terminalFontSize={settings.terminalFontSize}
@@ -1328,7 +1342,6 @@ export function App() {
         </main>
         </div>
         </OpenFileContext.Provider>
-        <ActivityRail machines={machines} open={teamOpen} onClose={() => setTeamOpen(false)} onSelect={(machine, pane) => { selectTarget(machine, pane, "chat"); setTeamOpen(false); }} />
       </div>
 
       {signOutOpen && <ConfirmDialog title={t("Sign out of this browser?")}

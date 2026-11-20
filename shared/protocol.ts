@@ -1157,3 +1157,17 @@ export interface ServerHealth {
 export type { MessagingOverview, MessagingAccount, BusinessChat, BusinessMessage, TelegramLinkRequest } from "./messaging.ts";
 
 export type { TaskSnapshot, WorkspaceTask, TaskStage } from "./tasks.ts";
+
+/** Weather lookups are same-origin POSTs with x-herdr-weather:1. Request bodies stay out of URLs and are never persisted by the bridge. */
+export type WeatherCondition = "clear" | "cloudy" | "rain" | "fog" | "snow" | "storm";
+export interface WeatherCoordinates { latitude: number; longitude: number }
+export interface WeatherLocation extends WeatherCoordinates { label: string }
+/** POST /api/weather/search — looks up a city or town by name. */
+export interface WeatherSearchRequest { query: string; language: string }
+export interface WeatherSearchResponse { locations: WeatherLocation[] }
+/** POST /api/weather/current — returns the current model estimate for rounded coordinates. Temperature is Celsius. */
+export interface CurrentWeather {
+  temperature: number;
+  condition: WeatherCondition;
+  model_time: string;
+}

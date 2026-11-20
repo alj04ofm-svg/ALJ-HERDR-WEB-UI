@@ -1,0 +1,60 @@
+.task-sidebar-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-2);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-panel) 44%, transparent);
+  color: var(--text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.task-sidebar-button:hover,
+.task-sidebar-button[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--bg-hover) 82%, transparent);
+}
+.task-sidebar-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+}
+.task-sidebar-icon svg { width: 15px; height: 15px; }
+.task-sidebar-button[data-active="true"] .task-sidebar-icon { color: var(--accent); background: var(--accent-tint); }
+.task-sidebar-copy { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.task-sidebar-copy strong,
+.task-sidebar-copy small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.task-sidebar-copy strong { color: var(--text-strong); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
+.task-sidebar-copy small { color: var(--text-dim); font-size: var(--fs-2xs); font-variant-numeric: tabular-nums; }
+.task-sidebar-count {
+  font-size: var(--fs-2xs);
+  font-variant-numeric: tabular-nums;
+  min-width: 18px;
+  text-align: center;
+  color: var(--text);
+}
+.task-sidebar-button[data-compact="true"] {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  padding-inline: var(--space-1);
+  gap: 1px 2px;
+  min-height: 52px;
+  justify-content: stretch;
+  text-align: center;
+}
+.task-sidebar-button[data-compact="true"] .task-sidebar-icon { width: 20px; height: 20px; justify-self: center; }
+.task-sidebar-button[data-compact="true"][data-active="false"] .task-sidebar-icon { grid-column: 1 / -1; }
+.task-sidebar-button[data-compact="true"] .task-sidebar-count { grid-area: 1 / 2; font-size: var(--fs-2xs); }
+.task-sidebar-button[data-compact="true"] .task-sidebar-copy { grid-column: 1 / -1; gap: 0; max-width: 100%; }
+.task-sidebar-button[data-compact="true"] .task-sidebar-copy strong { font-size: var(--fs-2xs); }
+.task-sidebar-button[data-compact="true"] .task-sidebar-copy small:empty { display: none; }
+.task-sidebar-loading { font-size: var(--fs-2xs); color: var(--text-dim); }
+@media (prefers-reduced-motion: reduce) {
+  .task-sidebar-button { transition: none; }
+}

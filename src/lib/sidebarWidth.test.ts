@@ -4,7 +4,7 @@ import { clampSidebarWidth, keyedSidebarWidth, parseSidebarWidth, sidebarMaxWidt
 
 describe("clampSidebarWidth", () => {
   it("keeps the width between the two limits, in whole pixels", () => {
-    expect(clampSidebarWidth(100)).toBe(SIDEBAR_MIN_WIDTH);
+    expect(clampSidebarWidth(20)).toBe(SIDEBAR_MIN_WIDTH);
     expect(clampSidebarWidth(9000)).toBe(SIDEBAR_MAX_WIDTH);
     expect(clampSidebarWidth(333.6)).toBe(334);
   });
@@ -12,8 +12,8 @@ describe("clampSidebarWidth", () => {
   it("never lets the sidebar take more than half of a narrow window", () => {
     expect(sidebarMaxWidth(800)).toBe(400);
     expect(clampSidebarWidth(480, 800)).toBe(400);
-    // a window too narrow for the rule still gets the smallest sidebar, not less
-    expect(clampSidebarWidth(480, 300)).toBe(SIDEBAR_MIN_WIDTH);
+    // A phone drawer can reach expanded mode and keeps a touch target outside it.
+    expect(clampSidebarWidth(480, 300)).toBe(256);
   });
 });
 
@@ -35,7 +35,9 @@ describe("keyedSidebarWidth", () => {
 describe("parseSidebarWidth", () => {
   it("reads a stored width and clamps it", () => {
     expect(parseSidebarWidth("360")).toBe(360);
-    expect(parseSidebarWidth("12")).toBe(SIDEBAR_MIN_WIDTH);
+    expect(parseSidebarWidth("12")).toBe(224);
+    expect(parseSidebarWidth("12", true)).toBe(SIDEBAR_MIN_WIDTH);
+    expect(parseSidebarWidth("360", true)).toBe(223);
   });
 
   it("falls back to the default width for anything else", () => {

@@ -376,13 +376,13 @@ One set for both themes: the card is island black wherever it shows.
   `--glass-blur` at `--z-header`, pulled over the pane by its own height (`--header-over`), so the
   transcript scrolls on under it while its first line, the banners and anything else at the pane's
   top start below it. The xterm mount is not fitted under the chat, so this resizes no pty.
-- From `769px` the sidebar's right edge is a grip (`.sidebar-resizer`, `role="separator"`): drag
-  it to resize the sidebar between `240px` and `520px`, never past half the window; the arrow
-  keys move the focused edge `16px`, Home and End go to the limits, and a double-click returns to
-  `--sidebar-w`. The seam shows `--border-strong` under a pointer and `--accent` while held or
-  focused. The chosen width is kept per device (`herdr-web-ui:sidebar-width`) and written as
-  `--sidebar-user-w` on `.app`; the sidebar and its top row in the header both read
-  `--sidebar-shown-w`. A phone's drawer keeps `--sidebar-w`.
+- The sidebar edge (`.sidebar-resizer`, `role="separator"`) resizes the drawer on a phone
+  and the sidebar on desktop. It switches to the expanded layout at `224px`. Width ranges
+  from `76px` to `520px`, capped at half the window on desktop and leaving `44px` of
+  uncovered content on a phone. Arrow keys move the edge by `16px`, Home and End go to the
+  limits, and a double-click resets the current layout's width. The browser remembers the
+  compact and expanded widths independently in `herdr-web-ui:sidebar-compact-width` and
+  `herdr-web-ui:sidebar-width`. The top row and sidebar stay aligned.
 - The sidebar keeps its width on desktop until its edge is dragged, and is a `<=768px` drawer. The desktop collapse removes its
   column; the drawer uses a scrim and keeps safe-area insets. On touch, a mostly horizontal swipe in
   from the left `24px` edge opens the drawer and a swipe to the left closes it. While the finger is
@@ -1350,7 +1350,7 @@ One set for both themes: the card is island black wherever it shows.
 - Status, loading and composer progress use `role="status"`; failures use `role="alert"`. Agent state
   has text plus color. Compact sidebar states add distinct glyphs and keep their text accessible;
   ready and unknown draw nothing there, and unknown uses a dashed badge edge elsewhere.
-- The compact rail is `88px`. Rows stack the agent mark above a two-line tab title.
+- The compact rail defaults to `88px`. Rows stack the agent mark above a two-line tab title.
   Unnamed tabs use their workspace name and add their tab number when needed. A
   full-title tooltip waits 1.1 seconds on hover. The accessible label keeps the full name.
 - Touch targets grow to `--touch-target`; fields stay `--fs-input` where mobile zoom is a risk.

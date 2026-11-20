@@ -198,11 +198,11 @@
   border-bottom: 0;
 }
 .pane-column.is-chat .tab-strip-shell {
-  background: linear-gradient(155deg, var(--card-glass), var(--bg));
+  background: linear-gradient(168deg, color-mix(in srgb, var(--card-glass) 82%, transparent), color-mix(in srgb, var(--bg-panel) 55%, transparent));
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
 }
-.pane-column.is-chat .tab-strip { --strip-bg: var(--bg); background: transparent; }
+.pane-column.is-chat .tab-strip { --strip-bg: var(--bg-panel); background: transparent; }
 .tab-strip-switch {
   flex: 0 0 auto;
   margin-inline-end: var(--space-2);
@@ -254,3 +254,13 @@
   color: var(--text-strong);
 }
 @media (prefers-reduced-motion: reduce) { .tab-strip-item { transition: none; } }
+
+.has-sidebar-scene .tab-strip-shell {
+  margin-inline: var(--space-2);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-md);
+}
+.has-sidebar-scene .tab-strip-add { border-radius: var(--radius-pill); }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .pane-column.is-chat .tab-strip-shell { background: var(--bg-panel); backdrop-filter: none; }
+}

@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore, type ComponentProps } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
@@ -94,6 +94,7 @@ export interface PaneTerminalProps {
   active?: boolean;
   /** The selected chat paints its city behind the full app body. */
   citySceneHost?: HTMLElement | null;
+  liveWeather?: ComponentProps<typeof CityBackdrop>["liveWeather"];
   /** App selected this pane itself (the selected one closed): switching to it must not take the keyboard */
   autoSelected?: boolean;
   /** xterm font size (settings) */
@@ -146,6 +147,7 @@ export function PaneTerminal({
   machineName = "",
   view,
   citySceneHost = null,
+  liveWeather,
   findRequest = 0,
   active = true,
   autoSelected = false,
@@ -2354,7 +2356,7 @@ export function PaneTerminal({
           onClose={() => { setFindOpen(false); if (activeRef.current && !coarse) termRef.current?.focus(); }} />
       )}
       {hasCity && (
-        <CityBackdrop animated={settings.atmosphere === "studio"} sceneHost={citySceneHost} />
+        <CityBackdrop animated={settings.atmosphere === "studio"} sceneHost={citySceneHost} liveWeather={liveWeather} />
       )}
       <div className="terminal-surface">
         {/* xterm hides its rendered rows from assistive technology, so the region around the

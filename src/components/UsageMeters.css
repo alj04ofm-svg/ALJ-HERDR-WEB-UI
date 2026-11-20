@@ -184,7 +184,7 @@
   min-width: 0;
   color: var(--text-dim);
   font-size: var(--fs-xs);
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
 .usage-plan {
@@ -222,7 +222,7 @@
 
 .usage-row-label {
   color: var(--text);
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
 .usage-row-reset {
@@ -311,3 +311,64 @@
 .usage-popover.is-anchored .usage-popover-body { padding: var(--space-2) var(--space-3); }
 .usage-popover.is-anchored .usage-popover-head h2 { font-size: var(--fs-sm); }
 .usage-popover.is-anchored .usage-popover-body { gap: var(--space-2); }
+
+.usage.is-rail { container-type: inline-size; }
+
+.usage.is-rail:has(.usage-rail-meters) .usage-strip {
+  display: grid;
+  align-content: start;
+  height: auto;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  text-align: start;
+  border: var(--hairline) solid var(--border);
+  background: color-mix(in srgb, var(--card-glass) 60%, transparent);
+}
+
+.usage-rail-header, .usage-rail-name, .usage-rail-limit {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  font-size: var(--fs-2xs);
+  line-height: var(--lh-tight);
+}
+
+.usage-rail-header { justify-content: center; color: var(--text-dim); }
+.usage-rail-header svg { width: 12px; height: 12px; }
+.usage-rail-meters {
+  display: grid;
+  gap: var(--space-1);
+  max-height: min(24dvh, 9rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.usage-rail-provider {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding: var(--space-1) 2px;
+  border-block-start: var(--hairline) solid var(--border);
+  color: var(--text);
+}
+
+.usage-rail-name { font-weight: var(--fw-semibold); }
+.usage-rail-name > span:last-child { min-width: 0; overflow-wrap: normal; }
+@container (width < 86px) {
+  .usage-rail-name .agent-mark { display: none; }
+}
+.usage-rail-limit { justify-content: space-between; color: var(--text-dim); }
+.usage-rail-limit > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.usage-rail-limit strong { font-weight: var(--fw-semibold); color: var(--text); font-variant-numeric: tabular-nums; }
+.usage-rail-limit.is-high strong { color: var(--status-blocked); }
+.usage-rail-stale {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-start: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--status-blocked);
+}
+.usage-rail-problem { position: absolute; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; }
