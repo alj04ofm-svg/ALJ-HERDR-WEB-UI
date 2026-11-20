@@ -64,6 +64,7 @@ function saveTaskTiming(tasks: WorkspaceTask[], started: ReadonlyMap<string, str
 export function createTaskStore() {
   let state: BoardState = { snapshot: null, pending: null, error: "", conflict: false, unavailable: false, started: new Map() };
   const listeners = new Set<() => void>();
+  let lastCaptureProject = "";
   const publish = (update: Partial<BoardState>) => {
     state = { ...state, ...update };
     for (const listener of listeners) listener();
@@ -86,6 +87,8 @@ export function createTaskStore() {
   }
   return {
     read: () => state,
+    lastCaptureProject: () => lastCaptureProject,
+    rememberCaptureProject(project: string) { lastCaptureProject = project; },
     subscribe(listener: () => void) {
       listeners.add(listener);
       return () => { listeners.delete(listener); };

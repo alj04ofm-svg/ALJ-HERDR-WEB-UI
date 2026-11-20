@@ -20,8 +20,9 @@ function suggestion(raw: string): { fields: DraftFields; question: string } {
   return { fields: { title, notes, due, due_time: time, priority }, question };
 }
 
-export function TaskCapture({ note, onNote, onClose, onDraft }: {
+export function TaskCapture({ note, onNote, onClose, onDraft, projects, project, onProject, ready }: {
   note: string; onNote(note: string): void; onClose(): void;
+  projects: string[]; project: string; onProject(project: string): void; ready: boolean;
   onDraft(fields: Partial<DraftFields>, question?: string): void;
 }) {
   const { settings } = useSettings();
@@ -41,7 +42,7 @@ export function TaskCapture({ note, onNote, onClose, onDraft }: {
   }, []);
 
   async function organize() {
-    if (controller.current || !note.trim()) return;
+    if (controller.current || !ready || !note.trim()) return;
     const request = new AbortController();
     controller.current = request;
     setError("");
@@ -67,13 +68,19 @@ export function TaskCapture({ note, onNote, onClose, onDraft }: {
     <header><Sparkles size={16} aria-hidden="true" /><h3>Quick capture</h3><button className="icon-button" type="button" aria-label="Close quick capture" onClick={onClose}><X aria-hidden="true" /></button></header>
     <textarea autoFocus className="input" aria-label="Task note" maxLength={2400} rows={4} value={note} disabled={busy}
       onChange={event => onNote(event.target.value)} placeholder="Send the edit to the studio tomorrow at 3 pm" />
+    <label className="task-capture-project">Project
+      <select className="select" value={project} disabled={busy || !ready} onChange={event => onProject(event.target.value)}>
+        <option value="">No project</option>
+        {projects.map(path => <option key={path} value={path}>{path}</option>)}
+      </select>
+    </label>
     <p>{configured ? "Organize with Codex sends only this note for an editable suggestion." : configured === false ? "Sign in to Codex on the host to organize notes with AI. Drafts are available now." : "Write a note and turn it into a draft."}</p>
     {(error || voice.error) && <p className="task-capture-error" role="alert">{error || "Dictation failed. Try again or type your note."}</p>}
     <div className="task-capture-actions">
       {voice.available && <button type="button" className="icon-button" disabled={busy || voice.state === "transcribing"} aria-label={voice.state === "recording" ? "Finish dictation" : "Dictate task"} onClick={voice.press}>{voice.state === "recording" ? <Square /> : <AudioLines />}</button>}
       {voice.state !== "idle" && <small role="status">{voice.state === "recording" ? "Recording…" : voice.state === "transcribing" ? "Transcribing…" : "Opening mic…"}</small>}
-      <button type="button" className="btn" disabled={busy || voice.state !== "idle" || !note.trim()} onClick={plainDraft}>Draft <ArrowRight aria-hidden="true" /></button>
-      {configured && <button type="button" className="btn btn-primary" disabled={busy || voice.state !== "idle" || !note.trim()} onClick={() => void organize()}>{busy ? "Organizing…" : "Organize with Codex"}</button>}
+      <button type="button" className="btn" disabled={!ready || busy || voice.state !== "idle" || !note.trim()} onClick={plainDraft}>Draft <ArrowRight aria-hidden="true" /></button>
+      {configured && <button type="button" className="btn btn-primary" disabled={!ready || busy || voice.state !== "idle" || !note.trim()} onClick={() => void organize()}>{busy ? "Organizing…" : "Organize with Codex"}</button>}
     </div>
   </section>;
 }

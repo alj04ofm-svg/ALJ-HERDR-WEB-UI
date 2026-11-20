@@ -159,6 +159,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   const [parent, setParent] = useState("");
   const [capture, setCapture] = useState(initialCapture);
   const [captureNote, setCaptureNote] = useState("");
+  const [captureChoice, setCaptureChoice] = useState<string | null>(null);
   const captureButton = useRef<HTMLButtonElement>(null);
   const [captureTask, setCaptureTask] = useState<string | null>(null);
   const [phoneStage, setPhoneStage] = useState<TaskStage | null>(null);
@@ -271,7 +272,14 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     setStatus("");
     const saved = await store.save(task);
     if (!saved) return;
-    if (task.id === captureTask) { setCaptureNote(""); setCaptureTask(null); }
+    if (task.id === captureTask) {
+      const destination = store.read().snapshot?.tasks.find(entry => entry.id === task.id)?.project ?? "";
+      store.rememberCaptureProject(destination);
+      setCaptureNote("");
+      setCaptureTask(null);
+      setCaptureChoice(null);
+      chooseProject(destination);
+    }
     setStatus(fromEditor ? task.archived ? "Task archived." : activeTask?.archived ? "Task restored." : "Task saved." : `Moved to ${TASK_STAGE_LABELS[task.stage]}.`);
     if (fromEditor) exitEditor();
     else {
@@ -295,6 +303,8 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     && (view !== "waiting" || task.stage === "needs-you" || task.stage === "review"));
   const projects = taskProjects(snapshot);
   const activeProjects = projects.filter(path => !archivedProject(snapshot, path));
+  const suggestedProject = captureChoice ?? (activeProjects.includes(project) ? project : store.lastCaptureProject());
+  const captureDestination = activeProjects.includes(suggestedProject) ? suggestedProject : "";
   const count = visible.length;
   const projectTasks = tasks.filter(task => !task.archived && !archivedProject(snapshot, task.project)
     && (!project || task.project === project || task.project.startsWith(`${project} / `))
@@ -346,8 +356,10 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   }
   function clearFilters() { setScope("all"); setView("all"); setQuery(""); }
   function chooseProject(path: string) {
+    const archived = archivedProject(snapshot, path);
     setProject(path);
-    setView(archivedProject(snapshot, path) ? "archive" : "all");
+    setView(archived ? "archive" : "all");
+    if (path && !archived) store.rememberCaptureProject(path);
   }
   function closeProjectPanel() {
     setProjectPanel(null);
@@ -401,7 +413,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     if (archivedProject(snapshot, path)) { setStatus("Restore that project from Archive first."); return; }
     if (name.includes("/")) { setStatus("Use the parent project field to create a subproject."); return; }
     if (projects.includes(path) || await store.addProject(path)) {
-      setProject(path); setView("all"); setFolderName(""); setParent(""); setCreateProject(false);
+      chooseProject(path); setFolderName(""); setParent(""); setCreateProject(false);
       setStatus(`${path} is ready.`);
     }
   }
@@ -536,8 +548,20 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
             </section>)}</div>}
           </>}
           {!editor && capture && snapshot && <div className="task-capture-dock">
-            <TaskCapture note={captureNote} onNote={setCaptureNote} onClose={closeCapture} onDraft={(fields, question) => {
-              const task = { ...newTask(scope === "personal" ? "personal" : "business", archivedProject(snapshot, project) ? "" : project, "inbox"), ...fields };
+            <TaskCapture note={captureNote} onNote={setCaptureNote} onClose={closeCapture}
+              projects={activeProjects} project={captureDestination} onProject={setCaptureChoice} ready={canMove}
+              onDraft={(fields, question) => {
+              const latest = store.read();
+              if (latest.pending || latest.conflict || !latest.snapshot) {
+                setStatus("Wait for the board to be ready, then try again.");
+                return;
+              }
+              if (captureDestination && (!taskProjects(latest.snapshot).includes(captureDestination) || archivedProject(latest.snapshot, captureDestination))) {
+                setCaptureChoice("");
+                setStatus("That project is unavailable. Choose a destination and try again.");
+                return;
+              }
+              const task = { ...newTask(scope === "personal" ? "personal" : "business", captureDestination, "inbox"), ...fields };
               setCapture(false); setCaptureTask(task.id); edit(task, true);
               setStatus(question || "Review the draft and save when it’s ready.");
               if (layout === "agents") chooseLayout("list");

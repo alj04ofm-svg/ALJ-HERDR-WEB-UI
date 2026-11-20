@@ -228,6 +228,8 @@
 .task-capture header, .task-capture-actions { display: flex; align-items: center; gap: var(--space-2); }
 .task-capture header h3 { flex: 1; margin: 0; font-size: var(--fs-sm); color: var(--text-strong); }
 .task-capture textarea { display: block; width: 100%; height: auto; padding: var(--space-2); resize: vertical; }
+.task-capture-project { display: grid; gap: var(--space-1); margin-block-start: var(--space-3); font-size: var(--fs-xs); font-weight: var(--fw-medium); }
+.task-capture-project .select { width: 100%; min-width: 0; min-height: var(--touch-target); }
 .task-capture p { margin-block: var(--space-2); font-size: var(--fs-xs); color: var(--text-dim); }
 .task-capture p.task-capture-error { color: var(--status-blocked); }
 .task-capture-actions { justify-content: flex-end; flex-wrap: wrap; }
