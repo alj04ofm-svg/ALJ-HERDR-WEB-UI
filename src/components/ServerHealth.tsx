@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Activity, ArrowUpRight, RefreshCw, X } from "lucide-react";
+import { Activity, RefreshCw, X } from "lucide-react";
 import type { ServerHealth as Health } from "../../shared/protocol.ts";
 import { fetchServerHealth } from "../lib/api.ts";
 import { useT } from "../lib/i18n.ts";
@@ -9,14 +9,27 @@ import { usePhoneSheetBack } from "../lib/sheetHistory.ts";
 import "./ServerHealth.css";
 
 const size = (bytes: number) => `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
-export function ServerHealth({ onClose }: { onClose(): void }) {
+export function ServerHealth({ anchor, onClose }: { anchor: HTMLElement; onClose(): void }) {
   const t = useT();
   const dialog = useFocusTrap<HTMLDivElement>(true);
   const [health, setHealth] = useState<Health | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const refresh = useRef<() => void>(() => {});
+  const [top, setTop] = useState(52);
+  const [right, setRight] = useState(8);
   usePhoneSheetBack(onClose);
+  useLayoutEffect(() => {
+    const position = () => {
+      const rect = anchor.getBoundingClientRect();
+      setTop(rect.bottom + 6);
+      const width = Math.min(332, window.innerWidth - 16);
+      setRight(Math.min(window.innerWidth - width - 8, Math.max(8, window.innerWidth - rect.right)));
+    };
+    position();
+    window.addEventListener("resize", position);
+    return () => window.removeEventListener("resize", position);
+  }, [anchor]);
   useEffect(() => {
     let alive = true;
     let pending = false;
@@ -47,9 +60,9 @@ export function ServerHealth({ onClose }: { onClose(): void }) {
     { label: t("Disk available"), value: health.disk ? size(health.disk.available_bytes) : t("Not reported"), detail: health.disk ? t("{amount} total", { amount: size(health.disk.total_bytes) }) : "", optimum: 1, used: health.disk ? health.disk.available_bytes / health.disk.total_bytes : null },
     { label: t("Swap used"), value: health.swap ? size(health.swap.total_bytes - health.swap.free_bytes) : t("Not reported"), detail: health.swap ? t("{amount} total", { amount: size(health.swap.total_bytes) }) : "", optimum: 0, used: health.swap && health.swap.total_bytes > 0 ? 1 - health.swap.free_bytes / health.swap.total_bytes : null },
   ] : [];
-  return createPortal(<div className="fm-tools-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <div className="fm-tools server-health" role="dialog" aria-modal="true" aria-labelledby="server-health-title" ref={dialog} tabIndex={-1}>
-      <header className="fm-tools-heading"><div><h2 id="server-health-title"><Activity aria-hidden="true" />{t("VPS health")}</h2><p>{t("The server hosting this workspace. Updates while this panel is open.")}</p></div><button className="icon-button" aria-label={t("Close")} onClick={onClose}><X aria-hidden="true" /></button></header>
+  return createPortal(<div className="server-health-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div style={{ top, right }} className="server-health" role="dialog" aria-modal="true" aria-labelledby="server-health-title" ref={dialog} tabIndex={-1}>
+      <header className="fm-tools-heading"><div><h2 id="server-health-title"><Activity aria-hidden="true" />{t("VPS health")}</h2><p>{t("The server hosting this workspace. Updates while this panel is open.")}</p></div><button className="icon-button" title={t("Refresh")} aria-label={t("Refresh")} disabled={busy} onClick={() => refresh.current()}><RefreshCw aria-hidden="true" /></button><button className="icon-button" aria-label={t("Close")} onClick={onClose}><X aria-hidden="true" /></button></header>
       <div className="server-health-body">
         {failed && <p className="server-health-error" role="alert">{t("Health refresh failed. Retry to get current measurements.")}</p>}
         {!health && !failed && <p role="status">{t("Loading…")}</p>}
@@ -59,8 +72,6 @@ export function ServerHealth({ onClose }: { onClose(): void }) {
           <p className="server-health-meta">{t("Uptime: {hours} hours", { hours: Math.floor(health.uptime_seconds / 3600) })} · {health.platform}</p>
           <p className="server-health-meta">{t("Measured at {time}", { time: new Date(health.measured_at).toLocaleTimeString() })}{failed ? ` · ${t("Last successful reading")}` : ""}</p>
         </>}
-        <div className="server-health-actions"><button className="btn" disabled={busy} onClick={() => refresh.current()}><RefreshCw aria-hidden="true" />{t("Refresh")}</button><a className="btn btn-ghost" href="https://ugc.freakmedia.eu/vps/#overview" target="_blank" rel="noopener noreferrer">{t("Advanced manager (separate sign-in)")}<ArrowUpRight aria-hidden="true" /></a></div>
-        <p className="server-health-meta">{t("Health is read-only. Maintenance controls remain protected in the advanced manager.")}</p>
       </div>
     </div>
   </div>, document.body);

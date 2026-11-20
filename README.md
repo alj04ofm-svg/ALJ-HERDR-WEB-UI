@@ -7,7 +7,8 @@ A self-hosted browser and phone interface for [herdr](https://github.com/herdrde
 - Switch between agent chat and the live terminal. Start a workspace with **New workspace** and choose an agent installed on your computer.
 - Expand the sidebar to see groups, workspaces, tab actions, and usage over the same live waterfront that fills Chat. Minimize it to a thin rail with agent icons and short tab labels, and move between them with the arrow keys.
 - In Chat, select the sailboat icon to open **Marina controls** on the waterfront. Race the yacht and jet ski, drag them across the water, or use the arrow keys when a boat has focus. Waterfront markers reveal local details. Choose the weather or pause motion from Chat. The scene also respects your system’s reduced-motion setting.
-- Open **Settings → Remote PCs** to connect another computer over SSH.
+- Open **Tasks** at the bottom of the sidebar for a list or Kanban board. Create projects and subprojects, set dates and times, and archive completed work. The **Agents** view shows work and requests from your connected agents. Use **Add to tasks** to save a task from an agent, or **Quick capture** to draft one by typing or using configured dictation.
+- Open **Settings → Setup guide** for your agent’s install and sign-in steps. Use **Settings → Remote PCs** to connect another computer over SSH.
 
 ## Install from source
 
@@ -27,6 +28,8 @@ bun run server
 Open [http://127.0.0.1:7317](http://127.0.0.1:7317) and choose **New workspace** or pick an existing one. On Windows, herdr currently uses a terminal screen mirror. If port 7317 is already in use, set `PORT` to another free port before starting the server.
 
 This repository contains source code and bundled artwork. Each installation connects to the owner's own herdr session through its local bridge. The server listens on loopback by default, and anonymous install and update telemetry is off by default in this edition. For access from another device, use a private tunnel or configure authentication before exposing the bridge. [Access and safety](docs/guide.md#access-and-safety)
+
+Task data is saved in your connection server’s state directory and shared among the interact devices paired to that instance. Use a separate instance and state directory per owner. If you choose **Organize with Codex**, the draft note is sent to Codex using the host’s existing ChatGPT sign-in. Regular task editing and plain drafts need no AI provider.
 
 ## Update
 

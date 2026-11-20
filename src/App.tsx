@@ -1,7 +1,7 @@
 import "./App.css";
 import fmBrand from "./brand/freak-media.svg";
-import { type CSSProperties, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Bell, Ellipsis, FolderInput, FolderOpen, Gauge, Grid2X2, Link, Lock, Menu, MessageSquare, PanelLeft, PanelLeftDashed, Plus, Search, SquareTerminal, X } from "lucide-react";
+import { type CSSProperties, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Activity, Bell, Ellipsis, FolderInput, FolderOpen, Gauge, Grid2X2, Link, Lock, Menu, MessageSquare, PanelLeft, PanelLeftDashed, Plus, Search, SquareTerminal, X } from "lucide-react";
 
 import type { AgentStatus, ServerMessage, AccessRefusal, HealthAuth, HerdrPane } from "../shared/protocol.ts";
 import { ApiError, authenticate, closeTab, fetchHealth, fetchBridgeHealth, fetchMachines, fetchSession, pairDevice, routeMissing, sendTestPush, signOut, splitPane, zoomPane, type HealthInfo } from "./lib/api.ts";
@@ -81,6 +81,8 @@ const POLL_MS = 5000;
  * Polls and the event stream hand over fresh objects every few seconds even when nothing
  * changed; storing them re-rendered the whole app (the chat transcript included) each time.
  */
+const ServerHealth = lazy(() => import("./components/ServerHealth.tsx").then(module => ({ default: module.ServerHealth })));
+
 function sameData(a: unknown, b: unknown): boolean {
   return a === b || JSON.stringify(a) === JSON.stringify(b);
 }
@@ -1101,6 +1103,8 @@ export function App() {
   }, []);
   const closeNewSession = useCallback(() => { setNewSessionOpen(false); setNewPrefill(null); setNewFields(null); }, []);
 
+  const [healthAnchor, setHealthAnchor] = useState<HTMLElement | null>(null);
+  const closeHealth = useCallback(() => setHealthAnchor(null), []);
   const moreItems: RowMenuItem[] = [
     ...(tinyHeader && selectedWorkspace ? [{ id: "new-tab", label: t("New tab"), icon: Plus, run: () => actions.openNewTab() }] : []),
     { id: "usage", label: t("Usage"), icon: Gauge, run: () => setUsageOpen(true) },
@@ -1215,6 +1219,8 @@ export function App() {
         )}
         {view === "chat" && selectedWorkspace && <button type="button" className="shell-view-button" aria-label={t("View tabs")} aria-expanded={tabsOpen} aria-controls="workspace-tabs" onClick={() => setTabsOpen(open => !open)}><Grid2X2 aria-hidden="true" /><span>{t("Tabs")}</span></button>}
         <div className="header-meta">
+          <button type="button" className="icon-button header-health" aria-haspopup="dialog" aria-expanded={healthAnchor !== null}
+            aria-label={t("VPS health")} title={t("VPS health")} onClick={event => setHealthAnchor(event.currentTarget)}><Activity aria-hidden="true" /></button>
           {selectedWorkspace && <button type="button" className="shell-new-tab" aria-label={t("New tab")} title={t("New tab in {workspace}", { workspace: selectedWorkspace.label })} onClick={() => actions.openNewTab()}><Plus aria-hidden="true" /><span>{t("New tab")}</span></button>}
           {/* speaks only while the bridge is not live; live, it stays in the document for a screen
               reader (and the browser scripts that wait on it), drawn by nothing (styles.css) */}
@@ -1246,6 +1252,7 @@ export function App() {
             {alertsOffDot && <span className="header-more-dot" aria-hidden="true" />}
           </span>
         </div>
+        {healthAnchor && <Suspense fallback={<span className="sr-only" role="status">{t("Loading…")}</span>}><ServerHealth anchor={healthAnchor} onClose={closeHealth} /></Suspense>}
         {more && (
           <RowMenu
             anchor={more.anchor}

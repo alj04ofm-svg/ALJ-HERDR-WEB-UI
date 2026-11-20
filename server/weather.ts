@@ -88,6 +88,8 @@ class ServiceBusy extends Error {}
 export class WeatherService {
   private readonly forecasts = new Map<string, { until: number; result: Promise<CurrentWeather[]> }>();
   private readonly searches = new Map<string, { until: number; result: Promise<WeatherLocation[]> }>();
+  private readonly places = new Map<string, { until: number; result: Promise<string | undefined> }>();
+  private nextPlace = 0;
   private nextForecast = 0;
   private nextSearch = 0;
 
@@ -142,6 +144,27 @@ export class WeatherService {
     return { locations: await result };
   }
 
+  private async place(coordinates: WeatherCoordinates): Promise<string | undefined> {
+    const key = `${coordinates.latitude},${coordinates.longitude}`;
+    const now = Date.now();
+    const saved = this.places.get(key);
+    if (saved && saved.until > now) return saved.result;
+    if (now < this.nextPlace) return;
+    this.nextPlace = now + 1000;
+    if (this.places.size >= MAX_SEARCHES) this.places.delete(this.places.keys().next().value!);
+    const url = new URL("https://photon.komoot.io/reverse");
+    url.searchParams.set("lat", String(coordinates.latitude));
+    url.searchParams.set("lon", String(coordinates.longitude));
+    url.searchParams.set("layer", "city");
+    url.searchParams.set("radius", "30");
+    url.searchParams.set("limit", "1");
+    const entry = { until: now + ONE_DAY, result: this.upstream(url)
+      .then(async response => locationsOf(await response.json())[0]?.label)
+      .catch(() => { entry.until = now + 300_000; return undefined; }) };
+    this.places.set(key, entry);
+    return entry.result;
+  }
+
   async handle(request: Request, path: string): Promise<Response> {
     if (request.method !== "POST") return fail("method_not_allowed", "Use POST", 405, { allow: "POST" });
     if (!sameOrigin(request) || request.headers.get("x-herdr-weather") !== "1") {
@@ -161,7 +184,11 @@ export class WeatherService {
       }
       const coordinates = roundedCoordinates(input.latitude, input.longitude);
       if (!coordinates) return fail("invalid_request", "Valid weather coordinates are required", 400);
-      return jsonResponse(await this.forecast(coordinates), 200, NO_STORE);
+      const [forecast, place] = await Promise.all([
+        this.forecast(coordinates),
+        input.resolve_place === true ? this.place(coordinates) : undefined,
+      ]);
+      return jsonResponse({ ...forecast, ...(place && { place }) }, 200, NO_STORE);
     } catch (error) {
       if (error instanceof ServiceBusy) return fail("weather_busy", "Weather requests are busy. Try again shortly.", 429);
       return fail("weather_unavailable", "Weather provider unavailable", 502);

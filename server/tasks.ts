@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { TaskSnapshot } from "../shared/tasks.ts";
-import { isTaskList, TASK_MAX_BYTES } from "../shared/tasks.ts";
+import { isTaskList, isTaskProjects, TASK_MAX_BYTES } from "../shared/tasks.ts";
 import { badRequest, conflictResponse, errorResponse, isJsonObject, jsonResponse } from "./http.ts";
 
 export class TaskStore {
@@ -16,19 +16,23 @@ export class TaskStore {
     let value: unknown;
     try { value = JSON.parse(raw); }
     catch { throw new Error("Task board needs recovery; original file preserved"); }
-    if (!isJsonObject(value) || value.version !== 1 || typeof value.revision !== "string" || !isTaskList(value.tasks)) throw new Error("Task board needs recovery; original file preserved");
-    return { revision: value.revision, tasks: value.tasks };
+    if (!isJsonObject(value) || value.version !== 1 || typeof value.revision !== "string" || !isTaskList(value.tasks) || (value.projects !== undefined && !isTaskProjects(value.projects))) throw new Error("Task board needs recovery; original file preserved");
+    return { revision: value.revision, tasks: value.tasks, ...(value.projects !== undefined && { projects: value.projects }) };
   }
-  replace(expected: string, tasks: TaskSnapshot["tasks"]): TaskSnapshot | "conflict" | "busy" {
+  replace(expected: string, tasks: TaskSnapshot["tasks"], projects?: string[]): TaskSnapshot | "conflict" | "busy" | "too_large" {
     mkdirSync(dirname(this.path), { recursive: true, mode: 0o700 });
     const lock = `${this.path}.lock`;
     try { mkdirSync(lock, { mode: 0o700 }); }
     catch (error) { if ((error as NodeJS.ErrnoException).code === "EEXIST") return "busy"; throw error; }
     const temporary = `${this.path}.${randomUUID()}.tmp`;
     try {
-      if (this.read().revision !== expected) return "conflict";
-      const next = { revision: randomUUID(), tasks };
-      writeFileSync(temporary, JSON.stringify({ version: 1, ...next }), { mode: 0o600, flag: "wx" });
+      const previous = this.read();
+      if (previous.revision !== expected) return "conflict";
+      const folders = projects ?? previous.projects;
+      const next = { revision: randomUUID(), tasks, ...(folders !== undefined && { projects: folders }) };
+      const encoded = JSON.stringify({ version: 1, ...next });
+      if (Buffer.byteLength(encoded) > TASK_MAX_BYTES) return "too_large";
+      writeFileSync(temporary, encoded, { mode: 0o600, flag: "wx" });
       renameSync(temporary, this.path);
       return next;
     } finally { rmSync(temporary, { force: true }); rmSync(lock, { recursive: true, force: true }); }
@@ -56,8 +60,9 @@ export async function handleTasks(request: Request, store: TaskStore): Promise<R
     let input: unknown;
     try { input = JSON.parse(Buffer.concat(chunks).toString("utf8")); }
     catch { return noStore(badRequest("invalid_request", "Invalid task board JSON")); }
-    if (!isJsonObject(input) || Object.keys(input).some(key => key !== "revision" && key !== "tasks") || typeof input.revision !== "string" || input.revision.length > 128 || !isTaskList(input.tasks)) return noStore(badRequest("invalid_request", "Invalid task board"));
-    const result = store.replace(input.revision, input.tasks);
+    if (!isJsonObject(input) || Object.keys(input).some(key => !["revision", "tasks", "projects"].includes(key)) || typeof input.revision !== "string" || input.revision.length > 128 || !isTaskList(input.tasks) || (input.projects !== undefined && !isTaskProjects(input.projects))) return noStore(badRequest("invalid_request", "Invalid task board"));
+    const result = store.replace(input.revision, input.tasks, input.projects);
+    if (result === "too_large") return noStore(jsonResponse({ error: { code: "too_large", message: "Task board exceeds 2 MiB" } }, 413));
     if (result === "conflict") return noStore(conflictResponse("tasks_changed", "Another device changed the task board. Check it again before saving."));
     if (result === "busy") return noStore(conflictResponse("tasks_busy", "Task storage is busy. Check it again before saving."));
     return noStore(jsonResponse(result));

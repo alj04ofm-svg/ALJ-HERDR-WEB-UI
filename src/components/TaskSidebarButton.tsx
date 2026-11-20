@@ -1,12 +1,13 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import { ClipboardList } from "lucide-react";
 import { createTaskStore, taskClock, taskElapsed, useTaskStore } from "../lib/workspaceTasks.ts";
+import type { Machine } from "../../shared/machines.ts";
 import { useT } from "../lib/i18n.ts";
 import "./TaskSidebarButton.css";
 
 const TaskBoard = lazy(() => import("./TaskBoard.tsx").then(module => ({ default: module.TaskBoard })));
 
-export function TaskSidebarButton({ compact = false }: { compact?: boolean }) {
+export function TaskSidebarButton({ compact = false, machines, onSelect }: { compact?: boolean; machines: Machine[]; onSelect(machine: string, pane: string): void }) {
   const t = useT();
   const [store] = useState(createTaskStore);
   const [open, setOpen] = useState(false);
@@ -62,7 +63,7 @@ export function TaskSidebarButton({ compact = false }: { compact?: boolean }) {
       {snapshot && active && <span className="task-sidebar-count" aria-hidden="true">{tasks.length}</span>}
     </button>
     {open && <Suspense fallback={<span role="status" className="task-sidebar-loading">Loading task board…</span>}>
-      <TaskBoard store={store} onClose={() => setOpen(false)} />
+      <TaskBoard store={store} machines={machines} onSelect={onSelect} onClose={() => setOpen(false)} />
     </Suspense>}
   </>;
 }

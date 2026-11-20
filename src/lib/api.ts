@@ -709,10 +709,10 @@ export async function saveVoiceConfig(update: VoiceConfigUpdate): Promise<VoiceS
 }
 
 /** Explicit draft rewrite; cancellation does not deliver anything to an agent. */
-export async function refinePrompt(text: string, agent: string | null, signal: AbortSignal): Promise<string> {
+export async function refinePrompt(text: string, agent: string | null, signal: AbortSignal, taskDay?: string): Promise<string> {
   // Refinement uses the connection server’s current Codex sign-in, not pane input.
   const url = "/api/prompt/refine";
-  const response = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, agent }), signal });
+  const response = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, agent, ...(taskDay && { task_day: taskDay }) }), signal });
   if (!response.ok) throw await errorFrom(url, response);
   const body = await response.json() as import("../../shared/protocol.ts").RefinePromptResponse;
   if (typeof body.text !== "string" || !body.text.trim() || body.text.length > 20_000) throw new Error("Invalid refined prompt");

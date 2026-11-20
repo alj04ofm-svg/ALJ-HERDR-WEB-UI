@@ -54,9 +54,10 @@ interface WeatherDialogProps {
   onClose: () => void;
   onRetry: () => void;
   failure: string | null;
+  devicePlace?: string;
 }
 
-function WeatherDialog({ prefs, onPrefs, onDevice, onClose, onRetry, failure }: WeatherDialogProps) {
+function WeatherDialog({ prefs, onPrefs, onDevice, onClose, onRetry, failure, devicePlace }: WeatherDialogProps) {
   const t = useT();
   const { resolvedLanguage } = useSettings();
   const id = useId();
@@ -117,7 +118,7 @@ function WeatherDialog({ prefs, onPrefs, onDevice, onClose, onRetry, failure }: 
         <div className="modal-body weather-dialog-body">
           <section className="weather-dialog-section">
             <h3>{t("Weather location")}</h3>
-            <p>{t("Search sends the city name to Photon. MET Norway receives approximate coordinates when weather is on. The bridge keeps those coordinates in memory only.")}</p>
+            <p>{t("Search sends the city name to Photon. Approximate coordinates go to Photon for the device’s city name and to MET Norway for weather. The bridge keeps coordinates in memory only.")}</p>
             <form className="weather-search" onSubmit={(event) => void search(event)}>
               <input ref={searchField} type="search" className="input" aria-label={t("City or town")} placeholder={t("City or town")} value={query}
                 maxLength={100} disabled={pending !== null} onChange={(event) => { setQuery(event.currentTarget.value); setMatches(null); setError(null); }} />
@@ -148,7 +149,7 @@ function WeatherDialog({ prefs, onPrefs, onDevice, onClose, onRetry, failure }: 
                 onPrefs({ location: null });
               }}>{t("Turn weather off")}</button>}
             </div>
-            {prefs.location && <p role="status">{t("Weather for {place}", { place: prefs.location === "device" ? t("This device") : prefs.location.label })}</p>}
+            {prefs.location && <p role="status">{t("Weather for {place}", { place: prefs.location === "device" ? devicePlace ?? t("This device") : prefs.location.label })}</p>}
             {failure && <div className="weather-location-actions">
               <p className="weather-error" role="alert">{lookupError(failure, t)}</p>
               <button type="button" className="btn btn-ghost" onClick={onRetry}>{t("Retry")}</button>
@@ -222,7 +223,7 @@ export function WeatherWidget({ onSceneWeather }: { onSceneWeather?: (weather: S
     date: new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric" }),
     temperature: new Intl.NumberFormat(locale, { style: "unit", unit: prefs.unit === "F" ? "fahrenheit" : "celsius", maximumFractionDigits: 0 }),
   }), [locale, prefs.unit]);
-  const weather = useLocalWeather(prefs.location, device, setDevice, prefs.temperature || prefs.matchScene, retry);
+  const weather = useLocalWeather(prefs.location, device, setDevice, prefs.temperature || prefs.matchScene || prefs.place, retry, prefs.place && prefs.location === "device");
   const data = weather.kind === "ready" ? weather.data : null;
   const scene = prefs.matchScene && data ? data.condition === "snow" ? "cloudy" : data.condition : null;
   useEffect(() => {
@@ -236,7 +237,7 @@ export function WeatherWidget({ onSceneWeather }: { onSceneWeather?: (weather: S
     condition === "snow" ? t("Snow") : condition === "storm" ? t("Thunderstorms") : "";
   let detail = prefs.date ? formatters.date.format(now) : "";
   if (prefs.place && prefs.location) {
-    const place = prefs.location === "device" ? t("This device") : prefs.location.label;
+    const place = prefs.location === "device" ? data?.place || t("This device") : prefs.location.label;
     detail += detail ? ` · ${place}` : place;
   }
   if (prefs.temperature && weather.kind === "loading") detail = t("Getting weather…");
@@ -263,6 +264,6 @@ export function WeatherWidget({ onSceneWeather }: { onSceneWeather?: (weather: S
         if (patch.location) setRetry(count => count + 1);
         update({ weatherWidget: { ...prefs, ...patch } });
       }} onDevice={setDevice} onClose={() => setOpen(false)} onRetry={() => setRetry(count => count + 1)}
-      failure={weather.kind === "failed" ? weather.code : null} />}
+      devicePlace={data?.place} failure={weather.kind === "failed" ? weather.code : null} />}
   </>;
 }

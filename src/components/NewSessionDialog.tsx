@@ -69,6 +69,7 @@ export function NewSessionDialog({ open, defaultCwd, tab = null, onClose, onCrea
   const { createTab, createWorkspace, fetchAgentKinds } = useMachineApi();
   const [agents, setAgents] = useState<AgentKind[]>([]);
   const [agentKind, setAgentKind] = useState(rememberedAgent);
+  const [custom, setCustom] = useState(false);
   const [presetId, setPresetId] = useState<string | null>(null);
   const selectedPreset = tab ? launchPresets.find(preset => preset.id === presetId && agents.some(agent => agent.kind === preset.kind)) : undefined;
   const [cwd, setCwd] = useState(defaultCwd ?? "");
@@ -103,6 +104,7 @@ export function NewSessionDialog({ open, defaultCwd, tab = null, onClose, onCrea
     const stored = filled?.agent ?? remembered;
     setAgentKind(stored);
     setPresetId(null);
+    setCustom(false);
     setAgents([]);
     let cancelled = false;
     void fetchAgentKinds()
@@ -110,7 +112,10 @@ export function NewSessionDialog({ open, defaultCwd, tab = null, onClose, onCrea
         if (cancelled) return;
         setAgents(next);
         if (tab) {
-          setPresetId(launchPresets.find(preset => next.some(agent => agent.kind === preset.kind))?.id ?? null);
+          const preset = launchPresets.find(candidate => next.some(agent => agent.kind === candidate.kind));
+          setPresetId(preset?.id ?? null);
+          setCustom(!preset);
+          setAgentKind(next.some(agent => agent.kind === stored) ? stored : "");
           return;
         }
         // a linked agent herdr does not offer gives way to the last one picked, as an unknown remembered one does to a shell
@@ -152,7 +157,7 @@ export function NewSessionDialog({ open, defaultCwd, tab = null, onClose, onCrea
   const startWorkspace = async (directory: string): Promise<void> => {
     if (pending) return;
     if (createdPaneId !== null) { onCreated(createdPaneId, false); return; }
-    if (tab && !selectedPreset) return;
+    if (tab && !selectedPreset && !custom) return;
     setPending(true);
     setError(null);
     try {
@@ -205,11 +210,17 @@ export function NewSessionDialog({ open, defaultCwd, tab = null, onClose, onCrea
             <div className="launch-presets" role="group" aria-label={t("Launch presets")}>
               {launchPresets.map(preset => <button key={preset.id} type="button"
                 disabled={fieldsDisabled || !agents.some(agent => agent.kind === preset.kind)}
-                aria-pressed={selectedPreset?.id === preset.id} onClick={() => setPresetId(preset.id)}>
+                aria-pressed={selectedPreset?.id === preset.id} onClick={() => { setCustom(false); setPresetId(preset.id); }}>
                 <AgentMark agent={preset.kind} size={17} />
                 <span className="launch-preset-name"><strong>{preset.label}</strong><small>{preset.detail}</small></span>
                 {selectedPreset?.id === preset.id && <Check className="launch-preset-check" size={16} aria-hidden="true" />}
               </button>)}
+            </div>
+            <div className="field launch-custom">
+              <button type="button" className="btn btn-ghost" disabled={fieldsDisabled} aria-expanded={custom}
+                onClick={() => { setCustom(true); setPresetId(null); }} id="new-tab-agent">{t("All agents & shell")}</button>
+              {custom && <AgentPicker ref={firstFieldRef} agents={agents} value={agentKind} disabled={fieldsDisabled}
+                labelledBy="new-tab-agent" onChange={setAgentKind} />}
             </div>
           </> : <>
             <div className="field">
@@ -252,7 +263,7 @@ export function NewSessionDialog({ open, defaultCwd, tab = null, onClose, onCrea
         </div>
         <footer className="modal-footer">
           <button type="button" className="btn btn-ghost" disabled={pending} onClick={onClose}>{t("Cancel")}</button>
-          <button type="submit" className="btn btn-primary" disabled={pending || (tab !== null && !selectedPreset && createdPaneId === null)}>{t(pending ? "Starting…" : tab || createdPaneId !== null ? "Open" : "Start")}</button>
+          <button type="submit" className="btn btn-primary" disabled={pending || (tab !== null && !selectedPreset && !custom && createdPaneId === null)}>{t(pending ? "Starting…" : tab || createdPaneId !== null ? "Open" : "Start")}</button>
         </footer>
       </form>
     </div>

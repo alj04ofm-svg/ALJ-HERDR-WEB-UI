@@ -42,6 +42,7 @@ export function useLocalWeather(
   setDevice: (coords: WeatherCoordinates | null) => void,
   active: boolean,
   retry: number,
+  resolvePlace: boolean,
 ):
   WeatherReading | { kind: "off" | "needs-location" } {
   const [reading, setReading] = useState<{ key: string; state: WeatherReading } | null>(null);
@@ -76,7 +77,7 @@ export function useLocalWeather(
   const coordinates = location === "device" ? device : location;
   const latitude = coordinates?.latitude;
   const longitude = coordinates?.longitude;
-  const key = coordinates ? `${latitude},${longitude}` : null;
+  const key = coordinates ? `${latitude},${longitude},${resolvePlace}` : null;
   useEffect(() => {
     if (!active || key === null) return;
     const controller = new AbortController();
@@ -85,7 +86,7 @@ export function useLocalWeather(
       if (document.hidden || Date.now() - lastRequest < REFRESH_MS) return;
       lastRequest = Date.now();
       const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]);
-      void weatherRequest<CurrentWeather>("current", { latitude, longitude }, signal).then((data) => {
+      void weatherRequest<CurrentWeather>("current", { latitude, longitude, ...(resolvePlace && { resolve_place: true }) }, signal).then((data) => {
         if (controller.signal.aborted) return;
         if (!Number.isFinite(data?.temperature) || typeof data.model_time !== "string" ||
             !["clear", "cloudy", "rain", "fog", "snow", "storm"].includes(data.condition)) {
@@ -106,7 +107,7 @@ export function useLocalWeather(
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", refresh);
     };
-  }, [active, key, latitude, longitude, retry]);
+  }, [active, key, latitude, longitude, retry, resolvePlace]);
 
   if (!active || !location) return { kind: "off" };
   if (key === null) return { kind: "needs-location" };

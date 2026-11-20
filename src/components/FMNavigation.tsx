@@ -1,11 +1,10 @@
 import { Suspense, lazy, useState, useCallback } from "react";
-import { Activity, Grid2X2, LayoutDashboard, MessageCircle, Pin, Plus, Wrench, X } from "lucide-react";
+import { Grid2X2, LayoutDashboard, MessageCircle, Pin, Plus, Wrench, X } from "lucide-react";
 import type { Machine } from "../../shared/machines.ts";
 import { MachineContext } from "../lib/machineContext.tsx";
 const WorkspaceOverview = lazy(() => import("./WorkspaceOverview.tsx").then(module => ({ default: module.WorkspaceOverview })));
 const WorkspaceTools = lazy(() => import("./WorkspaceTools.tsx").then(module => ({ default: module.WorkspaceTools })));
 const Communications = lazy(() => import("./Communications.tsx").then(module => ({ default: module.Communications })));
-const ServerHealth = lazy(() => import("./ServerHealth.tsx").then(module => ({ default: module.ServerHealth })));
 import { WorkspaceSync } from "./WorkspaceSync.tsx";
 import { SidebarTabActions } from "./SidebarTabActions.tsx";
 import { WorkflowNavigation } from "./WorkflowNavigation.tsx";
@@ -33,13 +32,11 @@ export function FMNavigation({ machines, selectedMachineId, selectedPaneId, acti
       { id: "communications", label: t("Comms"), icon: MessageCircle, run: () => setSurface("communications") },
       { id: "tabs", label: t("Organize tabs"), icon: Pin, run: () => setSurface("tabs") },
       { id: "tools", label: t("Workspace tools"), icon: Grid2X2, run: () => setSurface("tools") },
-      { id: "health", label: t("VPS health"), icon: Activity, run: () => setSurface("health") },
     ]} />}
 
     <Suspense fallback={<p role="status">Loading workspace tools…</p>}>
     {surface === "overview" && <WorkspaceOverview machines={machines} onSelect={select} onClose={() => setSurface("")} />}
     {surface === "communications" && <Communications onClose={() => setSurface("")} />}
-    {surface === "health" && <ServerHealth onClose={() => setSurface("")} />}
     {surface === "tools" && <WorkspaceTools paneId={selectedPaneId} onClose={() => setSurface("")} onOpened={pane => { actions.refresh(); select(selectedMachineId, pane); }} onAllActions={() => { setSurface(""); actions.openPalette(); }} />}
     {surface === "tabs" && createPortal(
       <div className="modal-scrim" onMouseDown={event => { if (event.target === event.currentTarget) setSurface(""); }}>

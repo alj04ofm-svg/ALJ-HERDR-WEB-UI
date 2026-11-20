@@ -13,6 +13,7 @@
  * What does not: files, images, push and remote PCs, which need a real machine.
  */
 import type { AgentIntegration, AgentStatus, ConversationTurn, IntegrationsResponse, Machine, MachineEvent, PaneDirection, PaneFindMatch, PaneFindRequest, PaneMoved, PanePlan, PaneResized, PaneSplit, PaneSwapped, PaneZoomed, PendingMessage, PlanStep, PluginActionResult, PluginActions, PluginActionsResponse, ServerMessage, SessionSnapshot, TabMoved, UsageReport, WorkspaceCreated, WorkspaceInfo, WorktreeEntry, WorktreeListing, WorktreeOpened, WorktreeRemoved } from "../../shared/protocol.ts";
+import { isTaskList, isTaskProjects, type TaskSnapshot } from "../../shared/tasks.ts";
 import { VOICE_DEFAULTS, type VoiceStatus } from "../../shared/voice.ts";
 import { isAgentName } from "../../shared/agent-name.ts";
 import { neighborPane } from "../../src/lib/layoutMap.ts";
@@ -27,6 +28,7 @@ import panesFixture from "./fixtures/panes.json";
 import terminalFixture from "./fixtures/terminal.json";
 
 const DEMO_VERSION = "demo";
+let taskSnapshot: TaskSnapshot = { revision: "0", tasks: [], projects: [] };
 /** Only an explicit `demo logs` command starts this fictional retained history. */
 const histories = new Map<string, DemoHistory>();
 const terminalGrids = new Map<string, { cols: number; rows: number }>();
@@ -578,6 +580,18 @@ async function route(url: URL, method: string, init: RequestInit | undefined, in
     if (query.get("scope") === "bridge") return json({ ok: true, auth, bridge_protocol: 1 });
     return json({ ok: true, herdr: { version: "0.9.0", protocol: 22, terminal_attach: true }, auth, web_ui: { boot_id: DEMO_VERSION, revision: null } });
   }
+  if (path === "/api/tasks") {
+    if (method === "GET") return json(taskSnapshot);
+    if (method !== "PUT") return error("method_not_allowed", "Use GET or PUT", 405);
+    const body = await bodyOf(init, input);
+    if (body.revision !== taskSnapshot.revision) return error("tasks_changed", "Reload the task board", 409);
+    if (!isTaskList(body.tasks) || (body.projects !== undefined && !isTaskProjects(body.projects))) return error("invalid_request", "Invalid task board", 400);
+    taskSnapshot = { revision: String(Number(taskSnapshot.revision) + 1), tasks: body.tasks, projects: body.projects ?? taskSnapshot.projects };
+    return json(taskSnapshot);
+  }
+  if (path === "/api/prompt/refine") return method === "GET" ? json({ configured: false }) : error("refine_not_configured", "Connect a host to use Codex", 409);
+  if (path === "/api/server/health") return error("health_unavailable", "Health metrics require a connected host", 404);
+  if (path.startsWith("/api/weather/")) return error("weather_demo", "Live weather requires a connected host", 404);
   if (path === "/api/machines") return json({ machines });
   if (path === "/api/session") return json({ snapshot: snapshot() });
   if (path === "/api/agents") return json(agentsFixture);

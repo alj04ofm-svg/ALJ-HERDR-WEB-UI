@@ -1120,7 +1120,7 @@ export interface RefinePromptStatus { configured: boolean }
 /** POST /api/prompt/refine. Explicit AI rewrite of a draft; never delivers pane input.
  * Uses current Codex sign-in, gpt-6-luna/high, in an ephemeral tool-disabled call. No history or files are sent upstream.
  * Authentication and same-origin mutation checks apply; failures use ApiError. */
-export interface RefinePromptRequest { text: string; agent: string | null }
+export interface RefinePromptRequest { text: string; agent: string | null; task_day?: string }
 export interface RefinePromptResponse { text: string }
 
 /** GET /api/server/health: allowlisted measurements of this bridge's host, never process data. */
@@ -1170,4 +1170,5 @@ export interface CurrentWeather {
   temperature: number;
   condition: WeatherCondition;
   model_time: string;
+  place?: string;
 }

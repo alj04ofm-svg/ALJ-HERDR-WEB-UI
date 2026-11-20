@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
-import { ArrowLeft, Bell, Check, ChevronDown, ChevronRight, ChevronUp, Eye, EyeOff, Gauge, Info, Keyboard, MessageSquare, Mic, Monitor, Palette, Plug, Plus, Smartphone, SquareTerminal, Star, X, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Bell, BookOpen, Check, ChevronDown, ChevronRight, ChevronUp, Eye, EyeOff, Gauge, Info, Keyboard, MessageSquare, Mic, Monitor, Palette, Plug, Plus, Smartphone, SquareTerminal, Star, X, type LucideIcon } from "lucide-react";
 
 import "./SettingsDialog.css";
 
@@ -102,7 +102,7 @@ function FontFamilyInput({ value, label, onCommit }: { value: string; label: str
 }
 
 
-type SettingsPage = "appearance" | "chat" | "terminal" | "alerts" | "voice" | "usage" | "shortcuts" | "devices" | "remote" | "integrations" | "about";
+type SettingsPage = "setup" | "appearance" | "chat" | "terminal" | "alerts" | "voice" | "usage" | "shortcuts" | "devices" | "remote" | "integrations" | "about";
 
 /** The pages in the order the list shows them: what is looked at first, then what is set once. */
 const PAGES: readonly { id: SettingsPage; icon: LucideIcon }[] = [
@@ -113,6 +113,7 @@ const PAGES: readonly { id: SettingsPage; icon: LucideIcon }[] = [
   { id: "voice", icon: Mic },
   { id: "usage", icon: Gauge },
   { id: "shortcuts", icon: Keyboard },
+  { id: "setup", icon: BookOpen },
   { id: "devices", icon: Smartphone },
   { id: "remote", icon: Monitor },
   { id: "integrations", icon: Plug },
@@ -711,6 +712,36 @@ function PluginsGroup() {
   );
 }
 
+const SETUP_AGENTS = [
+  { name: "Codex", docs: "https://developers.openai.com/codex/cli", command: "codex", login: "Run codex and choose Sign in with ChatGPT, or use the credentials for your own account." },
+  { name: "Claude Code", docs: "https://code.claude.com/docs/en/quickstart", command: "claude", login: "Run claude and follow the sign-in prompts for your own Claude account." },
+  { name: "OpenCode", docs: "https://opencode.ai/docs/", command: "opencode", login: "Run opencode, enter /connect, and choose your provider. Use /models to pick a model." },
+  { name: "Another agent or shell", docs: "", command: "", login: "Run your agent’s own sign-in or setup command in a shell. A plain shell needs no agent account." },
+] as const;
+
+function SetupPage({ onPage }: { onPage(page: SettingsPage): void }) {
+  const [selected, setSelected] = useState(0);
+  const agent = SETUP_AGENTS[selected]!;
+  return <section className="settings-setup">
+    <label className="field"><span className="field-label">What do you want to run?</span>
+      <select className="select" value={selected} onChange={event => setSelected(Number(event.target.value))}>
+        {SETUP_AGENTS.map(({ name }, index) => <option value={index} key={name}>{name}</option>)}
+      </select>
+    </label>
+    <ol>
+      <li><strong>Set up the host</strong><p>Install and run herdr and this web UI on the computer that will run your agents. For another computer, connect it under Remote PCs.</p></li>
+      <li><strong>{agent.command ? `Install and sign in to ${agent.name}` : "Prepare your shell"}</strong><p>{agent.login} Do this on the host under the same account that runs herdr.</p>{agent.docs && <a href={agent.docs} target="_blank" rel="noopener noreferrer">{agent.name} installation guide</a>}</li>
+      <li><strong>Open a workspace or tab</strong><p>Choose your project folder in New workspace. For an existing workspace, choose New tab, then All agents &amp; shell. Pick the agent or choose Shell and run it yourself.</p></li>
+      <li><strong>Pair your own devices</strong><p>Use Phone &amp; devices for pairing. Tasks are stored by your own connection server. Only pair devices you trust with interact access.</p></li>
+    </ol>
+    <div className="settings-setup-links">
+      <button className="btn" onClick={() => onPage("remote")}>Remote PCs</button>
+      <button className="btn" onClick={() => onPage("integrations")}>Agent integrations</button>
+      <button className="btn" onClick={() => onPage("devices")}>Phone &amp; devices</button>
+    </div>
+  </section>;
+}
+
 function AboutPage({ updates, herdrVersion, bridgesFollow }: { updates: UpdatesModel; herdrVersion: string | null; bridgesFollow: boolean }) {
   const t = useT();
   return (
@@ -768,7 +799,7 @@ function OpenSettingsDialog({ section = null, linkPage = null, linkSection = nul
   useSheetSwipe(surface, onClose);
   const shown = useRef<{ page: SettingsPage | null; keyBar: boolean } | null>(null);
   const label = (id: SettingsPage): string => t(id === "appearance" ? "Appearance" : id === "chat" ? "Chat" : id === "terminal" ? "Terminal" : id === "alerts" ? "Alerts" : id === "voice" ? "Voice input"
-    : id === "usage" ? "Subscription usage" : id === "shortcuts" ? "Shortcuts" : id === "devices" ? "Phone & devices" : id === "remote" ? "Remote PCs" : id === "integrations" ? "Agent integrations" : "About");
+    : id === "setup" ? "Setup guide" : id === "usage" ? "Subscription usage" : id === "shortcuts" ? "Shortcuts" : id === "devices" ? "Phone & devices" : id === "remote" ? "Remote PCs" : id === "integrations" ? "Agent integrations" : "About");
   const openPage = (id: SettingsPage): void => { setKeyBarOpen(false); setChosen(id); };
   const openKeyBar = (): void => {
     settingsScrollRef.current = settingsBodyRef.current?.scrollTop ?? 0;
@@ -838,6 +869,7 @@ function OpenSettingsDialog({ section = null, linkPage = null, linkSection = nul
 
   const body = (): ReactNode => {
     switch (page) {
+      case "setup": return <SetupPage onPage={openPage} />;
       case "appearance": return <AppearancePage />;
       case "chat": return <ChatPage />;
       case "terminal": return <TerminalPage keyBarButtonRef={keyBarButtonRef} onEditKeyBar={openKeyBar} />;

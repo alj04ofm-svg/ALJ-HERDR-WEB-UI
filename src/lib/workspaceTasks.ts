@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { isTaskList, type TaskSnapshot, type WorkspaceTask } from "../../shared/tasks.ts";
+import { isTaskList, isTaskProjects, type TaskSnapshot, type WorkspaceTask } from "../../shared/tasks.ts";
 
 class TaskResponseError extends Error {
   constructor(readonly status: number, message: string) { super(message); }
@@ -17,7 +17,7 @@ async function requestTasks(body?: TaskSnapshot): Promise<TaskSnapshot> {
   if (!response.ok) {
     throw new TaskResponseError(response.status, data?.error?.message ?? "Tasks are unavailable. Check your connection and try again.");
   }
-  if (typeof data?.revision !== "string" || !isTaskList(data.tasks)) {
+  if (typeof data?.revision !== "string" || !isTaskList(data.tasks) || (data.projects !== undefined && !isTaskProjects(data.projects))) {
     throw new Error("The bridge returned an unreadable task board.");
   }
   return data;
@@ -68,6 +68,22 @@ export function createTaskStore() {
     state = { ...state, ...update };
     for (const listener of listeners) listener();
   };
+  async function persist(snapshot: TaskSnapshot, updateTiming?: (timing: Map<string, string>) => void) {
+    publish({ pending: "save", error: "" });
+    try {
+      const next = await requestTasks(snapshot);
+      const started = new Map(state.started);
+      updateTiming?.(started);
+      saveTaskTiming(next.tasks, started);
+      publish({ snapshot: next, started });
+      return true;
+    } catch (error) {
+      publish({ error: (error as Error).message, conflict: error instanceof TaskResponseError && error.status === 409 });
+      return false;
+    } finally {
+      publish({ pending: null });
+    }
+  }
   return {
     read: () => state,
     subscribe(listener: () => void) {
@@ -99,29 +115,22 @@ export function createTaskStore() {
     async save(task: WorkspaceTask) {
       const { snapshot, pending, conflict } = state;
       if (!snapshot || pending || conflict) return false;
-      publish({ pending: "save", error: "" });
       const previous = snapshot.tasks.find(entry => entry.id === task.id);
       const updated = { ...task, title: task.title.trim(), project: task.project.trim(), updated_at: new Date().toISOString() };
       const tasks = previous
         ? snapshot.tasks.map(entry => entry.id === task.id ? updated : entry)
         : [...snapshot.tasks, updated];
-      try {
-        const next = await requestTasks({ revision: snapshot.revision, tasks });
-        const started = new Map(state.started);
+      return persist({ ...snapshot, tasks }, started => {
         if (updated.archived || updated.stage !== "doing") started.delete(updated.id);
         else if (!previous || previous.archived || previous.stage !== "doing") started.set(updated.id, updated.updated_at);
-        saveTaskTiming(next.tasks, started);
-        publish({ snapshot: next, started });
-        return true;
-      } catch (error) {
-        publish({
-          error: (error as Error).message,
-          conflict: error instanceof TaskResponseError && error.status === 409,
-        });
-        return false;
-      } finally {
-        publish({ pending: null });
-      }
+      });
+    },
+    async addProject(project: string) {
+      const { snapshot, pending, conflict } = state;
+      if (!snapshot || pending || conflict) return false;
+      const projects = [...new Set([...(snapshot.projects ?? []), project])];
+      if (!isTaskProjects(projects)) { publish({ error: "The project name or project limit is invalid." }); return false; }
+      return persist({ ...snapshot, projects });
     },
     dismissError() { publish({ error: "" }); },
   };

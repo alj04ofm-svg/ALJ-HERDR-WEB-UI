@@ -150,7 +150,7 @@ export function MachineSidebar(props: Props) {
     </>}
     <footer className="sidebar-footer">
       {!props.compact && !installed && !canInstall && installHelpOpen && <p className="sidebar-install-help" role="status">{help}</p>}
-      <TaskSidebarButton compact={props.compact} />
+      <TaskSidebarButton compact={props.compact} machines={props.machines} onSelect={props.onSelect} />
       <div className="sidebar-footer-row">
         {props.compact && <button type="button" className="icon-button sidebar-utility" aria-label={t("Command palette")} title={t("Command palette (⌘⇧K)")} onClick={props.actions.openPalette}><Search aria-hidden="true" /></button>}
         <UsageMeters compact={props.compact} open={props.usageOpen} onOpenChange={props.onUsageOpenChange} />
