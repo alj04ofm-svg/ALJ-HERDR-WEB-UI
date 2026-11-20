@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { Archive, ArrowLeft, CalendarDays, Check, CheckCheck, ChevronRight, Columns3, List, Radio, Sparkles, Maximize2, Minimize2, Plus, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
+import { Archive, ArrowLeft, CalendarDays, Check, CheckCheck, ChevronRight, Circle, CircleCheck, Columns3, List, Radio, Sparkles, Maximize2, Minimize2, Plus, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 import { TASK_STAGES, TASK_STAGE_LABELS, type TaskStage, type WorkspaceTask } from "../../shared/tasks.ts";
 import type { Machine } from "../../shared/machines.ts";
 import { sidebarAgents, agentNavigationLabel } from "../lib/sidebarAgents.ts";
@@ -57,15 +57,22 @@ function dueLabel(date: string) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(`${date}T12:00:00`));
 }
 
-function BoardCard({ task, today, canMove, disabled, onEdit }: {
+function BoardCard({ task, today, canMove, disabled, canComplete, completionDisabled, onEdit, onComplete }: {
   task: WorkspaceTask; today: string; canMove: boolean; disabled: boolean;
-  onEdit(): void;
+  canComplete: boolean; completionDisabled: boolean; onEdit(): void; onComplete(): void;
 }) {
-  return <article className="task-card" data-task-id={task.id}
+  const completed = task.stage === "done";
+  const checkedCount = task.checklist.filter(item => item.done).length;
+  const toggleLabel = completed ? `Reopen ${task.title}` : `Complete ${task.title}`;
+  return <article className="task-card" data-task-id={task.id} data-complete={completed}
     draggable={canMove} onDragStart={event => {
       event.dataTransfer.setData(DRAG_TYPE, task.id);
       event.dataTransfer.effectAllowed = "move";
     }}>
+    {canComplete && <button type="button" className="icon-button task-card-complete" aria-label={toggleLabel} title={toggleLabel}
+      disabled={completionDisabled} onClick={onComplete}>
+      {completed ? <CircleCheck aria-hidden="true" /> : <Circle aria-hidden="true" />}
+    </button>}
     <button type="button" className="task-card-open" disabled={disabled} onClick={onEdit}>
       <span className="task-card-title">{task.title}</span>
       {task.notes && <span className="task-note-preview">{task.notes}</span>}
@@ -75,7 +82,7 @@ function BoardCard({ task, today, canMove, disabled, onEdit }: {
       <span className="task-card-project" title={task.project || undefined}>{task.project || (task.scope === "business" ? "Business" : "Personal")}</span>
       {task.priority !== "normal" && <span className="task-priority">{task.priority === "urgent" ? "Urgent" : "High"}</span>}
       {task.due && <time dateTime={task.due} className={task.due < today && task.stage !== "done" ? "task-overdue" : undefined}><CalendarDays aria-hidden="true" />{dueLabel(task.due)}{task.due_time && ` · ${task.due_time}`}</time>}
-      {!!task.checklist.length && <span className="task-card-check" aria-label={`${task.checklist.filter(item => item.done).length} of ${task.checklist.length} checklist items complete`}><CheckCheck aria-hidden="true" />{task.checklist.filter(item => item.done).length}/{task.checklist.length}</span>}
+      {!!task.checklist.length && <span className="task-card-check" aria-label={`${checkedCount} of ${task.checklist.length} checklist items complete`}><CheckCheck aria-hidden="true" />{checkedCount}/{task.checklist.length}</span>}
     </div>
   </article>;
 }
@@ -171,6 +178,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   const [itemText, setItemText] = useState("");
   const [confirm, setConfirm] = useState<"close" | "board" | "reload" | "inline" | null>(null);
   const [status, setStatus] = useState("");
+  const [undo, setUndo] = useState<{ previous: WorkspaceTask; saved: WorkspaceTask; startedAt?: string } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [inlineStage, setInlineStage] = useState<TaskStage | null>(null);
   const [inlineTitle, setInlineTitle] = useState("");
@@ -270,8 +278,9 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   }
   async function update(task: WorkspaceTask, fromEditor = false) {
     setStatus("");
+    setUndo(null);
     const saved = await store.save(task);
-    if (!saved) return;
+    if (!saved) return false;
     if (task.id === captureTask) {
       const destination = store.read().snapshot?.tasks.find(entry => entry.id === task.id)?.project ?? "";
       store.rememberCaptureProject(destination);
@@ -289,6 +298,34 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
         const card = surface.current?.querySelector<HTMLElement>(`[data-task-id="${task.id}"] .task-card-open`);
         (card?.getClientRects().length ? card : newButton.current)?.focus({ preventScroll: true });
       });
+    }
+    return true;
+  }
+
+  async function toggleComplete(task: WorkspaceTask) {
+    const stage = task.stage === "done" ? "inbox" : "done";
+    const startedAt = store.read().started.get(task.id);
+    if (!await update({ ...task, stage })) return;
+    const saved = store.read().snapshot?.tasks.find(entry => entry.id === task.id);
+    if (!saved) return;
+    setStatus(stage === "done" ? "Task completed." : "Task reopened.");
+    setUndo({ previous: task, saved, startedAt });
+  }
+
+  async function undoComplete() {
+    if (!undo) return;
+    const current = store.read().snapshot?.tasks.find(task => task.id === undo.saved.id);
+    if (JSON.stringify(current) !== JSON.stringify(undo.saved)) {
+      setUndo(null);
+      setStatus("This task has changed. Open the task to adjust its stage.");
+      return;
+    }
+    // A conflict keeps the undo available after the board is reloaded.
+    if (await store.save(undo.previous, undo.startedAt)) {
+      setUndo(null);
+      setStatus("Task stage restored.");
+      setPhoneStage(COLUMNS.find(lane => lane.includes.includes(undo.previous.stage))?.stage ?? "inbox");
+      restoreBoardFocus();
     }
   }
 
@@ -422,7 +459,9 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     return state === "working" || state === "blocked" ? [{ machine, entry, state }] : [];
   }) : []);
   const cards = (entries: WorkspaceTask[]) => entries.map(task => <BoardCard key={task.id} task={task} today={today}
-    canMove={canMove && !addingInline && layout === "board" && !task.archived} disabled={addingInline} onEdit={() => edit(task)} />);
+    canMove={canMove && !addingInline && layout === "board" && view !== "archive"}
+    canComplete={view !== "archive"} disabled={addingInline} completionDisabled={!canMove || addingInline || Boolean(editor)}
+    onEdit={() => edit(task)} onComplete={() => void toggleComplete(task)} />);
 
   return createPortal(<div className="modal-scrim task-scrim" onClick={event => { if (event.currentTarget === event.target) attemptExit("close"); }}>
     <section className="modal task-workspace" ref={surface} data-expanded={expanded} data-editing={Boolean(editor)} role="dialog"
@@ -447,7 +486,10 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
         <span>{error}{unsaved ? " Your edit is still here." : ""}</span>
         {error && <button type="button" className="btn" disabled={Boolean(pending)} onClick={() => void refreshBoard()}>Load latest board</button>}
       </div>}
-      {!projectPanel && (status || pending) && <p className="task-status" role="status">{pending === "save" ? busyProject ? "Saving project…" : "Saving task…" : pending === "load" && snapshot ? "Refreshing tasks…" : status}</p>}
+      {!projectPanel && (status || pending) && <div className="task-status task-status-line">
+        <span role="status">{pending === "save" ? busyProject ? "Saving project…" : "Saving task…" : pending === "load" && snapshot ? "Refreshing tasks…" : status}</span>
+        {undo && <button type="button" className="btn btn-ghost" disabled={!canMove || addingInline || Boolean(editor)} onClick={() => void undoComplete()}><RotateCcw aria-hidden="true" />Undo</button>}
+      </div>}
       <div className="task-workspace-body" aria-hidden={projectPanel ? true : undefined} ref={node => { if (node) node.inert = Boolean(projectPanel); }}>
         <TaskProjectRail snapshot={snapshot} projects={projects} selected={project} archived={view === "archive" && (!project || Boolean(archivedProject(snapshot, project)))} open={createProject}
           busyProject={busyProject} canChange={Boolean(snapshot && canMove && !addingInline && !editor)} disabled={addingInline || Boolean(editor)}

@@ -115,7 +115,7 @@ export function createTaskStore() {
         publish({ pending: null });
       }
     },
-    async save(task: WorkspaceTask) {
+    async save(task: WorkspaceTask, startedAt?: string) {
       const { snapshot, pending, conflict } = state;
       if (!snapshot || pending || conflict) return false;
       const previous = snapshot.tasks.find(entry => entry.id === task.id);
@@ -125,7 +125,7 @@ export function createTaskStore() {
         : [...snapshot.tasks, updated];
       return persist({ ...snapshot, tasks }, started => {
         if (updated.archived || updated.stage !== "doing") started.delete(updated.id);
-        else if (!previous || previous.archived || previous.stage !== "doing") started.set(updated.id, updated.updated_at);
+        else if (!previous || previous.archived || previous.stage !== "doing") started.set(updated.id, startedAt ?? updated.updated_at);
       });
     },
     async addProject(project: string) {

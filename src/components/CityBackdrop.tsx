@@ -122,6 +122,8 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
             <div className="city-works">
               <span className="city-foundation" />
               <span className="city-site-fencing" />
+              <span className="city-scaffold" />
+              <span className="city-safety-lamps"><i /><i /><i /></span>
               <div className="city-excavator"><i /><b /><em /></div>
               <div className="city-crane">
                 <span className="city-crane-mast" /><span className="city-crane-jib" /><span className="city-crane-counterweight" />
@@ -155,14 +157,19 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
     </div>
     <div className="city-water-lights" />
     <div className="city-ripples" />
-    <div className="city-ferry-berth"><i /><i /><i /></div>
+    <div className="city-ferry-berth"><i /><i /><i />
+      <div className="city-boarding">
+        <span className="city-gangway" />
+        <span className="city-boarding-line">{crowd.slice(0, 4).map(person => <i key={person} style={{ "--boarding-person": person } as CSSProperties} />)}</span>
+      </div>
+    </div>
     <div className="city-river">
       {!manualBoats && <div className="city-vessel city-yacht" />}
       {!event && <div className="city-vessel city-yacht city-yacht-returning" />}
       {!manualBoats && <div className="city-vessel city-jet-ski" />}
       {!event && <div className="city-vessel city-jet-ski city-jet-ski-second" />}
       <div className="city-vessel city-yacht city-docked-yacht"><i /></div>
-      <div className="city-water-taxi"><i /><b /></div>
+      <div className="city-water-taxi"><i /><b /><span /></div>
     </div>
     <div className="city-bridge-traffic" />
     <div className="city-lantern" />
