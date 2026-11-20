@@ -21,6 +21,7 @@ import { moveSidebarGroup, moveSidebarRow, orderSidebarRows, removeSidebarGroup,
 import { RowMenu, type RowMenuItem } from "./RowMenu.tsx";
 import { RenameNativeTab, TabCloseConfirmation } from "./SidebarTabActions.tsx";
 import { AgentMark, hasAgentMark } from "./AgentMark.tsx";
+import { WorkingRing } from "./WorkingRing.tsx";
 import { displayPaneTitle } from "./Sidebar.tsx";
 import "./AgentSidebar.css";
 
@@ -391,14 +392,16 @@ export function AgentSidebar({ machines, selectedMachineId, selectedPaneId, stat
       const fraction = (event.clientY - bounds.top) / bounds.height;
       return { kind: "row", id, groupId, position: fraction < .25 ? "before" : fraction > .75 ? "after" : "group" };
     };
+    const status = online ? activity.status(machine.id, pane) : undefined;
     const dropHere = drop?.kind === "row" && drop.id === id;
     return <li className={`agent-item${selected ? " is-selected" : ""}${online ? "" : " is-offline"}${dragging?.id === id ? " is-dragging" : ""}${dropHere ? drop.position === "group" ? " drop-inside" : ` drop-${drop.position}` : ""}`} key={paneStorageId(machine.id, pane.pane_id)} data-machine={machine.id} data-pane={pane.pane_id}
       draggable={!editing} onDragStart={event => startDrag(event, { kind: "row", id })} onDragEnd={endDrag} onDragOver={event => over(event, rowDrop(event))} onDrop={event => finishDrop(event, rowDrop(event))}
       onContextMenu={event => openMenu(event, { kind: "row", id })} onKeyDown={event => localKey(event, { kind: "row", id })}>
       <button type="button" className="agent-select agent-row" disabled={!online} aria-current={selected ? "true" : undefined} title={tooltip} onClick={() => onSelect(machine.id, pane.pane_id)}>
         {/* a saved roster's state is not news: a PC that is away says nothing about its agents */}
-        <AgentRowBody mark={mark} markKind={markKind} title={title} online={online} status={online ? activity.status(machine.id, pane) : undefined} />
+        <AgentRowBody mark={mark} markKind={markKind} title={title} online={online} status={status} />
       </button>
+      {status === "working" && <WorkingRing />}
       {(settings.agentPins || isPinned) && <button type="button" className={`agent-pin-toggle${isPinned ? " is-pinned" : ""}`} aria-label={`${t("Pin agent")}: ${[title, machineName(machine), workspace.label].filter(Boolean).join(" · ")}`} aria-pressed={isPinned} title={t(isPinned ? "Unpin agent" : "Pin agent")} data-pin-key={pinKey} onClick={(event) => setPin(pinKey, event.currentTarget)}>
         <Star aria-hidden="true" fill={isPinned ? "currentColor" : "none"} />
       </button>}

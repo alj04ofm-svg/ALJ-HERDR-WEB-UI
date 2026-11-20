@@ -13,9 +13,8 @@
   padding: var(--space-1) var(--space-3);
   border: var(--hairline) solid color-mix(in srgb, var(--text) 16%, transparent);
   border-radius: var(--radius-lg);
-  background: var(--card-glass);
-  backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-card);
+  background: color-mix(in srgb, var(--bg-panel) 55%, transparent);
+  backdrop-filter: blur(8px);
   color: var(--text-strong);
   cursor: pointer;
   text-align: start;
@@ -31,14 +30,14 @@
 .sky-widget[data-size="large"] { --sky-icon: var(--space-6); --sky-time: var(--fs-display); }
 .sky-widget[data-font="mono"] { font-family: var(--font-mono); }
 .sky-widget[data-style="sky"] {
-  background: color-mix(in srgb, var(--bg-panel) 59%, transparent);
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--bg-panel) 68%, transparent) 13%, transparent 74%);
   border-color: transparent;
   border-radius: var(--radius-md);
   box-shadow: none;
   backdrop-filter: none;
 }
-.sky-widget:hover, .sky-widget:focus-visible { background: var(--bg-hover); }
-.sky-widget > svg { flex: none; inline-size: var(--sky-icon); block-size: var(--sky-icon); color: var(--accent); }
+.sky-widget:hover, .sky-widget:focus-visible { background: color-mix(in srgb, var(--bg-panel) 80%, transparent); }
+.sky-widget > svg { flex: none; inline-size: var(--sky-icon); block-size: var(--sky-icon); color: var(--text); }
 .sky-widget-copy { display: grid; gap: 2px; min-width: 0; }
 .sky-widget-values {
   display: flex;
@@ -88,4 +87,8 @@
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .sky-widget { transition: background-color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out); }
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .sky-widget, .sky-widget[data-style="sky"] { background: var(--bg-panel); backdrop-filter: none; border-color: var(--border-strong); }
 }

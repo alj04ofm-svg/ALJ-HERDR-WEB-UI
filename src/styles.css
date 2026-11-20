@@ -1856,7 +1856,7 @@ button {
   }
 }
 
-.app.sidebar-compact { --sidebar-rail-w: 88px; }
+.app.sidebar-compact { --sidebar-rail-w: 64px; }
 
 /* Keep native tap overlays from obscuring the app's own pressed/selected states. */
 button, a, [role="button"] {

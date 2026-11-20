@@ -378,7 +378,7 @@ One set for both themes: the card is island black wherever it shows.
   top start below it. The xterm mount is not fitted under the chat, so this resizes no pty.
 - The sidebar edge (`.sidebar-resizer`, `role="separator"`) resizes the drawer on a phone
   and the sidebar on desktop. It switches to the expanded layout at `224px`. Width ranges
-  from `76px` to `520px`, capped at half the window on desktop and leaving `44px` of
+  from `54px` to `520px`, capped at half the window on desktop and leaving `44px` of
   uncovered content on a phone. Arrow keys move the edge by `16px`, Home and End go to the
   limits, and a double-click resets the current layout's width. The browser remembers the
   compact and expanded widths independently in `herdr-web-ui:sidebar-compact-width` and
@@ -1350,9 +1350,11 @@ One set for both themes: the card is island black wherever it shows.
 - Status, loading and composer progress use `role="status"`; failures use `role="alert"`. Agent state
   has text plus color. Compact sidebar states add distinct glyphs and keep their text accessible;
   ready and unknown draw nothing there, and unknown uses a dashed badge edge elsewhere.
-- The compact rail defaults to `88px`. Rows stack the agent mark above a two-line tab title.
-  Unnamed tabs use their workspace name and add their tab number when needed. A
-  full-title tooltip waits 1.1 seconds on hover. The accessible label keeps the full name.
+- On desktop the sidebar button cycles through expanded, compact and hidden. The compact rail
+  defaults to `64px`; at its narrowest, each tab shows an agent mark and a single clipped title.
+  Wider rails can show two lines and an unnamed tab's number. Full titles remain accessible,
+  with a visual tooltip after 1.1 seconds of hover. A working agent gets a perimeter trace
+  around its tab and agent row. Reduced motion keeps a stationary outline.
 - Touch targets grow to `--touch-target`; fields stay `--fs-input` where mobile zoom is a risk.
 - On a touch screen (`hover: none` and `pointer: coarse`) the app is an app, not a page: its
   chrome (header, sidebar, tab strip, key bar, menus, sheet heads and feet, buttons, tabs, labels)

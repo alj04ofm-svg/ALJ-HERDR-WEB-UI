@@ -1,7 +1,7 @@
 import "./App.css";
 import fmBrand from "./brand/freak-media.svg";
 import { type CSSProperties, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Activity, Bell, Ellipsis, FolderInput, FolderOpen, Gauge, Grid2X2, Link, Lock, Menu, MessageSquare, PanelLeft, PanelLeftDashed, Plus, Search, SquareTerminal, X } from "lucide-react";
+import { Activity, Bell, Ellipsis, FolderInput, FolderOpen, Gauge, Grid2X2, Link, Lock, Menu, MessageSquare, PanelLeft, PanelLeftClose, PanelLeftDashed, Plus, Search, SquareTerminal, X } from "lucide-react";
 
 import type { AgentStatus, ServerMessage, AccessRefusal, HealthAuth, HerdrPane } from "../shared/protocol.ts";
 import { ApiError, authenticate, closeTab, fetchHealth, fetchBridgeHealth, fetchMachines, fetchSession, pairDevice, routeMissing, sendTestPush, signOut, splitPane, zoomPane, type HealthInfo } from "./lib/api.ts";
@@ -74,7 +74,7 @@ import { dropletAllows, endedTurn, seedStatuses, showDroplet, trackTurn, type Dr
 import { canPlayAlertSound, playAlertSound, unlockAlertSound, type AlertSoundKind } from "./lib/alertSound.ts";
 import { createAlertTurnPlayer } from "./lib/alertTurns.ts";
 
-const APP_TITLE = "ALJ HERDR WEB UI";
+const APP_TITLE = "ALJ Harbor";
 const POLL_MS = 5000;
 
 /**
@@ -139,7 +139,7 @@ function Brand() {
     <h1 className="brand">
       <img src={fmBrand} alt="" width="22" height="22" className="brand-mark" />
       <span className="brand-name">
-        ALJ HERDR <span className="brand-sub">WEB UI</span>
+        ALJ <span className="brand-sub">HARBOR</span>
       </span>
     </h1>
   );
@@ -292,9 +292,12 @@ export function App() {
   }, [sidebarCompact]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => initialLink?.sidebar === "hidden");
   const toggleDesktopSidebar = useCallback(() => {
-    if (sidebarCollapsed) setSidebarCollapsed(false);
-    else toggleSidebarCompact();
-  }, [sidebarCollapsed, toggleSidebarCompact]);
+    if (sidebarCollapsed) {
+      setSidebarCollapsed(false);
+      setSidebarCompact(false);
+    } else if (sidebarCompact) setSidebarCollapsed(true);
+    else setSidebarCompact(true);
+  }, [sidebarCollapsed, sidebarCompact]);
   const sidebarToggleLabel = t(sidebarCompact ? "Expand sidebar" : "Minimize sidebar");
   // the width the sidebar's edge was dragged to on this device; null is the density's own
   const [expandedWidth, setExpandedWidth] = useState(() => storedSidebarWidth());
@@ -938,7 +941,7 @@ export function App() {
     : null;
 
   useEffect(() => {
-    document.title = navigationTitle ? `${navigationTitle} · ALJ HERDR WEB UI` : APP_TITLE;
+    document.title = navigationTitle ? `${navigationTitle} · ALJ Harbor` : APP_TITLE;
   }, [navigationTitle]);
 
   const tabCloses = useRef(new Map<string, Promise<void>>());
@@ -1173,13 +1176,13 @@ export function App() {
           <button
             type="button"
             className="icon-button header-desktop-only sidebar-toggle"
-            aria-label={sidebarCollapsed ? t("Show workspace list") : sidebarToggleLabel}
-            aria-expanded={!sidebarCollapsed && !sidebarCompact}
+            aria-label={sidebarCollapsed ? t("Show workspace list") : sidebarCompact ? t("Close workspace list") : sidebarToggleLabel}
+            aria-expanded={!sidebarCollapsed}
             aria-controls="workspace-drawer"
             title={t("Toggle sidebar (⌘⇧B)")}
             onClick={toggleDesktopSidebar}
           >
-            {sidebarCompact && !sidebarCollapsed ? <PanelLeftDashed /> : <PanelLeft />}
+            {sidebarCollapsed ? <PanelLeft /> : sidebarCompact ? <PanelLeftClose /> : <PanelLeftDashed />}
           </button>
           <button type="button" className="icon-button palette-button" aria-label={t("Command palette")} title={t("Command palette (⌘⇧K)")} onClick={() => setPaletteOpen(true)}>
             <Search />

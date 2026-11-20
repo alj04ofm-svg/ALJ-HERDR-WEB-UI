@@ -1,14 +1,18 @@
-# ALJ HERDR WEB UI
+# ALJ Harbor
 
-A self-hosted browser and phone interface for [herdr](https://github.com/herdrdev/herdr). Open your own agent conversations and terminals, organize tabs into groups, and check subscription usage from the same workspace.
+**A self-hosted workspace for your code and coding agents.** Run Claude Code, Codex, OpenCode, and other agent CLIs in your own [herdr](https://github.com/herdrdev/herdr) instance. Pick up the same work from a desktop or phone, read an agent's reply in Chat, or switch to its live Terminal.
 
-![The waterfront skyline used in the animated chat backdrop](src/brand/city-harbor.webp)
+[Install from source](#install-from-source) · [Setup and safety](docs/guide.md#access-and-safety) · [Request a feature](#request-a-feature)
 
-- Switch between agent chat and the live terminal. Start a workspace with **New workspace** and choose an agent installed on your computer.
-- Expand the sidebar to see groups, workspaces, tab actions, and usage over the same live waterfront that fills Chat. Minimize it to a thin rail with agent icons and short tab labels, and move between them with the arrow keys.
-- In Chat, select the sailboat icon to open **Marina controls** on the waterfront. Race the yacht and jet ski, drag them across the water, or use the arrow keys when a boat has focus. Waterfront markers reveal local details. Choose the weather or pause motion from Chat. The scene also respects your system’s reduced-motion setting.
-- Open **Tasks** at the bottom of the sidebar for a list or Kanban board. Create projects and subprojects, set dates and times, and archive completed work. The **Agents** view shows work and requests from your connected agents. Use **Add to tasks** to save a task from an agent, or **Quick capture** to draft one by typing or using configured dictation.
-- Open **Settings → Setup guide** for your agent’s install and sign-in steps. Use **Settings → Remote PCs** to connect another computer over SSH.
+![Waterfront artwork used in the ALJ Harbor chat backdrop](src/brand/city-harbor.webp)
+
+## Your workspace
+
+- **Chat and Terminal.** Switch views in the same pane, answer supported agent prompts, and open files your agent mentions. Start a new workspace with an agent already installed on your computer.
+- **Live tabs and a sidebar you can get out of the way.** Organize tabs into groups, see which agents are running, and switch from the full sidebar to a slim rail or close it entirely. The rail keeps active tabs, Tasks, and configured usage meters within reach.
+- **Projects and tasks.** Plan work in a Trello-style Kanban board or a compact list, add cards directly to a column, and organize them into projects and subprojects. Find due work with filters and archive completed cards. The Agents view lets you turn live work into a saved task when you choose.
+- **A waterfront in Chat.** Set your location for current weather or choose a scene preset. Open the marina controls to race the yacht and jet ski, explore waterfront markers, or pause the scene. The interface respects reduced-motion preferences.
+- **Connect your setup.** Open **Settings → Setup guide** for supported agent install and sign-in instructions. Connect another computer through **Settings → Remote PCs**.
 
 ## Install from source
 
@@ -35,6 +39,10 @@ Task data is saved in your connection server’s state directory and shared amon
 
 Stop the web server, run `git pull --ff-only` from the checkout, repeat both dependency installs and `bun run build`, then restart with `bun run server`. This keeps your installation on this repository's `main` branch.
 
+## Request a feature
+
+[Open an issue](https://github.com/alj04ofm-svg/ALJ-HERDR-WEB-UI/issues/new) with the workflow you want to make easier. Use sample data in screenshots and logs.
+
 ## Credits
 
-ALJ HERDR WEB UI is based on [herdr web ui by devswha](https://github.com/devswha/herdr-web-ui) and is distributed under the [MIT license](LICENSE). See [third-party notices](THIRD_PARTY_NOTICES.md) for dependency licenses.
+ALJ Harbor is based on [herdr web ui by devswha](https://github.com/devswha/herdr-web-ui) and is distributed under the [MIT license](LICENSE). See [third-party notices](THIRD_PARTY_NOTICES.md) for dependency licenses.

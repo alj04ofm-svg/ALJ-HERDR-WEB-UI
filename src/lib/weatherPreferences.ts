@@ -15,7 +15,7 @@ export interface WeatherPreferences {
 }
 
 export const DEFAULT_WEATHER: WeatherPreferences = {
-  position: "right", size: "regular", font: "system", style: "glass",
+  position: "right", size: "regular", font: "system", style: "sky",
   time: true, date: true, temperature: true, place: true, unit: "C", matchScene: false, location: null,
 };
 
@@ -32,7 +32,7 @@ export function sanitizeWeatherPreferences(value: unknown): WeatherPreferences {
     position: source.position === "left" ? "left" : "right",
     size: source.size === "small" || source.size === "large" ? source.size : "regular",
     font: source.font === "mono" ? "mono" : "system",
-    style: source.style === "sky" ? "sky" : "glass",
+    style: source.style === "glass" ? "glass" : DEFAULT_WEATHER.style,
     time: source.time !== false,
     date: source.date !== false,
     temperature: source.temperature !== false,

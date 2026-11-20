@@ -58,3 +58,7 @@
 @media (prefers-reduced-motion: reduce) {
   .task-sidebar-button { transition: none; }
 }
+
+@container (width < 68px) {
+  .task-sidebar-button[data-compact="true"] .task-sidebar-copy small { display: none; }
+}

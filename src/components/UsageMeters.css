@@ -372,3 +372,16 @@
   background: var(--status-blocked);
 }
 .usage-rail-problem { position: absolute; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; }
+
+@container (width < 58px) {
+  .usage-rail-header > span { display: none; }
+  .usage-rail-provider { padding-inline: 0; }
+  .usage-rail-name { justify-content: center; }
+  .usage-rail-name > span:last-child { text-align: center; }
+  .usage-rail-name > span:last-child[data-short] { font-size: 0; }
+  .usage-rail-name > span:last-child[data-short]::after {
+    content: attr(data-short);
+    font-size: var(--fs-2xs);
+  }
+  .usage-rail-limit { gap: 2px; justify-content: space-between; }
+}

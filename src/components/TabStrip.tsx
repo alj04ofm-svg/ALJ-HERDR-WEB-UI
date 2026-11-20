@@ -19,6 +19,7 @@ import { useMediaQuery } from "../lib/useMediaQuery.ts";
 import { useTabReorder } from "../lib/useTabReorder.ts";
 import { moveSidebarRow, saveSidebarLayout, sidebarRowKey, useSidebarLayout } from "../lib/sidebarLayout.ts";
 import { paneStatus, rollupStatus } from "../lib/status.ts";
+import { WorkingRing } from "./WorkingRing.tsx";
 import { AgentMark } from "./AgentMark.tsx";
 import { ConfirmDialog } from "./ConfirmDialog.tsx";
 import { displayPaneTitle } from "./Sidebar.tsx";
@@ -387,7 +388,9 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
           const active = tab.tab_id === selectedPane.tab_id;
           const own = panesOf(tab);
           // Settle each pane's wait before rolling up, so a sibling's RUN or DONE stays visible.
-          const status = rollupStatus(own.map((pane) => paneStatus(pane as HerdrPane)));
+          const states = own.map((pane) => paneStatus(pane as HerdrPane));
+          const status = rollupStatus(states);
+          const working = states.includes("working");
           const pickerOpen = picker?.tab.tab_id === tab.tab_id;
           const name = nameOf(tab);
           const group = groupName(tab);
@@ -420,6 +423,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
                   className="tab-strip-tab"
                   data-tab-id={tab.tab_id}
                   aria-selected={active}
+                  aria-description={working ? t("Working") : status === "blocked" ? t("Needs input") : status === "waiting" ? t("Waiting") : undefined}
                   aria-haspopup="menu"
                   aria-keyshortcuts="Shift+F10 Alt+Shift+ArrowLeft Alt+Shift+ArrowRight"
                   aria-controls={panePanel}
@@ -448,6 +452,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
                   <span className="tab-strip-label">{name}</span>
                 </button>
               )}
+              {working && editing?.tabId !== tab.tab_id && <WorkingRing />}
               {(!touchMenu || active) && editing?.tabId !== tab.tab_id && <button type="button" className="tab-strip-menu" aria-label={t("Actions for {tab}", { tab: name })} aria-haspopup="menu" aria-expanded={pickerOpen} onClick={(event) => openPicker(event, tab)}>
                 <Ellipsis aria-hidden="true" />
               </button>}

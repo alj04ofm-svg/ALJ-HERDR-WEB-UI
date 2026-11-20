@@ -567,3 +567,21 @@
     transition: background-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
   }
 }
+
+.compact-sidebar { container-type: inline-size; }
+
+.compact-tab-list .compact-tab-row:is(:hover, :focus-visible) {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--text) 10%, transparent), var(--accent-tint));
+  color: var(--text-strong);
+}
+
+@container (width < 68px) {
+  .compact-tab-list .compact-tab-row { padding-inline: 2px; }
+  .compact-tab-label {
+    display: block;
+    overflow-wrap: normal;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .compact-tab-number { display: none; }
+}

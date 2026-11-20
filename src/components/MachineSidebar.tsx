@@ -10,6 +10,7 @@ import { keepDismissed, noticeKey, readDismissed, waitingMachines, writeDismisse
 import type { AppActions } from "../lib/actions.ts";
 import { useInstallPrompt } from "../lib/install.ts";
 import { AgentMark } from "./AgentMark.tsx";
+import { WorkingRing } from "./WorkingRing.tsx";
 import { Sidebar } from "./Sidebar.tsx";
 import { SidebarTabActions } from "./SidebarTabActions.tsx";
 import { customTabLabel, tabLabel } from "../lib/tabName.ts";
@@ -72,8 +73,10 @@ function SidebarRail(props: Pick<Props, "machines" | "selectedMachineId" | "sele
           {snapshot.tabs.map(tab => {
             const panes = snapshot.panes.filter(pane => pane.tab_id === tab.tab_id);
             const workspaceTabs = snapshot.tabs.filter(entry => entry.workspace_id === tab.workspace_id);
-            const status = rollupStatus(panes.map(paneStatus));
-            const show = selected?.workspace_id === tab.workspace_id || ["working", "waiting", "blocked"].includes(status);
+            const states = panes.map(paneStatus);
+            const status = rollupStatus(states);
+            const working = states.includes("working");
+            const show = selected?.workspace_id === tab.workspace_id || working || ["working", "waiting", "blocked"].includes(status);
             const pane = panes.find(entry => entry.pane_id === selected?.pane_id) ?? panes.find(entry => entry.focused) ?? panes[0];
             if (!pane || !show) return null;
             const place = workspaceTabs.indexOf(tab) + 1;
@@ -89,7 +92,7 @@ function SidebarRail(props: Pick<Props, "machines" | "selectedMachineId" | "sele
             return <SidebarTabActions key={tab.tab_id} tab={tab} name={name} workspaceName={workspaceName}
               lastTab={workspaceTabs.length === 1} online={online} panes={panes} actions={props.actions} renderRow={(handlers) =>
               <button type="button" className="compact-tab-row icon-button" aria-current={active ? "page" : undefined}
-                aria-label={tabNumber ? `${label} · ${tabNumber}` : label} aria-description={customName ? workspaceName : undefined} disabled={!online}
+                aria-label={tabNumber ? `${label} · ${tabNumber}` : label} aria-description={[customName ? workspaceName : "", online && (working ? t("Working") : status === "blocked" ? t("Needs input") : status === "waiting" ? t("Waiting") : "")].filter(Boolean).join(" · ") || undefined} disabled={!online}
                 onPointerEnter={event => { if (event.pointerType === "mouse") showTooltip(event.currentTarget, fullTitle, 1100); }}
                 onPointerLeave={leaveTooltip}
                 onFocus={event => { if (event.currentTarget.matches(":focus-visible")) showTooltip(event.currentTarget, fullTitle, 350); }}
@@ -113,6 +116,7 @@ function SidebarRail(props: Pick<Props, "machines" | "selectedMachineId" | "sele
                   }
                 }}
                 onDoubleClick={handlers.rename} onClick={() => { hideTooltip(); props.onSelect(machine.id, pane.pane_id); }}>
+                {online && working && <WorkingRing />}
                 <span className="compact-tab-mark" aria-hidden="true">
                   {pane.agent ? <AgentMark agent={pane.agent} /> : <Terminal />}
                   <span className="tab-strip-dot" data-status={status} />

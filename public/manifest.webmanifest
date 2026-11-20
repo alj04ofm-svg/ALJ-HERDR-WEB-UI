@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "ALJ HERDR WEB UI",
-  "short_name": "ALJ HERDR",
-  "description": "A browser workspace for herdr for agent chat, work prompts and live terminals.",
+  "name": "ALJ Harbor",
+  "short_name": "ALJ Harbor",
+  "description": "A self-hosted workspace for coding agents, live terminals, and project tasks powered by herdr.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

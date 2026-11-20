@@ -110,7 +110,7 @@ function RailMeter({ usage, count, glance }: { usage: ProviderUsage; count: Usag
     : window ? [window] : [];
   return <span className="usage-rail-provider">
     <span className="usage-rail-name" title={usageName(usage)}>
-      <AgentMark agent={PROVIDER_MARK[usage.id]} size={11} /><span>{name}</span>
+      <AgentMark agent={PROVIDER_MARK[usage.id]} size={11} /><span data-short={usage.id === "opencode" ? "OC Go" : undefined}>{name}</span>
     </span>
     {usage.problem && <span className="usage-rail-stale" aria-hidden="true" />}
     {windows.length > 0 ? windows.map((item, index) =>
@@ -201,7 +201,7 @@ export function UsageMeters({ open, onOpenChange, compact = false }: { open: boo
         onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); onOpenChange(true); }}
       >
         {compact && shown.length > 0 ? <>
-          <span className="usage-rail-header"><Gauge aria-hidden="true" />{t(count === "left" ? "Remaining" : "Used")}</span>
+          <span className="usage-rail-header"><Gauge aria-hidden="true" /><span>{t(count === "left" ? "Remaining" : "Used")}</span></span>
           <span className="usage-rail-meters" id={`${headingId}-rail`}>
             {shown.map(usage => <RailMeter key={usage.key} usage={usage} count={count} glance={settings.usageGlance} />)}
           </span>

@@ -1,13 +1,12 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, CalendarDays, Check, CheckCheck, Columns3, List, Radio, Sparkles, Copy, Maximize2, Minimize2, Plus, RefreshCw, Search, X } from "lucide-react";
+import { Archive, ArrowLeft, CalendarDays, Check, CheckCheck, Columns3, Folder, List, Radio, Sparkles, Maximize2, Minimize2, Plus, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 import { TASK_STAGES, TASK_STAGE_LABELS, type TaskStage, type WorkspaceTask } from "../../shared/tasks.ts";
 import type { Machine } from "../../shared/machines.ts";
 import { sidebarAgents, agentNavigationLabel } from "../lib/sidebarAgents.ts";
 import { paneStatus } from "../lib/status.ts";
 import { TaskCapture } from "./TaskCapture.tsx";
 import { useT } from "../lib/i18n.ts";
-import { copyText } from "../lib/clipboard.ts";
 import { usePhoneSheetBack } from "../lib/sheetHistory.ts";
 import { useSheetSwipe } from "../lib/sheets.ts";
 import { nativeModalOver, useFocusTrap } from "../lib/useFocusTrap.ts";
@@ -24,6 +23,12 @@ type Layout = "list" | "board" | "agents";
 const LAYOUTS = [{ id: "list", label: "List", Icon: List }, { id: "board", label: "Board", Icon: Columns3 }, { id: "agents", label: "Agents", Icon: Radio }] as const;
 const LAYOUT_KEY = "herdr-web-ui:tasks-layout";
 type Editor = { original: WorkspaceTask; draft: WorkspaceTask; isNew: boolean };
+const COLUMNS: { stage: TaskStage; label: string; includes: TaskStage[] }[] = [
+  { stage: "inbox", label: "To do", includes: ["inbox", "next"] },
+  { stage: "doing", label: "In progress", includes: ["doing"] },
+  { stage: "needs-you", label: "Attention", includes: ["needs-you", "review"] },
+  { stage: "done", label: "Done", includes: ["done"] },
+];
 const DRAG_TYPE = "application/x-herdr-task";
 
 function newTask(scope: WorkspaceTask["scope"], project: string, stage: TaskStage): WorkspaceTask {
@@ -35,28 +40,26 @@ function dueLabel(date: string) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(`${date}T12:00:00`));
 }
 
-function BoardCard({ task, today, canMove, onEdit, onMove }: {
-  task: WorkspaceTask; today: string; canMove: boolean;
-  onEdit(): void; onMove(stage: TaskStage): void;
+function BoardCard({ task, today, canMove, disabled, onEdit }: {
+  task: WorkspaceTask; today: string; canMove: boolean; disabled: boolean;
+  onEdit(): void;
 }) {
   return <article className="task-card" data-task-id={task.id}
     draggable={canMove} onDragStart={event => {
       event.dataTransfer.setData(DRAG_TYPE, task.id);
       event.dataTransfer.effectAllowed = "move";
     }}>
-    <button type="button" className="task-card-open" onClick={onEdit}>
+    <button type="button" className="task-card-open" disabled={disabled} onClick={onEdit}>
       <span className="task-card-title">{task.title}</span>
       {task.notes && <span className="task-note-preview">{task.notes}</span>}
     </button>
     <div className="task-card-meta">
+      <span className="task-card-state" data-stage={task.stage}>{TASK_STAGE_LABELS[task.stage]}</span>
       <span className="task-card-project" title={task.project || undefined}>{task.project || (task.scope === "business" ? "Business" : "Personal")}</span>
       {task.priority !== "normal" && <span className="task-priority">{task.priority === "urgent" ? "Urgent" : "High"}</span>}
       {task.due && <time dateTime={task.due} className={task.due < today && task.stage !== "done" ? "task-overdue" : undefined}><CalendarDays aria-hidden="true" />{dueLabel(task.due)}{task.due_time && ` · ${task.due_time}`}</time>}
       {!!task.checklist.length && <span className="task-card-check" aria-label={`${task.checklist.filter(item => item.done).length} of ${task.checklist.length} checklist items complete`}><CheckCheck aria-hidden="true" />{task.checklist.filter(item => item.done).length}/{task.checklist.length}</span>}
     </div>
-    <select className="select task-card-stage" aria-label={`Move ${task.title}`} value={task.stage} disabled={!canMove} onChange={event => onMove(event.target.value as TaskStage)}>
-      {TASK_STAGES.map(stage => <option key={stage} value={stage}>{TASK_STAGE_LABELS[stage]}</option>)}
-    </select>
   </article>;
 }
 
@@ -116,7 +119,10 @@ function NotesEditor({ editor, projects, itemText, setItemText, patch, onBack, o
       </fieldset>
     </fieldset>
     <footer className="task-editor-footer">
-      <label className="task-archive"><input type="checkbox" checked={draft.archived} disabled={busy} onChange={event => patch({ archived: event.target.checked })} />Archived</label>
+      {!isNew && <button className="btn btn-ghost" type="button" disabled={busy || conflict || externallyChanged || !draft.title.trim()} onClick={() => onSave({ ...draft, archived: !draft.archived })}>
+        {draft.archived ? <RotateCcw aria-hidden="true" /> : <Archive aria-hidden="true" />}
+        {draft.archived ? "Restore" : "Archive task"}
+      </button>}
       <button className="btn btn-primary" type="submit" disabled={busy || conflict || externallyChanged || !draft.title.trim()}><Check aria-hidden="true" />{busy ? "Saving…" : "Save task"}</button>
     </footer>
   </form>;
@@ -144,9 +150,14 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   const t = useT();
   const [editor, setEditor] = useState<Editor | null>(null);
   const [itemText, setItemText] = useState("");
-  const [confirm, setConfirm] = useState<"close" | "board" | "reload" | null>(null);
+  const [confirm, setConfirm] = useState<"close" | "board" | "reload" | "inline" | null>(null);
   const [status, setStatus] = useState("");
-  const [copyError, setCopyError] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [inlineStage, setInlineStage] = useState<TaskStage | null>(null);
+  const [inlineTitle, setInlineTitle] = useState("");
+  const inlineField = useRef<HTMLInputElement>(null);
+  const filterButton = useRef<HTMLButtonElement>(null);
+  const projectButton = useRef<HTMLButtonElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [dropStage, setDropStage] = useState<TaskStage | null>(null);
   const heading = useId();
@@ -155,7 +166,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   const keepEditing = useRef<HTMLButtonElement>(null);
   const editorOpener = useRef<HTMLElement | null>(null);
   const dirty = editor !== null && (JSON.stringify(editor.draft) !== JSON.stringify(editor.original) || Boolean(itemText.trim()));
-  const unsaved = dirty || Boolean(captureNote.trim() || folderName.trim());
+  const unsaved = dirty || Boolean(captureNote.trim() || folderName.trim() || inlineTitle.trim());
   const busy = pending === "save";
   const activeTask = editor && snapshot?.tasks.find(task => task.id === editor.draft.id);
   const externallyChanged = Boolean(editor && !editor.isNew && (!activeTask || JSON.stringify(activeTask) !== JSON.stringify(editor.original)));
@@ -164,7 +175,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     requestAnimationFrame(() => {
       const panel = surface.current;
       if (!panel || panel.contains(document.activeElement)) return;
-      (panel.querySelector<HTMLInputElement>(".task-editor-fields input") ?? newButton.current ?? panel).focus({ preventScroll: true });
+      (inlineField.current ?? panel.querySelector<HTMLInputElement>(".task-editor-fields input") ?? newButton.current ?? panel).focus({ preventScroll: true });
     });
   }
   function keepEdit() {
@@ -203,8 +214,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
       event.preventDefault();
       event.stopPropagation();
       if (confirm) keepEdit();
-      else if (capture) closeCapture();
-      else attemptExit(editor ? "board" : "close");
+      else escapePanel();
     };
     window.addEventListener("keydown", escape, true);
     return () => window.removeEventListener("keydown", escape, true);
@@ -214,13 +224,13 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     if (busy || dirty) { if (dirty) setStatus("Save or close the current task before opening another."); return; }
     editorOpener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setStatus("");
-    setCopyError("");
     setEditor({ original: task, draft: { ...task }, isNew });
     setItemText("");
   }
   function discard() {
     if (confirm === "close") onClose();
     if (confirm === "board") exitEditor();
+    if (confirm === "inline") closeInline();
     if (confirm === "reload" && editor) {
       if (activeTask) setEditor({ original: activeTask, draft: { ...activeTask }, isNew: false });
       else { exitEditor(); setStatus("This task is no longer on the board."); }
@@ -234,18 +244,17 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     event.preventDefault();
     event.stopPropagation();
     if (confirm) keepEdit();
-    else if (capture) closeCapture();
-    else attemptExit(editor ? "board" : "close");
+    else escapePanel();
   }
   async function update(task: WorkspaceTask, fromEditor = false) {
     setStatus("");
     const saved = await store.save(task);
     if (!saved) return;
     if (task.id === captureTask) { setCaptureNote(""); setCaptureTask(null); }
-    setStatus(fromEditor ? task.archived ? "Task archived." : "Task saved." : `Moved to ${TASK_STAGE_LABELS[task.stage]}.`);
+    setStatus(fromEditor ? task.archived ? "Task archived." : activeTask?.archived ? "Task restored." : "Task saved." : `Moved to ${TASK_STAGE_LABELS[task.stage]}.`);
     if (fromEditor) exitEditor();
     else {
-      setPhoneStage(task.stage);
+      setPhoneStage(COLUMNS.find(column => column.includes.includes(task.stage))?.stage ?? task.stage);
       requestAnimationFrame(() => {
         if (surface.current?.contains(document.activeElement)) return;
         const card = surface.current?.querySelector<HTMLElement>(`[data-task-id="${task.id}"] .task-card-open`);
@@ -264,31 +273,53 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     && (view !== "today" || (task.stage !== "done" && (task.stage === "doing" || task.priority === "urgent" || Boolean(task.due && task.due <= today))))
     && (view !== "waiting" || task.stage === "needs-you" || task.stage === "review"));
   const projects = [...new Set([...(snapshot?.projects ?? []), ...tasks.map(task => task.project).filter(Boolean)])].sort((a, b) => a.localeCompare(b));
-  const open = tasks.filter(task => !task.archived && task.stage !== "done").length;
-  const completed = tasks.filter(task => !task.archived && task.stage === "done").length;
-  const lanes = TASK_STAGES.map(stage => ({ stage, tasks: visible.filter(task => task.stage === stage) }));
+  const count = visible.length;
+  const lanes = COLUMNS.map(column => ({ ...column, tasks: visible.filter(task => column.includes.includes(task.stage)) }));
   const selectedStage = phoneStage ?? (lanes.find(lane => lane.stage === "doing" && lane.tasks.length)?.stage
     ?? lanes.find(lane => lane.tasks.length)?.stage ?? "inbox");
-  const filtered = scope !== "all" || Boolean(project || queryText);
+  const filtered = scope !== "all" || Boolean(queryText);
+  const hasFilters = filtered || view !== "all";
   const canMove = !pending && !dirty && !conflict;
+  const addingInline = inlineStage !== null;
 
-  async function copyBrief() {
-    setCopyError("");
-    try {
-      const brief = visible.filter(task => task.stage !== "done").map(task =>
-        `- ${task.title} [${task.scope}; ${task.stage}; ${task.priority}${task.due ? `; due ${task.due}` : ""}${task.project ? `; project ${task.project}` : ""}]\n${task.notes}\n${task.checklist.map(item => `  [${item.done ? "x" : " "}] ${item.title}`).join("\n")}`,
-      );
-      const copied = await copyText(`Task planning brief — ${today}\nSuggest priorities and blockers. Keep all actions and messages for my approval.\n\n${brief.join("\n\n")}`);
-      if (!copied) {
-        setCopyError("Clipboard access is unavailable. Open a task to copy its notes.");
-        return;
-      }
-      setStatus("Planning brief copied.");
-    } catch { setCopyError("Clipboard access is unavailable. Open a task to copy its notes."); }
+  function escapePanel() {
+    if (editor) { attemptExit("board"); return; }
+    if (capture) { closeCapture(); return; }
+    if (inlineStage) {
+      if (inlineTitle.trim()) { setConfirm("inline"); return; }
+      closeInline();
+      return;
+    }
+    if (createProject && !folderName.trim()) {
+      setCreateProject(false);
+      projectButton.current?.focus();
+      return;
+    }
+    if (showFilters && !createProject) { setShowFilters(false); filterButton.current?.focus(); return; }
+    attemptExit("close");
   }
-  function clearFilters() { setScope("all"); setProject(""); setQuery(""); }
+  function closeInline(stage = inlineStage) {
+    setInlineStage(null);
+    setInlineTitle("");
+    requestAnimationFrame(() => {
+      const opener = surface.current?.querySelector<HTMLElement>(`[data-add-stage="${stage}"]`);
+      (opener?.getClientRects().length ? opener : newButton.current)?.focus();
+    });
+  }
+  async function addInline(event: FormEvent, stage: TaskStage) {
+    event.preventDefault();
+    const title = inlineTitle.trim();
+    if (!title || !canMove) return;
+    const task = { ...newTask(scope === "personal" ? "personal" : "business", project, stage), title };
+    if (await store.save(task)) {
+      setStatus("Task added.");
+      closeInline(stage);
+    } else requestAnimationFrame(() => inlineField.current?.focus());
+  }
+  function clearFilters() { setScope("all"); setView("all"); setQuery(""); }
   function startTask(stage: TaskStage = "inbox") {
     if (view !== "all") setView("all");
+    if (layout === "agents") chooseLayout("list");
     setPhoneStage(stage);
     edit(newTask(scope === "personal" ? "personal" : "business", project, stage), true);
   }
@@ -317,17 +348,18 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     return state === "working" || state === "blocked" ? [{ machine, entry, state }] : [];
   }) : []);
   const cards = (entries: WorkspaceTask[]) => entries.map(task => <BoardCard key={task.id} task={task} today={today}
-    canMove={canMove && !task.archived} onEdit={() => edit(task)} onMove={stage => void update({ ...task, stage })} />);
+    canMove={canMove && !addingInline && layout === "board" && !task.archived} disabled={addingInline} onEdit={() => edit(task)} />);
 
   return createPortal(<div className="modal-scrim task-scrim" onClick={event => { if (event.currentTarget === event.target) attemptExit("close"); }}>
     <section className="modal task-workspace" ref={surface} data-expanded={expanded} data-editing={Boolean(editor)} role="dialog"
       aria-modal="true" aria-labelledby={heading} tabIndex={-1} onKeyDown={onKeyDown}>
       <header className="task-header">
         <div className="task-heading">
-          <div><h2 id={heading}>{t("Tasks")}</h2>{snapshot && <p>{open} open <span aria-hidden="true">·</span> {completed} done</p>}</div>
+          <h2 id={heading}>{t("Tasks")}</h2>
         </div>
         <div className="task-header-actions">
-          <button type="button" ref={newButton} className="btn btn-primary task-create" disabled={!snapshot || Boolean(pending) || dirty || conflict} onClick={() => startTask()}><Plus aria-hidden="true" /><span>New task</span></button>
+          <button ref={captureButton} type="button" className="icon-button task-capture-trigger" aria-label="Quick capture" title="Quick capture" aria-expanded={capture} disabled={!snapshot || !canMove || addingInline || Boolean(editor)} onClick={() => capture ? closeCapture() : setCapture(true)}><Sparkles aria-hidden="true" /></button>
+          <button type="button" ref={newButton} className="btn btn-primary task-create" disabled={!snapshot || Boolean(pending) || dirty || conflict || addingInline} onClick={() => startTask()}><Plus aria-hidden="true" /><span>New task</span></button>
           <button type="button" className="icon-button task-expand" aria-label={expanded ? "Restore board size" : "Expand board"} title={expanded ? "Restore board size" : "Expand board"} onClick={() => setExpanded(value => !value)}>{expanded ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}</button>
           <button type="button" className="icon-button" aria-label="Close tasks" title="Close tasks" disabled={busy} onClick={() => attemptExit("close")}><X aria-hidden="true" /></button>
         </div>
@@ -337,21 +369,33 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
         <button type="button" ref={keepEditing} className="btn" onClick={keepEdit}>Keep editing</button>
         <button type="button" className="btn" onClick={discard}>Discard edit</button>
       </div>}
-      {(error || copyError) && <div className="task-feedback" role="alert">
-        <span>{error || copyError}{error && dirty ? " Your edit is still here." : ""}</span>
+      {error && <div className="task-feedback" role="alert">
+        <span>{error}{unsaved ? " Your edit is still here." : ""}</span>
         {error && <button type="button" className="btn" disabled={Boolean(pending)} onClick={() => void refreshBoard()}>Load latest board</button>}
       </div>}
       {(status || pending) && <p className="task-status" role="status">{pending === "save" ? "Saving task…" : pending === "load" && snapshot ? "Refreshing tasks…" : status}</p>}
       <div className="task-workspace-body">
+        <nav className="task-projects" aria-label="Projects">
+          <div className="task-project-heading">
+            <h3>Projects</h3>
+            <button ref={projectButton} className="icon-button task-project-add" type="button" aria-label="New project" title="New project" aria-expanded={createProject} disabled={!snapshot || !canMove || addingInline} onClick={() => { if (layout === "agents") chooseLayout("list"); setCreateProject(value => !value); setParent(project); }}><Plus aria-hidden="true" /></button>
+          </div>
+          <div className="task-project-links">
+            <button type="button" aria-pressed={!project} disabled={addingInline} onClick={() => setProject("")}><Folder aria-hidden="true" /><span>All projects</span></button>
+            {projects.map(name => <button type="button" key={name} aria-pressed={project === name} title={name} disabled={addingInline} onClick={() => setProject(name)}>
+              <Folder aria-hidden="true" /><span>{name}</span>
+            </button>)}
+          </div>
+          <select className="select task-project-mobile" aria-label="Project" value={project} disabled={addingInline} onChange={event => setProject(event.target.value)}><option value="">All projects</option>{projects.map(name => <option key={name} value={name}>{name}</option>)}</select>
+        </nav>
         <div className="task-content">
           <div className="task-controls">
             <div className="task-views" role="group" aria-label="Task views">
-              {LAYOUTS.map(({ id, label, Icon }) => <button type="button" key={id} aria-pressed={layout === id} onClick={() => chooseLayout(id)}><Icon aria-hidden="true" /><span>{label}</span></button>)}
+              {LAYOUTS.map(({ id, label, Icon }) => <button type="button" key={id} aria-pressed={layout === id} disabled={addingInline} onClick={() => chooseLayout(id)}><Icon aria-hidden="true" /><span>{label}</span></button>)}
             </div>
-            <div className="task-utility">
-              <button type="button" className="icon-button" title="Refresh tasks" aria-label="Refresh tasks" disabled={Boolean(pending)} onClick={() => void refreshBoard()}><RefreshCw aria-hidden="true" /></button>
-              <button type="button" className="icon-button" title="Copy planning brief" aria-label="Copy planning brief" disabled={!visible.some(task => task.stage !== "done")} onClick={() => void copyBrief()}><Copy aria-hidden="true" /></button>
-            </div>
+            {layout !== "agents" && <button ref={filterButton} type="button" className="btn task-filter-toggle" aria-expanded={showFilters} disabled={addingInline} onClick={() => setShowFilters(value => !value)}>
+              <SlidersHorizontal aria-hidden="true" /> Filters {hasFilters && <span className="task-filter-dot" aria-label="active" />}
+            </button>}
           </div>
           {layout === "agents" ? <div className="task-list task-live">
             <p>Work and requests from connected agents. Add anything you want to track as a task.</p>
@@ -369,29 +413,31 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
               </article>;
             }) : <div className="task-empty"><h3>No agents need attention</h3><p>Working agents and requests for input appear here.</p></div>}
           </div> : <>
-          <div className="task-filters">
-            <label className="task-search"><Search aria-hidden="true" /><input className="input" type="search" aria-label="Search tasks" placeholder="Search tasks" value={query} onChange={event => setQuery(event.target.value)} /></label>
-            <select className="select task-filter" aria-label="Task area" value={scope} onChange={event => setScope(event.target.value as typeof scope)}><option value="all">All areas</option><option value="business">Business</option><option value="personal">Personal</option></select>
-            <select className="select task-filter" aria-label="Task filter" value={view} onChange={event => setView(event.target.value as TaskFilter)}><option value="all">All tasks</option>{VIEW_OPTIONS.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}</select>
-            <select className="select task-filter" aria-label="Project" value={project} onChange={event => setProject(event.target.value)}><option value="">All projects</option>{projects.map(name => <option key={name} value={name}>{name}</option>)}</select>
-            <button className="icon-button task-project-add" type="button" aria-label="New project" title="New project" aria-expanded={createProject} disabled={!snapshot || !canMove} onClick={() => { setCreateProject(value => !value); setParent(project); }}><Plus aria-hidden="true" /></button>
-          </div>
+          {showFilters && <div className="task-filters">
+            <label className="task-search"><Search aria-hidden="true" /><input className="input" type="search" aria-label="Search tasks" disabled={addingInline} placeholder="Search tasks" value={query} onChange={event => setQuery(event.target.value)} /></label>
+            <select className="select" aria-label="Task filter" disabled={addingInline} value={view} onChange={event => setView(event.target.value as TaskFilter)}><option value="all">All tasks</option>{VIEW_OPTIONS.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}</select>
+            <select className="select" aria-label="Task area" disabled={addingInline} value={scope} onChange={event => setScope(event.target.value as typeof scope)}><option value="all">All areas</option><option value="business">Business</option><option value="personal">Personal</option></select>
+          </div>}
           {createProject && <form className="task-project-form" onSubmit={event => void addProject(event)}>
             <input autoFocus className="input" aria-label="Project name" placeholder="Project name" value={folderName} onChange={event => setFolderName(event.target.value)} maxLength={120} required />
             <select className="select" aria-label="Parent project" value={parent} onChange={event => setParent(event.target.value)}><option value="">Top level</option>{projects.map(name => <option key={name}>{name}</option>)}</select>
             <button className="btn btn-primary" type="submit" disabled={!canMove}>Create project</button>
           </form>}
+          <div className="task-lens">
+            <h3>{view === "archive" ? "Archive" : view === "today" ? "Today" : view === "waiting" ? "Needs attention" : project || "All tasks"}</h3>
+            {snapshot && <span>{count} {count === 1 ? "task" : "tasks"}</span>}
+          </div>
           {!snapshot ? <p className="task-empty" role="status">{error ? "The board could not be loaded." : "Loading tasks…"}</p>
-            : !visible.length && (filtered || view !== "all" || !tasks.some(task => !task.archived)) ? <div className="task-empty">
-              <h3>{filtered ? "No matching tasks" : view === "archive" ? "No archived tasks" : view === "today" ? "Nothing due today" : view === "waiting" ? "Nothing needs attention" : "Your board is empty"}</h3>
+            : !visible.length && (layout === "list" || view !== "all" || filtered) ? <div className="task-empty">
+              <h3>{filtered ? "No matching tasks" : view === "archive" ? "No archived tasks" : view === "today" ? "Nothing due today" : view === "waiting" ? "Nothing needs attention" : "No tasks yet"}</h3>
               {filtered ? <button type="button" className="btn" onClick={clearFilters}>Clear filters</button> : view === "all" && <button type="button" className="btn" onClick={() => startTask()}><Plus aria-hidden="true" />Add a task</button>}
             </div> : layout === "board" && view !== "archive" ? <>
-              <label className="task-phone-lane"><span>Stage</span><select className="select" value={selectedStage} onChange={event => setPhoneStage(event.target.value as TaskStage)}>{lanes.map(lane => <option key={lane.stage} value={lane.stage}>{TASK_STAGE_LABELS[lane.stage]} ({lane.tasks.length})</option>)}</select></label>
+              <label className="task-phone-lane"><span>Stage</span><select className="select" value={selectedStage} disabled={addingInline} onChange={event => setPhoneStage(event.target.value as TaskStage)}>{lanes.map(lane => <option key={lane.stage} value={lane.stage}>{lane.label} ({lane.tasks.length})</option>)}</select></label>
               <div className="task-columns">
                 {lanes.map(lane => <section className="task-column" key={lane.stage} data-stage={lane.stage} data-phone-active={selectedStage === lane.stage}
-                  data-drop={dropStage === lane.stage} aria-label={TASK_STAGE_LABELS[lane.stage]}
+                  data-drop={dropStage === lane.stage} aria-label={lane.label}
                   onDragOver={event => {
-                    if (!canMove || !event.dataTransfer.types.includes(DRAG_TYPE)) return;
+                    if (!canMove || addingInline || !event.dataTransfer.types.includes(DRAG_TYPE)) return;
                     event.preventDefault();
                     event.dataTransfer.dropEffect = "move";
                     setDropStage(lane.stage);
@@ -400,28 +446,33 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
                   onDragEnd={() => setDropStage(null)}
                   onDrop={event => {
                     setDropStage(null);
-                    if (!canMove || !event.dataTransfer.types.includes(DRAG_TYPE)) return;
+                    if (!canMove || addingInline || !event.dataTransfer.types.includes(DRAG_TYPE)) return;
                     event.preventDefault();
                     const task = visible.find(entry => entry.id === event.dataTransfer.getData(DRAG_TYPE));
-                    if (task && task.stage !== lane.stage) void update({ ...task, stage: lane.stage });
+                    if (task && !lane.includes.includes(task.stage)) void update({ ...task, stage: lane.stage });
                   }}>
-                  <header><span className="task-lane-dot" aria-hidden="true" /><h3>{TASK_STAGE_LABELS[lane.stage]}</h3><span className="task-lane-count">{lane.tasks.length}</span><button type="button" className="icon-button" disabled={!canMove} aria-label={`Add to ${TASK_STAGE_LABELS[lane.stage]}`} onClick={() => startTask(lane.stage)}><Plus aria-hidden="true" /></button></header>
-                  <div className="task-stack">{cards(lane.tasks)}{!lane.tasks.length && <p className="task-lane-empty">No tasks</p>}</div>
+                  <header><span className="task-lane-dot" aria-hidden="true" /><h3>{lane.label}</h3><span className="task-lane-count">{lane.tasks.length}</span></header>
+                  <div className="task-stack">{cards(lane.tasks)}</div>
+                  {inlineStage === lane.stage ? <form className="task-inline" onSubmit={event => void addInline(event, lane.stage)}>
+                    <input ref={inlineField} autoFocus className="input" aria-label="Card title" placeholder="Task title" maxLength={240} value={inlineTitle} onChange={event => setInlineTitle(event.target.value)} disabled={busy} required />
+                    <div><button type="submit" className="btn btn-primary" disabled={!canMove || !inlineTitle.trim()}>Add</button>
+                    <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => inlineTitle.trim() ? setConfirm("inline") : closeInline()}>Cancel</button></div>
+                  </form> : !hasFilters && <button type="button" className="task-lane-add" data-add-stage={lane.stage} disabled={!canMove || addingInline || createProject || capture || Boolean(editor)} aria-label={`Add to ${lane.label}`} onClick={() => setInlineStage(lane.stage)}><Plus aria-hidden="true" />Add task</button>}
                 </section>)}
               </div>
-            </> : <div className="task-list">{lanes.filter(lane => lane.tasks.length > 0).map(lane => <section className="task-list-group" key={lane.stage} aria-label={TASK_STAGE_LABELS[lane.stage]}>
-              <h3>{TASK_STAGE_LABELS[lane.stage]} <small>{lane.tasks.length}</small></h3>
+            </> : <div className="task-list">{lanes.filter(lane => lane.tasks.length > 0).map(lane => <section className="task-list-group" key={lane.stage} aria-label={lane.label}>
+              <h3>{lane.label} <small>{lane.tasks.length}</small></h3>
               {cards(lane.tasks)}
             </section>)}</div>}
           </>}
-          {!editor && snapshot && <div className="task-capture-dock">
-            {capture ? <TaskCapture note={captureNote} onNote={setCaptureNote} onClose={closeCapture} onDraft={(fields, question) => {
+          {!editor && capture && snapshot && <div className="task-capture-dock">
+            <TaskCapture note={captureNote} onNote={setCaptureNote} onClose={closeCapture} onDraft={(fields, question) => {
               const task = { ...newTask(scope === "personal" ? "personal" : "business", project, "inbox"), ...fields };
               setCapture(false); setCaptureTask(task.id); edit(task, true);
               setStatus(question || "Review the draft and save when it’s ready.");
               if (layout === "agents") chooseLayout("list");
               setView("all");
-            }} /> : <button ref={captureButton} className="btn task-capture-trigger" disabled={!canMove} onClick={() => setCapture(true)}><Sparkles aria-hidden="true" /> Quick capture</button>}
+            }} />
           </div>}
         </div>
         {editor && <NotesEditor editor={editor} projects={projects} itemText={itemText} setItemText={setItemText}
