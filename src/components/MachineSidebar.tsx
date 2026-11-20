@@ -1,7 +1,7 @@
 import { FMNavigation } from "./FMNavigation.tsx";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronRight, Download, Monitor, Plus, Search, Settings, SlidersHorizontal, Terminal, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Download, Monitor, Plus, Search, Settings, SlidersHorizontal, Terminal, X } from "lucide-react";
 import type { Machine, MachineState, MachineUpdate } from "../../shared/machines.ts";
 import { MachineContext } from "../lib/machineContext.tsx";
 import { answerMachineSetup, machineRequest } from "../lib/api.ts";
@@ -119,6 +119,7 @@ function SidebarRail(props: Pick<Props, "machines" | "selectedMachineId" | "sele
                 {online && working && <WorkingRing />}
                 <span className="compact-tab-mark" aria-hidden="true">
                   {pane.agent ? <AgentMark agent={pane.agent} /> : <Terminal />}
+                  {active && <span className="sidebar-current-mark"><Check /></span>}
                   <span className="tab-strip-dot" data-status={status} />
                 </span>
                 <span className="compact-tab-copy" aria-hidden="true">

@@ -18,16 +18,16 @@ const rebuildOrder = [2, 1, 3, 0];
 const dayNumber = (date = new Date()) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000;
 const waterfronts = ["harbor", "london", "singapore"] as const;
 const residents = [
-  { berth: 7, pace: 77, offset: 12 },
+  { berth: 7, pace: 77, offset: 12, near: true },
   { berth: 24, pace: 96, offset: 46 },
-  { berth: 41, pace: 85, offset: 38 },
+  { berth: 41, pace: 85, offset: 38, near: true },
   { berth: 59, pace: 74, offset: 21 },
-  { berth: 73, pace: 103, offset: 57 },
+  { berth: 73, pace: 103, offset: 57, near: true },
   { berth: 88, pace: 89, offset: 72 },
-  { berth: 15, pace: 49, offset: 24 },
+  { berth: 15, pace: 49, offset: 24, near: true },
   { berth: 32, pace: 101, offset: 83 },
   { berth: 51, pace: 87, offset: 55 },
-  { berth: 68, pace: 96, offset: 16 },
+  { berth: 68, pace: 96, offset: 16, near: true },
   { berth: 81, pace: 91, offset: 30 },
   { berth: 95, pace: 72, offset: 9 },
 ];
@@ -244,9 +244,10 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
         {giantChase.map((person, position) => <span className="city-giant-chase" key={person}
           style={{ "--giant-queue": position } as CSSProperties}><Resident index={person} /></span>)}
       </div>}
-      {residents.map(({ berth, pace, offset }, index) => giantVisit && giantChase.includes(index) ? null : <span className="city-pedestrian" key={index}
+      {residents.map(({ berth, pace, offset, near }, index) => giantVisit && giantChase.includes(index) ? null : <span className="city-pedestrian" key={index}
         data-direction={index % 2 === 0 ? "east" : "west"}
         data-assigned={assigned.includes(index)}
+        data-near={near}
         style={{
           "--resident-berth": `${berth}%`,
           "--resident-duration": `${pace}s`,

@@ -1,6 +1,6 @@
 /** Native workspace tabs, pointer and keyboard reordering, and per-tab actions. */
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
-import { ArrowLeft, ArrowRight, ChevronDown, Ellipsis, Folder, FolderMinus, FolderPlus, Pencil, Plus, Terminal, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Ellipsis, Folder, FolderMinus, FolderPlus, Pencil, Plus, Terminal, X } from "lucide-react";
 
 import "./TabStrip.css";
 
@@ -456,6 +456,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
                   {(status === "working" || status === "blocked" || status === "waiting" || status === "done") && <span className="tab-strip-dot" data-status={status} aria-hidden="true" />}
                   {group && <span className="tab-strip-group" title={group}><Folder aria-hidden="true" /></span>}
                   <span className="tab-strip-label">{name}</span>
+                  {active && <Check className="tab-strip-current" aria-hidden="true" />}
                 </button>
               )}
               {working && editing?.tabId !== tab.tab_id && <WorkingRing />}

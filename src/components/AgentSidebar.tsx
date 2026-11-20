@@ -32,6 +32,7 @@ interface AgentRowBodyProps {
   markKind: string | null;
   title: string;
   online: boolean;
+  selected: boolean;
   status?: AgentStatus;
 }
 
@@ -39,7 +40,7 @@ interface AgentRowBodyProps {
  * One agent in a list: the coding agent's mark, what it is working on, who and where it is, and
  * how it is doing.
  */
-function AgentRowBody({ mark, markKind, title, online, status }: AgentRowBodyProps) {
+function AgentRowBody({ mark, markKind, title, online, selected, status }: AgentRowBodyProps) {
   const t = useT();
   const state = online ? knownStatus(status) : "unknown";
   const statusLabel = !online ? t("Disconnected") : {
@@ -47,11 +48,15 @@ function AgentRowBody({ mark, markKind, title, online, status }: AgentRowBodyPro
     done: t("Finished"), idle: t("Ready"), unknown: "—",
   }[state];
   return <>
-    <span className="sidebar-mark" aria-hidden="true">{mark !== null ? <AgentMark agent={mark} size={18} /> : <Terminal />}</span>
+    <span className="sidebar-mark" aria-hidden="true">
+      {mark !== null ? <AgentMark agent={mark} size={18} /> : <Terminal />}
+      {selected && <span className="sidebar-current-mark"><Check /></span>}
+    </span>
     <span className="agent-copy">
       {markKind && <span className="visually-hidden">{markKind}: </span>}
       <span className="agent-title">{title}</span>
     </span>
+    {selected && <span className="agent-current" aria-hidden="true">{t("Current")}</span>}
     <span className="agent-state" data-status={state} data-online={online} role="status" aria-label={statusLabel} title={state === "waiting" ? t("Waiting for background work") : statusLabel}>
       {!online ? <WifiOff aria-hidden="true" /> : state === "working" ? <LoaderCircle aria-hidden="true" /> : state === "blocked" ? <CircleAlert aria-hidden="true" /> : state === "waiting" ? <Clock aria-hidden="true" /> : state === "done" ? <Check aria-hidden="true" /> : null}
       <span className="visually-hidden">{statusLabel}</span>
@@ -399,7 +404,7 @@ export function AgentSidebar({ machines, selectedMachineId, selectedPaneId, stat
       onContextMenu={event => openMenu(event, { kind: "row", id })} onKeyDown={event => localKey(event, { kind: "row", id })}>
       <button type="button" className="agent-select agent-row" disabled={!online} aria-current={selected ? "true" : undefined} title={tooltip} onClick={() => onSelect(machine.id, pane.pane_id)}>
         {/* a saved roster's state is not news: a PC that is away says nothing about its agents */}
-        <AgentRowBody mark={mark} markKind={markKind} title={title} online={online} status={status} />
+        <AgentRowBody mark={mark} markKind={markKind} title={title} online={online} selected={selected} status={status} />
       </button>
       {status === "working" && <WorkingRing />}
       {(settings.agentPins || isPinned) && <button type="button" className={`agent-pin-toggle${isPinned ? " is-pinned" : ""}`} aria-label={`${t("Pin agent")}: ${[title, machineName(machine), workspace.label].filter(Boolean).join(" · ")}`} aria-pressed={isPinned} title={t(isPinned ? "Unpin agent" : "Pin agent")} data-pin-key={pinKey} onClick={(event) => setPin(pinKey, event.currentTarget)}>
@@ -448,8 +453,9 @@ export function AgentSidebar({ machines, selectedMachineId, selectedPaneId, stat
             const dropHere = drop?.kind === "group" && drop.id === group.id;
             return <li className={`agent-custom-group${selected ? " has-selected" : ""}${dropHere ? dragging?.kind === "group" ? drop.after ? " drop-after" : " drop-before" : " drop-inside" : ""}`} key={group.id} data-group-id={group.id}>
               <div className="agent-custom-head" draggable={!editing} onDragStart={event => startDrag(event, { kind: "group", id: group.id })} onDragEnd={endDrag} onDragOver={event => over(event, groupDrop(event))} onDrop={event => finishDrop(event, groupDrop(event))} onContextMenu={event => openMenu(event, { kind: "group", id: group.id })} onKeyDown={event => localKey(event, { kind: "group", id: group.id })}>
-                <button type="button" className="agent-group-toggle" aria-expanded={!folded} aria-controls={`${listId}-${group.id}`} onClick={() => commit({ ...layout, groups: layout.groups.map(item => item.id === group.id ? { ...item, collapsed: !folded } : item) })}>
+                <button type="button" className="agent-group-toggle" aria-expanded={!folded} aria-description={selected && folded ? t("Current") : undefined} aria-controls={`${listId}-${group.id}`} onClick={() => commit({ ...layout, groups: layout.groups.map(item => item.id === group.id ? { ...item, collapsed: !folded } : item) })}>
                   {folded ? <ChevronRight aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}<span>{group.name}</span><span className="agent-group-count">{query ? `${members.length}/${total}` : total}</span>
+                  {selected && folded && <span className="agent-current" aria-hidden="true">{t("Current")}</span>}
                 </button>
                 <button type="button" className="agent-organize agent-group-menu" aria-label={`${t("Organize group")}: ${group.name}`} aria-haspopup="menu" aria-expanded={menu?.kind === "group" && menu.id === group.id} onClick={event => openMenu(event, { kind: "group", id: group.id })}><MoreHorizontal aria-hidden="true" /></button>
               </div>

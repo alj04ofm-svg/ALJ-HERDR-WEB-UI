@@ -177,20 +177,34 @@
 }
 .city-promenade {
   position: absolute;
-  inset: auto 0 var(--city-quay);
+  inset: auto 0 calc(var(--city-shore) + 1%);
 }
 .city-pedestrian {
   position: absolute;
   left: var(--resident-berth);
-  bottom: 2px;
-  --resident-size: clamp(26px, 2.9cqw, 42px);
+  bottom: clamp(4px, 1.25cqh, 13px);
+  --resident-size: clamp(17px, 1.75cqw, 27px);
+  --resident-night: .70;
+}
+.city-pedestrian[data-near="true"] {
+  bottom: -2px;
+  --resident-size: clamp(34px, 3.45cqw, 52px);
+  --resident-night: .94;
+  z-index: 1;
 }
 .city-resident {
   position: relative;
   display: block;
   width: var(--resident-size);
   aspect-ratio: 1;
-  filter: brightness(calc(.81 + var(--city-daylight, 0) * .19)) drop-shadow(0 1px 1px var(--bg));
+  filter: brightness(calc(var(--resident-night, .81) + var(--city-daylight, 0) * .17)) drop-shadow(0 1px 1px var(--bg));
+}
+.city-pedestrian .city-resident::before {
+  position: absolute;
+  inset: auto 16% 2%;
+  height: 12%;
+  background: radial-gradient(ellipse, var(--droplet-shadow), transparent 72%);
+  content: "";
 }
 .city-resident > i {
   position: absolute;
@@ -249,7 +263,7 @@
   0%, 28%, 93%, 100% { opacity: 1; }
   35%, 86% { opacity: 0; }
 }
-.city-giant-visit { position: absolute; inset: 0; }
+.city-giant-visit { position: absolute; inset: 0; z-index: 2; }
 .city-giant, .city-giant-chase {
   position: absolute;
   left: var(--giant-stop);

@@ -22,6 +22,7 @@ import { useMediaQuery } from "../lib/useMediaQuery.ts";
 import { useWorktreeBranches } from "../lib/useWorktreeBranches.ts";
 import { watchTouchReorder } from "../lib/touchReorder.ts";
 import { worktreeLabel } from "../lib/worktreeName.ts";
+import { tabLabel } from "../lib/tabName.ts";
 import { paneMark, sidebarAgents, workspaceAgentLabels } from "../lib/sidebarAgents.ts";
 
 const ERROR_NOTE_MS = 5000;
@@ -513,6 +514,9 @@ export function Sidebar({ snapshot, online, selectedPaneId, actions }: SidebarPr
     if (panes.length === 0) return null;
     const pane = currentPane(workspace, panes);
     const selected = panes.some((candidate) => candidate.pane_id === selectedPaneId);
+    const tabs = selected ? snapshot?.tabs.filter((tab) => tab.workspace_id === workspace.workspace_id) ?? [] : [];
+    const currentIndex = tabs.findIndex((tab) => tab.tab_id === pane.tab_id);
+    const currentTab = tabs.length > 1 && currentIndex !== -1 ? tabLabel(tabs[currentIndex]!, t, currentIndex + 1) : null;
     const repoKey = workspace.worktree?.repo_key;
     const branch = workspace.worktree?.is_linked_worktree ? branches.get(workspace.workspace_id) : undefined;
     const branchTitle = branch?.branch ?? (branch?.isDetached ? t("Detached HEAD") : null);
@@ -604,6 +608,7 @@ export function Sidebar({ snapshot, online, selectedPaneId, actions }: SidebarPr
             {secondaryBranch && <span className="worktree-workspace-label">{secondaryBranch}</span>}
             {foldedCount > 0 && <span className="workspace-fold-count" aria-hidden="true">+{foldedCount}</span>}
           </span>}
+          {currentTab && !editingWorkspace && <span className="workspace-current-tab" title={currentTab}>{currentTab}</span>}
           <span className="sidebar-pane-meta">
             <span className="visually-hidden">{markName(pane)}</span>
             {online && pane.restore_error ? <RestoreErrorBadge reason={pane.restore_error} /> : <StatusBadge compact status={online ? rollupStatus(statusPanes.map((candidate) => activity.status(machineId, candidate))) : undefined} />}

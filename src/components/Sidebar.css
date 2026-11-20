@@ -241,6 +241,17 @@ button.sidebar-section-label:focus-visible { outline-offset: calc(var(--ring-off
   white-space: nowrap;
 }
 
+.workspace-current-tab {
+  flex: 0 1 42%;
+  min-inline-size: 0;
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* a worktree workspace's own name follows its branch on the same line, and gives way first */
 .worktree-workspace-label {
   flex: 1 1 0;

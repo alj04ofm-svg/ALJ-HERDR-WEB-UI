@@ -17,7 +17,14 @@
 .agent-row:disabled { cursor: default; }
 .agent-copy { display: flex; flex: 1; min-width: 0; }
 .agent-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: var(--fs-sm); font-weight: var(--fw-medium); line-height: var(--lh-tight); }
-.agent-item.is-selected .agent-title { color: var(--text-strong); font-weight: var(--fw-medium); }
+.agent-item.is-selected .agent-title { color: var(--text-strong); font-weight: var(--fw-bold); }
+.agent-current {
+  flex: none;
+  color: var(--accent);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+}
+.sidebar-narrow .agent-select > .agent-current { display: none; }
 .agent-state { display: inline-flex; justify-content: center; align-items: center; flex: none; width: var(--space-6); color: var(--text-dim); }
 .agent-state svg { width: var(--space-4); height: var(--space-4); }
 .agent-state[data-status="blocked"] { color: var(--status-blocked); }

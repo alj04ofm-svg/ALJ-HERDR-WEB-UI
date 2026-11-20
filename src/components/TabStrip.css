@@ -265,11 +265,7 @@
   .pane-column.is-chat .tab-strip-shell { background: var(--bg-panel); backdrop-filter: none; }
 }
 
-.tab-strip-item:has(> .working-ring).is-active {
-  box-shadow: inset 0 0 0 var(--hairline) color-mix(in srgb, var(--status-working) 24%, var(--border));
-}
-.tab-strip-item:has(> .working-ring).is-active .tab-strip-tab { color: var(--text-strong); }
-
+.tab-strip-current { flex: none; width: 14px; height: 14px; stroke-width: 2.5; color: var(--accent); }
 .app-header .tab-strip-item.is-active {
   background: color-mix(in srgb, var(--accent) 20%, var(--bg-elevated));
   box-shadow: inset 0 0 0 var(--hairline) color-mix(in srgb, var(--accent) 72%, var(--border)),
