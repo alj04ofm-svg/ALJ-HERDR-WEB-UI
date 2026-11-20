@@ -25,11 +25,11 @@ const residents = [
   { berth: 73, pace: 103, offset: 57 },
   { berth: 88, pace: 89, offset: 72 },
 ];
-const debris = Array.from({ length: 14 }, (_, index) => ({
+const debris = Array.from({ length: 10 }, (_, index) => ({
   "--debris-x": `${13 + (index * 29 % 75)}%`,
   "--debris-y": `${14 + (index * 17 % 70)}%`,
-  "--debris-size": `${2 + index % 4}px`,
-  "--debris-wind": `${(index * 19 % 59) - 29}px`,
+  "--debris-size": `${1 + index % 4}px`,
+  "--debris-wind": `${(index * 19 % 39) - 19}px`,
   "--debris-spin": `${(index * 83 % 330) - 165}deg`,
   "--debris-delay": `${index % 7 * .065}s`,
 } as CSSProperties));
@@ -85,6 +85,14 @@ type Landmark = typeof landmarks[number]["id"];
 type Point = { x: number; y: number };
 const initialBoats = [{ x: 21, y: 73 }, { x: 28, y: 76 }];
 const crowd = [0, 1, 2, 3, 4, 5];
+function Resident({ index }: { index: number }) {
+  return <span className="city-resident" data-resident={index} style={{
+    "--resident-column": `${index % 3 * 50}%`,
+    "--resident-row": index < 3 ? "0%" : "100%",
+    "--resident-step-offset": `-${(index * 131) % 760}ms`,
+  } as CSSProperties}><i /><b /></span>;
+}
+
 const clampPoint = ({ x, y }: Point): Point => ({
   x: Math.max(9, Math.min(91, x)),
   y: Math.max(73, Math.min(93, y)),
@@ -116,6 +124,9 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
   const district = eventPhase === 0;
   const sites = buildable.slice(start).concat(buildable.slice(0, start)).slice(0, district ? 3 : eventPhase === 3 ? 2 : 1);
   const lead = sites[0];
+  const activeSites = moving && (district || eventPhase === 3) ? sites : [];
+  const crew = activeSites.map((_, position) => [0, 1].map(member => (cycle + position * 2 + member) % residents.length));
+  const assigned = crew.flat();
   const closingLot = district && day % 2 === 0 && vacantLot < 0 ? sites.at(-1) : undefined;
   const currentCity = moving ? city : day % waterfronts.length;
   const nextCity = (currentCity + 1) % waterfronts.length;
@@ -156,7 +167,8 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
       setCycle(index => index + 1);
     }}>
       {waterfront.map(({ x, height, width }, index) => {
-        const working = moving && (district || eventPhase === 3) && sites.includes(index);
+        const siteCrew = crew[activeSites.indexOf(index)];
+        const working = siteCrew !== undefined;
         const variant = index + day + (dailyBuildings?.versions[index] ?? 0);
         const architecture = waterfront[variant % waterfront.length]!.architecture;
         const nextArchitecture = waterfront[(variant + 1) % waterfront.length]!.architecture;
@@ -178,15 +190,10 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
           {working && <div className="city-sequence" key={cycle} data-district={district}
             style={{ "--city-damage-lag": `${district ? sites.indexOf(index) * .35 : 0}s` } as CSSProperties}>
             {index === lead && district && <span className="city-meteor" />}
-            {(district || index === lead) && <div className="city-impact" />}
-            <div className="city-collapse"><i /></div>
+            <div className="city-collapse"><i /><i /></div>
             <div className="city-debris">{debris.map((style, fragment) => <i key={fragment} style={style} />)}</div>
-            <div className="city-impact-dust"><i /><i /><i /></div>
-            <div className="city-impact-glint" />
             <span className="city-rubble" />
-            {[-1, 1].map(direction => <div className="city-evacuation" key={direction} style={{ "--evac-direction": direction } as CSSProperties}>
-              {crowd.map(person => <span key={person} style={{ "--evac-person": person } as CSSProperties}><i /></span>)}
-            </div>)}
+            <div className="city-impact-dust"><i /><i /><i /></div>
             <div className="city-works" data-architecture={alternate ? nextArchitecture : undefined}>
               <span className="city-foundation" />
               <span className="city-site-fencing" />
@@ -205,10 +212,12 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
                 <span className="city-frame" />
                 <span className="city-module" />
                 <span className="city-hoist"><i /><b /></span>
-                <span className="city-floor-crew"><i /><i /></span>
               </div>)}
               <span className="city-inspection-lift"><i /><b /></span>
-              <span className="city-ground-crew"><i /><i /><i /></span>
+              <span className="city-ground-crew">
+                {siteCrew.map((person, member) => <span className="city-crew-route"
+                  data-route={member === 1 && !clearing ? "lift" : "quay"} key={person}><Resident index={person} /></span>)}
+              </span>
             </div>
           </div>}
         </div>;
@@ -220,13 +229,12 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
     <div className="city-promenade">
       {residents.map(({ berth, pace, offset }, index) => <span className="city-pedestrian" key={index}
         data-direction={index % 2 === 0 ? "east" : "west"}
+        data-assigned={assigned.includes(index)}
         style={{
           "--resident-berth": `${berth}%`,
           "--resident-duration": `${pace}s`,
           "--resident-delay": `-${offset}s`,
-          "--resident-column": `${index % 3 * 50}%`,
-          "--resident-row": index < 3 ? "0%" : "100%",
-        } as CSSProperties}><i /></span>)}
+        } as CSSProperties}><Resident index={index} /></span>)}
     </div>
     <div className="city-water-lights" />
     <div className="city-ripples" />
