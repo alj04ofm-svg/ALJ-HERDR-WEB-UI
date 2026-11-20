@@ -39,11 +39,14 @@ export interface TabStripProps {
   onCloseTab: (tabId: string) => Promise<void>;
   /** An explicitly opened strip still shows its only tab on a short screen. */
   explicitlyOpened?: boolean;
+  workingOnly?: boolean;
+  /** On the smallest header the More menu owns New tab. */
+  hideNewTab?: boolean;
   /** the open pane's actions (PaneCanvas), offered in the touch menu */
   paneActions?: (paneId: string) => RowMenuItem[];
 }
 
-export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNewTab, onCloseTab, explicitlyOpened = false, paneActions }: TabStripProps) {
+export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNewTab, onCloseTab, explicitlyOpened = false, workingOnly = false, hideNewTab = false, paneActions }: TabStripProps) {
   const t = useT();
   const machineId = useMachineId();
   const { renameTab, moveTab } = useMachineApi();
@@ -86,7 +89,10 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
   const panes = rosterPanes(snapshot.panes.filter((pane) => pane.workspace_id === workspace.workspace_id), selectedPane.pane_id);
   // The snapshot order is authoritative; number identifies a tab and does not change on a move.
   const tabs = snapshot.tabs.filter((tab) => tab.workspace_id === workspace.workspace_id);
-  const reorder = useTabReorder({ owner: `${machineId}:${workspace.workspace_id}`, tabs, strip, moveTab,
+  const workingTabs = new Set(panes.filter((pane) => paneStatus(pane as HerdrPane) === "working").map((pane) => pane.tab_id));
+  const visibleTabs = workingOnly ? tabs.filter((tab) => tab.tab_id === selectedPane.tab_id || workingTabs.has(tab.tab_id)
+    || tab.tab_id === editing?.tabId || tab.tab_id === picker?.tab.tab_id) : tabs;
+  const reorder = useTabReorder({ owner: `${machineId}:${workspace.workspace_id}`, tabs, visibleTabs, strip, moveTab,
     failed: (reason) => setError(t("Move failed: {reason}", { reason: said(reason) })),
     stale: () => setError(t("Tab order did not refresh. Try again.")),
   });
@@ -170,7 +176,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
   useLayoutEffect(() => {
     scroll.current = stripSelected(scroll.current);
   }, [selectedPane.tab_id]);
-  useLayoutEffect(bringOpenTab, [selectedPane.tab_id, tabs.length, shown, touchMenu]);
+  useLayoutEffect(bringOpenTab, [selectedPane.tab_id, visibleTabs.length, shown, touchMenu, hideNewTab]);
   // A face that arrives after that (lib/fontFaces.ts) redraws every name wider or narrower with
   // no tab added or opened, so the open tab is brought into view again for each: unless the user
   // has scrolled the strip themselves since a tab was last opened (lib/tabStripScroll.ts), and is
@@ -361,9 +367,9 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
     ...(keysOf(tab).some(key => sidebarLayout.membership[key]) ? [{ id: "ungroup", label: t("Ungrouped"), icon: FolderMinus, divider: true, run: () => saveTabGroup(tab, null) }] : []),
   ];
   const tabActions = (tab: HerdrTab): RowMenuItem[] => [
-    ...(!reorder.moving && tabs.findIndex((entry) => entry.tab_id === tab.tab_id) > 0
+    ...(!reorder.moving && visibleTabs.findIndex((entry) => entry.tab_id === tab.tab_id) > 0
       ? [{ id: "move-left", label: t("Move tab left"), icon: ArrowLeft, run: () => reorder.moveAdjacent(tab.tab_id, -1) }] : []),
-    ...(!reorder.moving && tabs.findIndex((entry) => entry.tab_id === tab.tab_id) < tabs.length - 1
+    ...(!reorder.moving && visibleTabs.findIndex((entry) => entry.tab_id === tab.tab_id) < visibleTabs.length - 1
       ? [{ id: "move-right", label: t("Move tab right"), icon: ArrowRight, run: () => reorder.moveAdjacent(tab.tab_id, 1) }] : []),
     { id: "new-tab", label: t("New tab"), icon: Plus, run: onNewTab },
     { id: "rename-tab", label: t("Rename tab"), icon: Pencil, run: () => beginRename(tab) },
@@ -384,7 +390,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
       <div ref={strip} className="tab-strip" role="tablist" aria-label={t("Tabs of {workspace}", { workspace: workspace.label })} aria-busy={reorder.moving} onKeyDown={onKeyDown} onScroll={onScroll}
         onFocus={(event) => { if (event.target.getAttribute("role") === "tab") focusedTab.current = event.target; }}
         onBlur={(event) => { if (event.relatedTarget !== null) focusedTab.current = null; }}>
-        {tabs.map((tab, index) => {
+        {visibleTabs.map((tab, index) => {
           const active = tab.tab_id === selectedPane.tab_id;
           const own = panesOf(tab);
           // Settle each pane's wait before rolling up, so a sibling's RUN or DONE stays visible.
@@ -395,7 +401,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
           const name = nameOf(tab);
           const group = groupName(tab);
           return (
-            <div className={`tab-strip-item${active ? " is-active" : ""}${own.length > 1 ? " has-panes" : ""}${editing?.tabId === tab.tab_id ? " is-editing" : ""}${reorder.drag?.tabId === tab.tab_id ? " is-dragging" : ""}${reorder.drag?.boundary === index ? " is-drop-before" : ""}${reorder.drag?.boundary === tabs.length && index === tabs.length - 1 ? " is-drop-after" : ""}`} key={tab.tab_id}>
+            <div className={`tab-strip-item${active ? " is-active" : ""}${own.length > 1 ? " has-panes" : ""}${editing?.tabId === tab.tab_id ? " is-editing" : ""}${reorder.drag?.tabId === tab.tab_id ? " is-dragging" : ""}${reorder.drag?.boundary === index ? " is-drop-before" : ""}${reorder.drag?.boundary === visibleTabs.length && index === visibleTabs.length - 1 ? " is-drop-after" : ""}`} key={tab.tab_id}>
               {editing?.tabId === tab.tab_id ? (
                 <input
                   className="input tab-strip-rename"
@@ -459,9 +465,9 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
             </div>
           );
         })}
-        <button type="button" className="tab-strip-add" aria-label={t("New tab")} title={t("New tab")} onClick={onNewTab}>
+        {!hideNewTab && <button type="button" className="tab-strip-add" aria-label={t("New tab")} title={t("New tab")} onClick={onNewTab}>
           <Plus aria-hidden="true" />
-        </button>
+        </button>}
         {error && <span className="tab-strip-error" role="alert">{error}</span>}
         {showClosing && !confirm && <span className="tab-strip-progress" role="status">{t("Closing tab…")}</span>}
       </div>

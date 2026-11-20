@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { clampSidebarWidth, keyedSidebarWidth, parseSidebarWidth, sidebarMaxWidth, SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH, SIDEBAR_WIDTH_STEP } from "./sidebarWidth.ts";
+import { clampSidebarWidth, keyedSidebarWidth, parseSidebarWidth, sidebarMaxWidth, SIDEBAR_EXPANDED_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH, SIDEBAR_WIDTH_STEP } from "./sidebarWidth.ts";
 
 describe("clampSidebarWidth", () => {
   it("keeps the width between the two limits, in whole pixels", () => {
@@ -35,9 +35,10 @@ describe("keyedSidebarWidth", () => {
 describe("parseSidebarWidth", () => {
   it("reads a stored width and clamps it", () => {
     expect(parseSidebarWidth("360")).toBe(360);
-    expect(parseSidebarWidth("12")).toBe(224);
+    expect(parseSidebarWidth("12")).toBe(SIDEBAR_EXPANDED_WIDTH);
+    expect(parseSidebarWidth("160")).toBe(160);
     expect(parseSidebarWidth("12", true)).toBe(SIDEBAR_MIN_WIDTH);
-    expect(parseSidebarWidth("360", true)).toBe(223);
+    expect(parseSidebarWidth("360", true)).toBe(SIDEBAR_EXPANDED_WIDTH - 1);
   });
 
   it("falls back to the default width for anything else", () => {

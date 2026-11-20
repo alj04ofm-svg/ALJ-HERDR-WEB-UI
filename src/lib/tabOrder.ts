@@ -22,3 +22,12 @@ export function tabDropBoundary(rects: readonly { left: number; right: number }[
   const before = rects.findIndex((rect) => x < (rect.left + rect.right) / 2);
   return before < 0 ? rects.length : before;
 }
+
+/** Move relative to the next visible tab in that direction, using native coordinates. */
+export function visibleTabBoundary(ids: readonly string[], visible: readonly string[], tabId: string, boundary: number): number | null {
+  const source = visible.indexOf(tabId);
+  if (!movedTabOrder(visible, tabId, boundary)) return null;
+  const movingRight = boundary > source;
+  const anchor = ids.indexOf(visible[movingRight ? boundary - 1 : boundary]!);
+  return anchor < 0 ? null : anchor + Number(movingRight);
+}

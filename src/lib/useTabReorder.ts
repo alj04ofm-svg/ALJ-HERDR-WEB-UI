@@ -1,15 +1,16 @@
 import { useLayoutEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
 import type { HerdrTab, TabMoved } from "../../shared/protocol.ts";
-import { adjacentTabBoundary, movedTabOrder, tabDropBoundary } from "./tabOrder.ts";
+import { adjacentTabBoundary, movedTabOrder, tabDropBoundary, visibleTabBoundary } from "./tabOrder.ts";
 
 type Drag = { tabId: string; boundary: number | null };
 type Press = { tabId: string; pointerId: number; element: HTMLElement; x: number; y: number; startX: number; startY: number; started: boolean };
 type Operation = { expected: string | null; settled: boolean; timer?: number };
 
 /** A drag previews only an insertion line. Herdr's next snapshot owns the actual order. */
-export function useTabReorder({ owner, tabs, strip, moveTab, failed, stale }: {
+export function useTabReorder({ owner, tabs, visibleTabs, strip, moveTab, failed, stale }: {
   owner: string;
   tabs: HerdrTab[];
+  visibleTabs: HerdrTab[];
   strip: RefObject<HTMLDivElement>;
   moveTab: (tabId: string, boundary: number) => Promise<TabMoved>;
   failed: (error: unknown) => void;
@@ -19,8 +20,10 @@ export function useTabReorder({ owner, tabs, strip, moveTab, failed, stale }: {
   const [moving, setMoving] = useState(false);
   const ids = tabs.map((tab) => tab.tab_id);
   const key = JSON.stringify(ids);
-  const current = useRef({ owner, key, ids, moveTab, failed, stale });
-  current.current = { owner, key, ids, moveTab, failed, stale };
+  const visibleIds = visibleTabs.map((tab) => tab.tab_id);
+  const visibleKey = JSON.stringify(visibleIds);
+  const current = useRef({ owner, key, ids, visibleIds, moveTab, failed, stale });
+  current.current = { owner, key, ids, visibleIds, moveTab, failed, stale };
   const press = useRef<Press | null>(null);
   const operation = useRef<Operation | null>(null);
   const suppressClick = useRef(false);
@@ -56,7 +59,7 @@ export function useTabReorder({ owner, tabs, strip, moveTab, failed, stale }: {
     // the answer is not an acknowledgement, and must not enable another stale-coordinate move.
     const op = operation.current;
     if (op?.settled && key === op.expected) finishOperation(op);
-  }, [key, owner]);
+  }, [key, owner, visibleKey]);
   useLayoutEffect(() => {
     setMoving(false);
     suppressClick.current = false;
@@ -87,9 +90,14 @@ export function useTabReorder({ owner, tabs, strip, moveTab, failed, stale }: {
       saved.failed(reason);
     });
   };
+  const moveVisible = (tabId: string, boundary: number): void => {
+    const { ids, visibleIds } = current.current;
+    const nativeBoundary = visibleTabBoundary(ids, visibleIds, tabId, boundary);
+    if (nativeBoundary !== null) requestMove(tabId, nativeBoundary);
+  };
   const moveAdjacent = (tabId: string, direction: -1 | 1): void => {
-    const boundary = adjacentTabBoundary(current.current.ids, tabId, direction);
-    if (boundary !== null) requestMove(tabId, boundary);
+    const boundary = adjacentTabBoundary(current.current.visibleIds, tabId, direction);
+    if (boundary !== null) moveVisible(tabId, boundary);
   };
   const boundaryAt = (held: Press): number | null => {
     const row = strip.current;
@@ -119,7 +127,7 @@ export function useTabReorder({ owner, tabs, strip, moveTab, failed, stale }: {
     // Touch keeps its native swipe scroll; its menu offers the same adjacent moves.
     if (event.pointerType !== "mouse" || event.button !== 0 || event.ctrlKey || !event.isPrimary) return;
     suppressClick.current = false;
-    if (operation.current || current.current.ids.length < 2) return;
+    if (operation.current || current.current.visibleIds.length < 2) return;
     event.preventDefault(); // dragging an inactive tab must not steal terminal or keyboard focus
     const element = event.currentTarget;
     press.current = { tabId, pointerId: event.pointerId, element, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, started: false };
@@ -143,7 +151,7 @@ export function useTabReorder({ owner, tabs, strip, moveTab, failed, stale }: {
     held.x = event.clientX; held.y = event.clientY;
     const boundary = held.started ? boundaryAt(held) : null;
     cancelDrag();
-    if (boundary !== null) requestMove(held.tabId, boundary);
+    if (boundary !== null) moveVisible(held.tabId, boundary);
   };
   useLayoutEffect(() => {
     if (!drag) return;

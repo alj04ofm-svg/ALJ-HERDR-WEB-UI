@@ -1,6 +1,6 @@
 /* The panorama sets the horizon. The near quay and its reflections share a baseline. */
 .city-backdrop {
-  --city-event-cycle: 44s;
+  --city-event-cycle: 56s;
   --city-shore: 29%;
   --city-quay: 32%;
   --city-facade-tone: saturate(.82) brightness(.90);
@@ -47,10 +47,21 @@
   transform: translateX(-50%);
   --city-roof: color-mix(in srgb, var(--status-working) 34%, var(--bg-elevated));
 }
-.city-site[data-architecture="brick"] { --city-architecture: url("../brand/city-brick.webp"); }
-.city-site[data-architecture="stone"] { --city-architecture: url("../brand/city-stone.webp"); }
-.city-site[data-architecture="glass"] { --city-architecture: url("../brand/city-glass.webp"); }
-.city-site[data-architecture="deco"] { --city-architecture: url("../brand/city-deco.webp"); }
+:is(.city-site, .city-site-replacement)[data-architecture="brick"] { --city-architecture: url("../brand/city-brick.webp"); }
+:is(.city-site, .city-site-replacement)[data-architecture="stone"] { --city-architecture: url("../brand/city-stone.webp"); }
+:is(.city-site, .city-site-replacement)[data-architecture="glass"] { --city-architecture: url("../brand/city-glass.webp"); }
+:is(.city-site, .city-site-replacement)[data-architecture="deco"] { --city-architecture: url("../brand/city-deco.webp"); }
+.city-quay-lot {
+  position: absolute;
+  inset: auto -8% 0;
+  height: clamp(5px, 1.6cqh, 16px);
+  border-block-end: var(--hairline) solid var(--border-strong);
+  background:
+    radial-gradient(ellipse closest-side, var(--status-done), transparent) 0 0 / 19% 76% repeat-x,
+    linear-gradient(transparent 54%, var(--bg-elevated) 55% 75%, var(--border-strong) 76%);
+  filter: brightness(.65) saturate(.65);
+}
+.city-quay-lot.is-opening { animation: city-fill-lot var(--city-event-cycle) steps(140) infinite; }
 .city-building, .city-facade { position: absolute; inset: 0; }
 .city-building { transform-origin: bottom center; }
 .city-facade {
@@ -218,6 +229,14 @@
 .is-animated .city-river .city-docked-yacht::after {
   animation: city-berth-wake 84s steps(270) -24s infinite;
 }
+.city-guest-yacht {
+  --city-channel: 17%;
+  --city-berth: 22%;
+  --city-vessel-width: clamp(25px, 4.7cqw, 63px);
+}
+.city-guest-yacht::before { filter: sepia(.28) drop-shadow(0 2px 2px var(--bg)); }
+.is-animated .city-river .city-guest-yacht,
+.is-animated .city-river .city-guest-yacht::after { animation-duration: 109s; animation-delay: -31s; }
 @keyframes city-yacht-docking {
   0% { transform: translate(-25cqw, 13cqh); }
   13% { transform: translate(-6cqw, 3cqh) rotate(-3deg); }
@@ -285,6 +304,47 @@
 
 .city-site[data-target="true"] .city-building { animation: city-rebuild var(--city-event-cycle) steps(140) infinite; }
 .city-site[data-target="true"] .city-reflection { animation: city-reflect var(--city-event-cycle) steps(140) infinite; }
+.city-site[data-replacement="true"] .city-building { animation-name: city-leave-lot; }
+.city-site[data-replacement="true"] .city-reflection { animation-name: city-leave-reflection; }
+.city-site-replacement {
+  position: absolute;
+  inset: 0;
+  animation: city-fill-lot var(--city-event-cycle) steps(140) infinite;
+}
+.city-meteor, .city-district-flash {
+  position: absolute;
+  left: 50%;
+  bottom: 59%;
+  opacity: 0;
+}
+.city-meteor {
+  width: clamp(120px, 24cqw, 350px);
+  height: clamp(6px, 1.5cqh, 18px);
+  background: linear-gradient(90deg, transparent, var(--status-blocked) 61%, var(--accent) 86%, var(--text-strong));
+  border-radius: 100% 35% 45% 100%;
+  filter: drop-shadow(0 1px 8px var(--accent));
+  animation: city-meteor-trail var(--city-event-cycle) steps(380) infinite;
+}
+.city-district-flash {
+  width: clamp(110px, 31cqw, 440px);
+  aspect-ratio: 2.7;
+  background: radial-gradient(ellipse at center, var(--text-strong), var(--accent) 15%, var(--status-blocked) 31%, transparent 67%);
+  animation: city-district-flash var(--city-event-cycle) steps(240) infinite;
+}
+@keyframes city-meteor-trail {
+  0%, 12% { opacity: 0; transform: translate(clamp(-400px, -30cqw, -150px), -38cqh) rotate(25deg); }
+  15% { opacity: .92; }
+  20% { opacity: .94; transform: translate(-96%, -2%) rotate(25deg); }
+  20.5%, 100% { opacity: 0; transform: translate(-96%, -2%) rotate(25deg); }
+}
+@keyframes city-district-flash {
+  0%, 20% { opacity: 0; transform: translate(-50%, 30%) scale(.08); }
+  21% { opacity: .76; transform: translate(-50%, 28%) scale(.55); }
+  27%, 100% { opacity: 0; transform: translate(-50%, 18%) scale(1.4); }
+}
+@keyframes city-leave-lot { 0%, 20% { opacity: 1; } 20.5%, 100% { opacity: 0; } }
+@keyframes city-leave-reflection { 0%, 20% { opacity: .36; } 31%, 100% { opacity: 0; } }
+@keyframes city-fill-lot { 0%, 77% { opacity: 0; } 83%, 100% { opacity: 1; } }
 .city-flight, .city-impact, .city-rubble {
   position: absolute;
   left: 50%;

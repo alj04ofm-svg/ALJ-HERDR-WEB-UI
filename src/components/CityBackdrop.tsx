@@ -1,4 +1,4 @@
-import { memo, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
+import { memo, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { Clock3, CloudSun, Compass, Pause, Play, Rabbit, Sailboat, Ship } from "lucide-react";
 import { useT } from "../lib/i18n.ts";
@@ -14,23 +14,52 @@ const waterfront = [
   { x: 76, height: 48, width: 7.2, architecture: "stone", columns: 7, rows: 6 },
 ] as const;
 const rebuildOrder = [2, 1, 3, 0];
+const dayNumber = (date = new Date()) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000;
 const constructionFloors = [0, 1, 2, 3, 4, 5];
 const weatherModes = ["auto", "clear", "fog", "rain"] as const;
 type MarinaWeather = typeof weatherModes[number];
 type LiveWeather = "clear" | "cloudy" | "rain" | "fog" | "storm";
 const bannerMessages = [
   "Do what matters first.",
-  "One priority at a time.",
-  "Make the next step clear.",
+  "Give the agent a failing test.",
+  "Pick one thing to finish.",
+  "Ask what could invalidate it.",
+  "Reopen with a clear next step.",
+  "Tell the agent what must stay.",
   "Small steps still count.",
-  "Finish what moves the work.",
+  "Ask for files and line numbers.",
+  "Try the hardest case first.",
+  "Give each agent a clear owner.",
+  "Check what users see on failure.",
   "Protect your focus.",
-  "Pick the next useful step.",
-  "Reproduce it first.",
+  "Send a runnable example.",
+  "Write down the decision.",
+  "Ask the agent to check its diff.",
+  "Make the next step clear.",
+  "Set a clear stopping point.",
+  "Read the first failing line.",
+  "Let the quiet work compound.",
+  "Ask for the smallest safe fix.",
+  "Keep a way to roll back.",
+  "Turn a hunch into a check.",
+  "Leave a note for tomorrow.",
   "Make it work, then polish.",
+  "Ask what the tests missed.",
+  "Name the input and output.",
+  "Check a real user flow.",
   "Leave it easier to use.",
+  "Review one change at a time.",
+  "Move one priority forward.",
+  "Ask for evidence before merging.",
   "Read the diff before shipping.",
   "Take a breath. Start again.",
+  "Finish what moves the work.",
+  "Have the agent list unknowns.",
+  "Write a test for the old bug.",
+  "Clear one blocker before lunch.",
+  "Re-run the check after edits.",
+  "Make the handoff easy to resume.",
+  "Timebox the investigation.",
 ] as const;
 
 // The façade sprites provide the edge of each building. Each slot covers a small part of its window grid.
@@ -91,8 +120,30 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
 }) {
   const [cycle, setCycle] = useState(0);
   const [bannerPass, setBannerPass] = useState(0);
-  const lot = rebuildOrder[cycle % rebuildOrder.length];
-  const adjoining = cycle % 3 === 2 ? rebuildOrder[(cycle + 1) % rebuildOrder.length] : null;
+  const [day, setDay] = useState(dayNumber);
+  const [rebuilt, setRebuilt] = useState<{ day: number; versions: Record<number, number>; cleared?: number } | null>(null);
+  useEffect(() => {
+    const sync = () => setDay(dayNumber());
+    const now = new Date();
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const timer = window.setTimeout(sync, tomorrow.getTime() - now.getTime());
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [day]);
+  const dailyBuildings = rebuilt?.day === day ? rebuilt : null;
+  const vacantLot = dailyBuildings?.cleared ?? (day % 3 === 0 ? day % waterfront.length : -1);
+  const buildable = rebuildOrder.filter(index => index !== vacantLot);
+  const start = (cycle + day) % buildable.length;
+  const eventPhase = (cycle + day) % 7;
+  const district = eventPhase === 0;
+  const sites = buildable.slice(start).concat(buildable.slice(0, start)).slice(0, district ? 3 : eventPhase === 3 ? 2 : 1);
+  const lead = sites[0];
+  const closingLot = district && day % 2 === 0 && vacantLot < 0 ? sites.at(-1) : undefined;
+
+  useEffect(() => { setBannerPass(0); }, [day]);
 
   return <div className={`city-backdrop${moving ? " is-animated" : ""}${paused ? " is-paused" : ""}`} data-weather={event?.weather ?? weather} data-regatta-light={event ? (event.sunset ? "sunset" : "floodlit") : undefined} data-discovery={discovery ?? undefined} aria-hidden="true">
     <div className="city-panorama">
@@ -102,13 +153,25 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
     </div>
     <div className="city-sky-haze" />
     <div className="city-gulls"><i /><i /><i /></div>
-    <div className="city-site-clock" onAnimationIteration={event => {
-      if (event.target === event.currentTarget && event.animationName === "city-clock") setCycle(index => index + 1);
+    <div className="city-site-clock" key={day} onAnimationIteration={event => {
+      if (event.target !== event.currentTarget || event.animationName !== "city-clock") return;
+      if (district) {
+        const versions = { ...dailyBuildings?.versions };
+        for (const site of sites) versions[site] = (versions[site] ?? 0) + 1;
+        setRebuilt({ day, versions, cleared: closingLot ?? dailyBuildings?.cleared });
+      }
+      setCycle(index => index + 1);
     }}>
-      {waterfront.map(({ x, height, width, architecture }, index) => {
-        const working = moving && (index === lot || index === adjoining);
-        return <div className="city-site" key={index} data-target={working} data-architecture={architecture}
+      {waterfront.map(({ x, height, width }, index) => {
+        const working = moving && sites.includes(index);
+        const variant = index + day + (dailyBuildings?.versions[index] ?? 0);
+        const architecture = waterfront[variant % waterfront.length]!.architecture;
+        const nextArchitecture = waterfront[(variant + 1) % waterfront.length]!.architecture;
+        const alternate = working && district;
+        const clearing = working && index === closingLot;
+        return <div className="city-site" key={index} data-target={working} data-replacement={alternate} data-architecture={architecture}
           style={{ "--city-lot": `${x}%`, "--city-height": `${height}%`, "--city-width": `${width}cqw` } as CSSProperties}>
+          {index === vacantLot ? <span className="city-quay-lot" /> : <>
           <span className="city-building">
             <span className="city-facade" />
             <span className="city-room-lights">
@@ -116,8 +179,14 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
             </span>
           </span>
           <span className="city-reflection" />
+          {clearing ? <span className="city-quay-lot is-opening" />
+            : alternate && <div className="city-site-replacement" data-architecture={nextArchitecture}><span className="city-facade" /></div>}
+          </>}
           {working && <div className="city-sequence" key={cycle} data-arrival={cycle % 2 === 0 ? "west" : "east"}>
-            {index === lot && <><div className="city-flight"><span /></div><div className="city-impact" /></>}
+            {index === lead && (district
+              ? <><span className="city-meteor" /><span className="city-district-flash" /></>
+              : <div className="city-flight"><span /></div>)}
+            {(district || index === lead) && <div className="city-impact" />}
             <div className="city-collapse"><i /><i /><i /></div>
             <div className="city-impact-dust"><i /><i /></div>
             <div className="city-impact-glint" />
@@ -136,7 +205,7 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
               </div>
               <span className="city-work-lights" />
               <span className="city-site-truck" />
-              {constructionFloors.map(floor => <div className="city-install" key={floor} style={{
+              {!clearing && constructionFloors.map(floor => <div className="city-install" key={floor} style={{
                 "--city-floor": floor,
                 "--city-module-offset": `${100 - floor * 20}%`,
               } as CSSProperties}>
@@ -175,6 +244,7 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
       {!manualBoats && <div className="city-vessel city-jet-ski" />}
       {!event && <div className="city-vessel city-jet-ski city-jet-ski-second" />}
       <div className="city-vessel city-yacht city-docked-yacht"><i /></div>
+      <div className="city-vessel city-yacht city-docked-yacht city-guest-yacht"><i /></div>
       <div className="city-water-taxi"><i /><b /><span /></div>
     </div>
     <div className="city-bridge-traffic" />
@@ -185,7 +255,7 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
       }
     }}>
       <span />
-      <b className="city-plane-banner">{bannerMessages[bannerPass]}</b>
+      <b className="city-plane-banner">{bannerMessages[(bannerPass + (day % 10) * 4) % bannerMessages.length]}</b>
     </div>
     <div className="city-weather-fog"><i /><i /></div>
     <div className="city-weather-rain">

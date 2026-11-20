@@ -4,7 +4,7 @@ const KEY = "herdr-web-ui:sidebar-width";
 const COMPACT_KEY = "herdr-web-ui:sidebar-compact-width";
 
 export const SIDEBAR_MIN_WIDTH = 54;
-export const SIDEBAR_EXPANDED_WIDTH = 224;
+export const SIDEBAR_EXPANDED_WIDTH = 144;
 export const SIDEBAR_DEFAULT_COMPACT_WIDTH = 64;
 export const SIDEBAR_MAX_WIDTH = 520;
 /** one arrow key press on the focused edge */

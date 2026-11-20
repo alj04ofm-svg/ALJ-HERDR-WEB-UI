@@ -562,6 +562,25 @@
 .compact-tab-row[aria-current="page"]::before { width: 2px; }
 .sidebar-shell .sidebar-footer-row :is(.usage-strip, .sidebar-utility) { border-radius: var(--radius-md); }
 
+.sidebar-narrow .sidebar-shell { --side-gutter: var(--space-1); --side-box: var(--space-6); }
+.sidebar-narrow .sidebar-navigation { scrollbar-gutter: auto; gap: var(--space-1); }
+.sidebar-narrow .fm-navigation > button { white-space: nowrap; }
+.sidebar-narrow .fm-navigation > [aria-haspopup] > span,
+.sidebar-narrow .agent-section-caret,
+.sidebar-narrow .agent-section-count,
+.sidebar-narrow .agent-state[data-status="working"],
+.sidebar-narrow .workspace-select > .sidebar-mark { position: absolute; clip-path: inset(50%); }
+.sidebar-narrow .agent-section-toggle { padding-inline-start: var(--space-1); }
+.sidebar-narrow .agent-section-toggle > span:first-of-type { font-size: var(--fs-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-narrow .agent-state { width: var(--space-4); }
+.sidebar-narrow .agent-state svg { width: var(--icon-size); height: var(--icon-size); }
+.sidebar-narrow .machine-kind { display: none; }
+.sidebar-narrow .machine-new { margin-inline-end: 0; }
+.sidebar-narrow .worktree-children .workspace-header { padding-inline-start: var(--space-2); }
+.sidebar-narrow .sidebar-footer-row { flex-wrap: wrap; }
+.sidebar-narrow .sidebar-footer-row .usage { flex: 1 0 100%; }
+.sidebar-narrow .sidebar-footer-row .sidebar-utility { flex: 1 1 auto; }
+
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .sidebar-shell :is(.agent-item, .workspace-header, .compact-tab-row, .sidebar-utility, .usage-strip) {
     transition: background-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);

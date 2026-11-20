@@ -1176,7 +1176,7 @@ export function App() {
   if (locked) return <AccessGate reason={lockReason} initialCode={pairCode} onUnlocked={unlock} />;
 
   const workspaceTabs = snapshot && selectedPane && selectedWorkspace ? (
-    <div id="workspace-tabs" className="workspace-tabs"><TabStrip explicitlyOpened={tabsOpen} snapshot={snapshot} workspace={selectedWorkspace} selectedPane={selectedPane} onSelectPane={selectPane} onNewTab={() => actions.openNewTab()} onCloseTab={(tabId) => actions.closeTab(selectedMachineId, tabId)}
+    <div id="workspace-tabs" className="workspace-tabs"><TabStrip explicitlyOpened={tabsOpen} workingOnly={headerHasTabs} hideNewTab={headerHasTabs && tinyHeader} snapshot={snapshot} workspace={selectedWorkspace} selectedPane={selectedPane} onSelectPane={selectPane} onNewTab={() => actions.openNewTab()} onCloseTab={(tabId) => actions.closeTab(selectedMachineId, tabId)}
             paneActions={(paneId) => {
               const target = snapshot.panes.find((item) => item.pane_id === paneId);
               if (!target || !paneActionsRef.current) return [];
@@ -1187,7 +1187,7 @@ export function App() {
   ) : null;
 
   return (
-    <MachineSessionsProvider machineIds={machines.map((machine) => machine.id)}><MachineContext.Provider value={selectedMachineId}><TaskBoardContext.Provider value={taskBoardContext}><div className={`app${sidebarCollapsed ? " sidebar-collapsed" : ""}${sidebarCompact ? " sidebar-compact" : ""}${showCity ? " has-sidebar-scene" : ""}`} style={sidebarWidth === null ? undefined : { "--sidebar-user-w": `${sidebarWidth}px` } as CSSProperties}>
+    <MachineSessionsProvider machineIds={machines.map((machine) => machine.id)}><MachineContext.Provider value={selectedMachineId}><TaskBoardContext.Provider value={taskBoardContext}><div className={`app${sidebarCollapsed ? " sidebar-collapsed" : ""}${sidebarCompact ? " sidebar-compact" : sidebarWidth !== null && sidebarWidth < 208 ? " sidebar-narrow" : ""}${showCity ? " has-sidebar-scene" : ""}`} style={sidebarWidth === null ? undefined : { "--sidebar-user-w": `${sidebarWidth}px` } as CSSProperties}>
       <header className={`app-header is-zoned${chatShown ? " is-chat" : ""}${headerHasTabs ? " has-header-tabs" : ""}`}>
         {/* is-zoned tells this header from the connecting shell's, which has no zones to draw.
             .header-side is the sidebar's own top row from 769px (styles.css); below that its

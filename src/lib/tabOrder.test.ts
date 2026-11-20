@@ -1,5 +1,14 @@
 import { describe, expect, it } from "bun:test";
-import { adjacentTabBoundary, movedTabOrder, tabDropBoundary } from "./tabOrder.ts";
+import { adjacentTabBoundary, movedTabOrder, tabDropBoundary, visibleTabBoundary } from "./tabOrder.ts";
+
+it("moves a working tab past its visible neighbor while preserving hidden tab order", () => {
+  const ids = ["a", "idle-1", "b", "idle-2", "c"];
+  const visible = ["a", "b", "c"];
+  expect(visibleTabBoundary(ids, visible, "a", 1)).toBeNull();
+  expect(visibleTabBoundary(ids, visible, "a", 2)).toBe(3);
+  expect(visibleTabBoundary(ids, visible, "c", 1)).toBe(2);
+  expect(visibleTabBoundary(ids, visible, "idle-1", 1)).toBeNull();
+});
 
 describe("native tab insertion boundaries", () => {
   const ids = ["a", "b", "c", "d"];

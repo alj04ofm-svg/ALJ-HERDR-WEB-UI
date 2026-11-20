@@ -235,8 +235,7 @@
 .app-header.has-header-tabs .shell-new-tab { display: none; }
 @media (max-width: 768px) {
   .app-header.has-header-tabs :is(.view-switch, .header-health) { display: none; }
-  .app-header.has-header-tabs .tab-strip { gap: var(--space-1); }
-  .app-header.has-header-tabs .tab-strip-switch { display: none; }
+  .app-header.has-header-tabs .tab-strip { --strip-bg: var(--bg-panel); gap: var(--space-1); }
 }
 @media (prefers-reduced-motion: no-preference) {
   .app-header.has-header-tabs .workspace-tabs { animation: header-tabs-enter 170ms var(--ease-out) both; }
