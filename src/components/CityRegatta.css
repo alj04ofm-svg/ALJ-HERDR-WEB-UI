@@ -1,0 +1,169 @@
+.regatta-controls {
+  --regatta-top: calc(var(--marina-top) + max(var(--touch-target), 44px) + var(--space-2));
+  inset-block-start: var(--regatta-top);
+  inline-size: min(340px, calc(100% - var(--marina-right) * 2));
+  max-block-size: max(112px, calc(var(--marina-space, 100%) - var(--regatta-top) - var(--space-2)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.regatta-heading { display: flex; justify-content: space-between; align-items: center; min-block-size: var(--chip-h); }
+.regatta-heading h2 { margin: 0 0 var(--space-1); font-size: var(--fs-lg); color: var(--text-strong); }
+.regatta-heading .icon-button { inline-size: 44px; block-size: 44px; margin-inline-end: calc(-1 * var(--space-1)); }
+.regatta-controls .btn, .regatta-controls select { min-block-size: 44px; }
+.regatta-controls .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); }
+.regatta-controls :is(.btn, .regatta-live) svg { width: var(--icon-size); height: var(--icon-size); flex: none; }
+.regatta-controls .city-marina-actions { gap: var(--space-1); }
+.regatta-grid { display: grid; gap: var(--space-1); padding-block: var(--space-1); }
+.regatta-grid label { display: grid; gap: var(--space-1); color: var(--text); font-size: var(--fs-xs); }
+.regatta-grid select { width: 100%; text-overflow: ellipsis; }
+.regatta-live, .regatta-results { padding: var(--space-2) 0; }
+.regatta-live > strong, .regatta-results > strong { color: var(--accent); font-size: var(--fs-lg); }
+.regatta-live p { min-height: 2.9em; display: flex; align-items: start; gap: var(--space-2); }
+.regatta-results ol {
+  display: grid;
+  gap: var(--space-1);
+  padding-inline-start: var(--space-5);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+  font-variant-numeric: tabular-nums;
+}
+.regatta-results li span { margin-inline-end: var(--space-2); }
+.regatta-results time { color: var(--text-dim); white-space: nowrap; }
+
+.regatta-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  --race-top: 74%;
+  --race-depth: 10%;
+}
+.regatta-overlay[data-paused="true"] :is(.regatta-person, .regatta-splash) { animation-play-state: paused; }
+.regatta-quay { position: absolute; inset: var(--regatta-shore, 67%) 0 auto; }
+.regatta-stand { position: absolute; width: clamp(37px, 8cqw, 110px); height: 14px; }
+.regatta-floodlight {
+  --beam: color-mix(in srgb, var(--status-working) 34%, var(--text-strong));
+  position: absolute;
+  bottom: 10px;
+  left: 60%;
+  height: 24px;
+  width: 3px;
+  background: linear-gradient(var(--text-dim), var(--bg));
+  box-shadow: 1px 2px 3px var(--bg);
+}
+.regatta-floodlight::before, .regatta-floodlight::after { content: ""; position: absolute; }
+.regatta-floodlight::before {
+  inset: -2px -4px auto;
+  height: 4px;
+  background: var(--beam);
+  box-shadow: 0 1px 6px var(--beam);
+}
+.regatta-floodlight::after {
+  inset: 1px -44px auto;
+  height: 54px;
+  background: radial-gradient(ellipse at 50% 0%, var(--beam), transparent 73%);
+  clip-path: polygon(47% 0, 53% 0, 100% 100%, 0 100%);
+  opacity: .35;
+}
+.regatta-person {
+  --jacket: var(--status-working);
+  position: absolute;
+  left: calc(var(--spectator-slot) * 18%);
+  top: 0;
+  width: 7px;
+  height: 13px;
+  border-radius: 45% 50% 35% 35%;
+  background: linear-gradient(var(--jacket) 58%, var(--bg-elevated) 62%);
+  filter: drop-shadow(1px 2px 1px var(--bg));
+  animation: regatta-gather 2.6s var(--ease-out) both;
+}
+.regatta-person:nth-of-type(3n) { --jacket: var(--status-done); }
+.regatta-person:nth-of-type(2n) { top: 3px; }
+.regatta-person:nth-of-type(3n + 1) { --jacket: var(--status-blocked); }
+.regatta-person i {
+  position: absolute;
+  inset: -4px 0 auto;
+  height: 6px;
+  border-radius: 54% 45% 42% 55%;
+  background: color-mix(in srgb, var(--accent) 40%, var(--text));
+  box-shadow: inset 0 2px var(--bg-elevated);
+}
+.regatta-person:nth-of-type(odd) i { box-shadow: inset 0 2px var(--jacket); }
+@keyframes regatta-gather {
+  from { opacity: .18; translate: var(--spectator-from) 2px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+.regatta-start-gate, .regatta-finish-gate {
+  position: absolute;
+  top: var(--race-top);
+  left: var(--gate-x);
+  height: var(--race-depth);
+  width: 5px;
+  translate: -50% 0;
+  border-radius: var(--radius-pill);
+  border: var(--hairline) solid var(--border);
+  background: repeating-linear-gradient(var(--text-strong) 0 4px, var(--bg-panel) 4px 8px);
+  opacity: .68;
+}
+.regatta-start-gate { width: 8px; display: grid; padding: 1px; place-items: center; background: var(--bg-elevated); }
+.regatta-start-gate i { width: 4px; height: 4px; border-radius: 50%; background: var(--border-strong); }
+.regatta-overlay:is([data-phase="3"], [data-phase="2"], [data-phase="1"]) .regatta-start-gate i:first-child,
+.regatta-overlay:is([data-phase="2"], [data-phase="1"]) .regatta-start-gate i:nth-child(2),
+.regatta-overlay[data-phase="1"] .regatta-start-gate i:last-child { background: var(--status-blocked); box-shadow: 0 1px 4px var(--status-blocked); }
+.regatta-overlay[data-phase="race"] .regatta-start-gate i { background: var(--status-done); box-shadow: 0 1px 4px var(--status-done); }
+.regatta-ramp {
+  position: absolute;
+  inset: var(--ramp-y, 0) auto auto var(--ramp-x, 0);
+  width: clamp(12px, 3cqw, 36px);
+  height: 11px;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 2px, var(--bg-elevated) 2px 5px);
+  clip-path: polygon(0 80%, 85% 5%, 100% 35%, 100% 78%, 10% 100%);
+  opacity: .76;
+}
+.regatta-craft {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 0;
+  height: 0;
+}
+.regatta-craft .city-vessel {
+  inset: auto auto 0 0;
+  width: clamp(30px, 7cqw, 77px);
+  translate: -50% 15%;
+}
+.regatta-craft .city-vessel::before { filter: hue-rotate(var(--livery)) drop-shadow(0 2px 2px var(--bg)); }
+.regatta-craft .city-jet-ski { width: clamp(22px, 4cqw, 51px); }
+.regatta-craft .city-speedboat {
+  --city-vessel-art: url("../brand/city-speedboat.webp");
+  --city-wake: 175%;
+  width: clamp(29px, 5.7cqw, 67px);
+  aspect-ratio: 2.9;
+}
+.regatta-overlay:not([data-phase="race"]) .city-vessel::after { opacity: .18; }
+.regatta-craft[data-stunt="jump"] .city-vessel { rotate: -11deg; }
+.regatta-craft b {
+  position: absolute;
+  inset: auto auto 9px -6px;
+  width: 13px;
+  text-align: center;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-2xs);
+  color: var(--text-strong);
+  background: color-mix(in srgb, var(--bg-panel) 90%, transparent);
+}
+.regatta-craft[data-winner="true"] b { background: var(--accent); color: var(--primary-text); }
+.regatta-splash {
+  position: absolute;
+  display: none;
+  inset: auto 4px -8px auto;
+  width: 49px;
+  height: 29px;
+  background: radial-gradient(ellipse 45% 9% at 60% 85%, var(--text-strong), transparent),
+    radial-gradient(ellipse 40% 42% at 74% 45%, var(--status-working), transparent);
+  transform-origin: right bottom;
+  animation: regatta-spray 500ms var(--ease-out) both;
+}
+.regatta-craft:is([data-stunt="spray"], [data-stunt="jump"]) .regatta-splash { display: block; }
+@keyframes regatta-spray { from { opacity: .78; scale: .4; } to { opacity: 0; scale: 1.42; } }

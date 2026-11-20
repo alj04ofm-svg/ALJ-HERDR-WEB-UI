@@ -108,19 +108,15 @@
   filter: blur(1.2px);
   opacity: .36;
 }
-.city-roof-sign { display: none; }
-@container (max-width: 620px) {
-  .city-roof-sign {
-    position: absolute;
-    inset: 46% auto auto 10%;
-    display: block;
-    width: 9px;
-    height: 9px;
-    color: var(--status-blocked);
-    filter: drop-shadow(0 0 3px currentColor);
-    translate: -50% -50%;
-    opacity: .75;
-  }
+.city-roof-sign {
+  position: absolute;
+  inset: 46% auto auto 10%;
+  width: 10px;
+  height: 10px;
+  color: var(--status-blocked);
+  filter: drop-shadow(0 0 3px currentColor);
+  translate: -50% -50%;
+  opacity: .75;
 }
 .city-promenade {
   position: absolute;
@@ -914,7 +910,7 @@
 .city-weather-control .select { flex: 1; width: min(120px, 35vw); padding-inline: var(--space-1); }
 .city-marina-controls p { margin: var(--space-1) 0 0; color: var(--text); font-size: var(--fs-xs); }
 
-.city-racer, .city-hotspot {
+.city-racer {
   position: absolute;
   translate: -50% -50%;
   border: var(--hairline) solid transparent;
@@ -942,30 +938,6 @@
 }
 .city-racer-1 .city-vessel { width: 63%; }
 .city-racer:disabled { opacity: 1; pointer-events: none; }
-.city-racer.is-racing { animation: city-race 4.2s var(--ease-out) both; }
-.city-racer.is-first.is-racing { animation-duration: 3.4s; }
-.city-interactions.is-paused :is(.city-racer, .city-ghost-ferry) { animation-play-state: paused; }
-@keyframes city-race { to { transform: translateX(var(--race-distance)); } }
-
-.city-hotspot {
-  display: grid;
-  place-items: center;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  color: var(--text-strong);
-}
-.city-hotspot svg {
-  width: 15px;
-  height: 15px;
-  filter: drop-shadow(0 1px 2px var(--bg));
-}
-.city-hotspot:is(:hover, :focus-visible, .is-found) {
-  background: var(--card-glass);
-  border-color: var(--border-strong);
-}
-.city-hotspot.is-found { color: var(--status-done); }
-
 @media (max-width: 768px) {
   .city-interactions { --marina-top: calc(var(--header-over, 0px) + 56px + var(--space-2)); }
   .city-tools .icon-button { min-width: 44px; min-height: 44px; }
@@ -977,13 +949,6 @@
 @media (max-width: 768px) {
   .terminal-stack.has-city.is-chat:not(.is-greeted) > .terminal-surface + .prompt-dock:empty + .composer { z-index: 2; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .city-interactions .city-racer.is-racing {
-    animation-duration: 1ms;
-    animation-play-state: running;
-  }
-}
-
 .city-bridge-traffic {
   position: absolute;
   left: 4%;
@@ -1043,24 +1008,6 @@
   34%, 100% { transform: translateX(calc(var(--evac-direction) * 12cqw)); opacity: 0; }
 }
 @keyframes city-run-step { to { transform: translateY(-1.5px) rotate(10deg); } }
-
-.city-ferry-signal { left: 18%; top: 62%; }
-.city-ghost-ferry {
-  top: 75%;
-  left: 4%;
-  opacity: .65;
-  filter: grayscale(.7) brightness(1.4) drop-shadow(0 0 5px var(--accent));
-  pointer-events: none;
-  animation: city-ghost-ferry 7s var(--ease-out) both;
-}
-@keyframes city-ghost-ferry {
-  0%, 100% { opacity: 0; }
-  25%, 75% { opacity: .65; }
-  100% { transform: translateX(41vw); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .city-ghost-ferry { animation: none; }
-}
 
 .terminal-stack.has-city {
   position: relative;
@@ -1219,3 +1166,32 @@
 .city-backdrop.is-animated[data-weather].is-paused *::after {
   animation-play-state: paused;
 }
+
+
+.city-marina-tools, .city-landmarks {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding-block-start: var(--space-2);
+}
+.city-landmarks p { flex-basis: 100%; }
+.city-marina-tools .city-weather-control { min-width: 7rem; }
+.city-discovery-beacon {
+  position: absolute;
+  display: none;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 1px 8px var(--bg);
+  translate: -50% -50%;
+  z-index: 1;
+}
+.city-backdrop[data-discovery] .city-discovery-beacon { display: block; }
+.city-backdrop[data-discovery="rabbit"] .city-discovery-beacon { top: 46%; left: 10%; }
+.city-backdrop[data-discovery="clock"] .city-discovery-beacon { top: calc(53% + 3px); left: calc(65% + 4px); }
+.city-backdrop[data-discovery="taxi"] .city-discovery-beacon { top: calc(68% + 2px); left: calc(51% + 8px); }
+.city-backdrop[data-regatta-light="sunset"] .city-panorama { filter: sepia(.16) saturate(1.12) brightness(1.13); }
+.city-backdrop[data-regatta-light="floodlit"] .city-water-lights { opacity: .73; }
+.city-backdrop[data-regatta-light] .city-water-taxi { visibility: hidden; }

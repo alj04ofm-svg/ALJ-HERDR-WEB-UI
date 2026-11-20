@@ -9,9 +9,9 @@
 ## Your workspace
 
 - **Chat and Terminal.** Switch views in the same pane, answer supported agent prompts, and open files your agent mentions. Start a new workspace with an agent already installed on your computer.
-- **Live tabs and a sidebar you can get out of the way.** Organize tabs into groups, see which agents are running, and switch from the full sidebar to a slim rail or close it entirely. The rail keeps active tabs, Tasks, and configured usage meters within reach.
-- **Projects and tasks.** Plan work in a Trello-style Kanban board or a compact list, add cards directly to a column, and organize them into projects and subprojects. Find due work with filters and archive completed cards. The Agents view lets you turn live work into a saved task when you choose.
-- **A waterfront in Chat.** Set your location for current weather or choose a scene preset. Open the marina controls to race the yacht and jet ski, explore waterfront markers, or pause the scene. The interface respects reduced-motion preferences.
+- **Live tabs and a sidebar you can get out of the way.** Organize tabs into groups, see which agents are running, put your Chat tabs directly in the top bar, and switch from the full sidebar to a slim rail or close it entirely. The rail keeps active tabs, Tasks, and configured usage meters within reach.
+- **Projects and tasks.** Plan work in a Trello-style Kanban board or a compact list, add cards directly to a column, and organize them into projects and subprojects. Find due work with filters and archive completed cards. Track progress by project and open Quick Capture from the Chat composer to organize a task with your configured assistant. The Agents view lets you turn live work into a saved task when you choose.
+- **A waterfront in Chat.** Set your location for current weather or choose a scene preset. Open the marina controls to start the Harbor Grand Prix with a random or custom fleet, pick a winner, explore waterfront landmarks, or pause the scene. The interface respects reduced-motion preferences.
 - **Connect your setup.** Open **Settings → Setup guide** for supported agent install and sign-in instructions. Connect another computer through **Settings → Remote PCs**.
 
 ## Install from source

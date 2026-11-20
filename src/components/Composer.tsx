@@ -5,6 +5,7 @@ import { appendWorkPrompt, type WorkPromptId } from "../lib/workPrompts.ts";
 import { rememberPrompt } from "../lib/workspacePreferences.ts";
 import {
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -18,11 +19,12 @@ import {
   type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
-import { Layers, ArrowUp, Ellipsis, FileText, Plus, Square, TriangleAlert, X } from "lucide-react";
+import { Layers, ArrowUp, ClipboardPlus, Ellipsis, FileText, Plus, Square, TriangleAlert, X } from "lucide-react";
 
 import "./Composer.css";
 
 import type { AgentStatus, ConversationMetadata, PlanSummary, SlashCommand } from "../../shared/protocol.ts";
+import { TaskBoardContext } from "../lib/taskBoardContext.ts";
 import { useMachineApi, useMachineId } from "../lib/machineContext.tsx";
 import { composerDrafts } from "../lib/composerDraft.ts";
 import { paneStorageId } from "../../shared/machines.ts";
@@ -247,6 +249,7 @@ export function Composer({
   onUploadImage,
 }: ComposerProps) {
   const t = useT();
+  const taskBoard = useContext(TaskBoardContext);
   const activeRef = useRef(active);
   activeRef.current = active;
   const machineId = useMachineId();
@@ -1036,6 +1039,8 @@ export function Composer({
           >
             <Plus aria-hidden="true" />
           </button>
+          {taskBoard && <button type="button" className="icon-button composer-capture" aria-label={t("Quick task capture")} title={t("Quick task capture")}
+            aria-haspopup="dialog" onClick={() => taskBoard.show("capture")}><ClipboardPlus aria-hidden="true" /></button>}
           <details className="composer-tools" onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
             <summary className="icon-button" aria-label={t("More composer tools")} title={t("More composer tools")}><Ellipsis aria-hidden="true" /></summary>
             <div className="composer-tools-panel">

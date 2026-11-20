@@ -1400,3 +1400,13 @@
 .terminal-stack.has-city > .composer {
   background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--bg) 38%, transparent));
 }
+
+.composer .composer-capture { color: var(--text-dim); }
+.composer .composer-capture:is(:hover, :focus-visible) { color: var(--accent); background: var(--accent-tint); }
+.terminal-stack.is-chat .composer-surface:has(.composer-text:focus-visible) {
+  border-color: color-mix(in srgb, var(--status-working) 52%, var(--border));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--bg) 40%, transparent), inset 0 1px var(--status-working-tint);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .terminal-stack.is-chat .composer-surface { transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
+}

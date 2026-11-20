@@ -36,3 +36,17 @@
 @keyframes working-ring-lap {
   to { stroke-dashoffset: -100; }
 }
+
+/* Icon-button sizing is for glyphs. The SVG outline spans the whole interactive surface. */
+.compact-tab-row > .working-ring {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
+.tab-strip-item > .working-ring { inset: 1px; width: calc(100% - 2px); height: calc(100% - 2px); }
+.tab-strip-item > .working-ring rect { rx: calc((var(--control-h) - 4px) / 2); }
+
+@media (pointer: coarse), (max-width: 768px) {
+  .tab-strip-item > .working-ring rect { rx: calc((var(--touch-target) - 4px) / 2); }
+}

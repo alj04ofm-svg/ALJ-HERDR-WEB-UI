@@ -23,8 +23,10 @@
 
 .sky-widget[data-position="left"] { inset-inline-start: var(--space-3); }
 .sky-widget[data-position="right"] { inset-inline-end: var(--space-3); }
-.terminal-host:has(.city-marina-controls) > .sky-widget[data-position="right"] {
-  inset-block-start: calc(var(--sky-offset) + var(--touch-target) * 3);
+@media (min-width: 821px) {
+  .terminal-host:has(.regatta-controls) > .sky-widget[data-position="right"] {
+    inset-inline: var(--space-3) auto;
+  }
 }
 .sky-widget[data-size="small"] { --sky-icon: var(--space-4); --sky-time: var(--fs-sm); }
 .sky-widget[data-size="large"] { --sky-icon: var(--space-6); --sky-time: var(--fs-display); }
@@ -76,7 +78,7 @@
 .weather-unit .select { inline-size: auto; }
 
 @media (max-width: 820px) {
-  .sky-widget, .terminal-host:has(.city-marina-controls) > .sky-widget[data-position="right"] { inset-block-start: var(--sky-offset); }
+  .sky-widget { inset-block-start: var(--sky-offset); }
   .sky-widget { max-inline-size: 66%; }
   :root:not([data-keyboard]) .terminal-host:has(> .sky-widget) .terminal-stack.has-shared-city .chat-view {
     padding-block-start: calc(var(--header-over, 0px) + 60px);

@@ -1,10 +1,11 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { Archive, ArrowLeft, CalendarDays, Check, CheckCheck, Columns3, Folder, List, Radio, Sparkles, Maximize2, Minimize2, Plus, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
+import { Archive, ArrowLeft, CalendarDays, Check, CheckCheck, ChevronRight, Columns3, Folder, List, Radio, Sparkles, Maximize2, Minimize2, Plus, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 import { TASK_STAGES, TASK_STAGE_LABELS, type TaskStage, type WorkspaceTask } from "../../shared/tasks.ts";
 import type { Machine } from "../../shared/machines.ts";
 import { sidebarAgents, agentNavigationLabel } from "../lib/sidebarAgents.ts";
 import { paneStatus } from "../lib/status.ts";
+import { WorkingRing } from "./WorkingRing.tsx";
 import { TaskCapture } from "./TaskCapture.tsx";
 import { useT } from "../lib/i18n.ts";
 import { usePhoneSheetBack } from "../lib/sheetHistory.ts";
@@ -30,6 +31,20 @@ const COLUMNS: { stage: TaskStage; label: string; includes: TaskStage[] }[] = [
   { stage: "done", label: "Done", includes: ["done"] },
 ];
 const DRAG_TYPE = "application/x-herdr-task";
+const PRIORITY_WEIGHT: Record<WorkspaceTask["priority"], number> = { urgent: 2, high: 1, normal: 0 };
+
+function nextFocusTask(tasks: WorkspaceTask[], today: string) {
+  const order = (a: WorkspaceTask, b: WorkspaceTask) => {
+    const work = Number(b.stage === "doing") - Number(a.stage === "doing");
+    const deadline = Number(Boolean(b.due && b.due <= today)) - Number(Boolean(a.due && a.due <= today));
+    return work || deadline || PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority]
+      || Number(b.stage === "next") - Number(a.stage === "next")
+      || (a.due || "9999").localeCompare(b.due || "9999")
+      || a.created_at.localeCompare(b.created_at);
+  };
+  return tasks.filter(task => task.stage === "doing" || task.stage === "next" || task.stage === "inbox").sort(order)[0];
+}
+
 
 function newTask(scope: WorkspaceTask["scope"], project: string, stage: TaskStage): WorkspaceTask {
   const now = new Date().toISOString();
@@ -128,7 +143,7 @@ function NotesEditor({ editor, projects, itemText, setItemText, patch, onBack, o
   </form>;
 }
 
-export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSelect }: { onClose(): void; store?: TaskStore; machines?: Machine[]; onSelect?(machine: string, pane: string): void }) {
+export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSelect, initialCapture = false }: { initialCapture?: boolean; onClose(): void; store?: TaskStore; machines?: Machine[]; onSelect?(machine: string, pane: string): void }) {
   const [store] = useState(() => suppliedStore ?? createTaskStore());
   const { snapshot, error, pending, conflict } = useTaskStore(store);
   const [view, setView] = useState<TaskFilter>("all");
@@ -139,7 +154,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   const [createProject, setCreateProject] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [parent, setParent] = useState("");
-  const [capture, setCapture] = useState(false);
+  const [capture, setCapture] = useState(initialCapture);
   const [captureNote, setCaptureNote] = useState("");
   const captureButton = useRef<HTMLButtonElement>(null);
   const [captureTask, setCaptureTask] = useState<string | null>(null);
@@ -274,6 +289,11 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     && (view !== "waiting" || task.stage === "needs-you" || task.stage === "review"));
   const projects = [...new Set([...(snapshot?.projects ?? []), ...tasks.map(task => task.project).filter(Boolean)])].sort((a, b) => a.localeCompare(b));
   const count = visible.length;
+  const projectTasks = tasks.filter(task => !task.archived
+    && (!project || task.project === project || task.project.startsWith(`${project} / `))
+    && (scope === "all" || task.scope === scope));
+  const completed = projectTasks.filter(task => task.stage === "done").length;
+  const nextTask = nextFocusTask(projectTasks, today);
   const lanes = COLUMNS.map(column => ({ ...column, tasks: visible.filter(task => column.includes.includes(task.stage)) }));
   const selectedStage = phoneStage ?? (lanes.find(lane => lane.stage === "doing" && lane.tasks.length)?.stage
     ?? lanes.find(lane => lane.tasks.length)?.stage ?? "inbox");
@@ -391,7 +411,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
         <div className="task-content">
           <div className="task-controls">
             <div className="task-views" role="group" aria-label="Task views">
-              {LAYOUTS.map(({ id, label, Icon }) => <button type="button" key={id} aria-pressed={layout === id} disabled={addingInline} onClick={() => chooseLayout(id)}><Icon aria-hidden="true" /><span>{label}</span></button>)}
+              {LAYOUTS.map(({ id, label, Icon }) => <button type="button" key={id} aria-pressed={layout === id} disabled={addingInline} onClick={() => chooseLayout(id)}><Icon aria-hidden="true" /><span>{label}</span>{layout === id && pending && <WorkingRing />}</button>)}
             </div>
             {layout !== "agents" && <button ref={filterButton} type="button" className="btn task-filter-toggle" aria-expanded={showFilters} disabled={addingInline} onClick={() => setShowFilters(value => !value)}>
               <SlidersHorizontal aria-hidden="true" /> Filters {hasFilters && <span className="task-filter-dot" aria-label="active" />}
@@ -427,6 +447,21 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
             <h3>{view === "archive" ? "Archive" : view === "today" ? "Today" : view === "waiting" ? "Needs attention" : project || "All tasks"}</h3>
             {snapshot && <span>{count} {count === 1 ? "task" : "tasks"}</span>}
           </div>
+          {snapshot && projectTasks.length > 0 && view === "all" && !queryText && <div className="task-momentum">
+            <div className="task-momentum-meter">
+              <div><strong>{completed === projectTasks.length ? "All caught up" : "Progress"}</strong><span>{completed} / {projectTasks.length} complete</span></div>
+              <div className="task-progress-track" role="progressbar" aria-label="Tasks complete"
+                aria-valuenow={completed} aria-valuemin={0} aria-valuemax={projectTasks.length}
+                aria-valuetext={`${completed} of ${projectTasks.length} tasks complete`}>
+                <span style={{ width: `${completed / projectTasks.length * 100}%` }} />
+              </div>
+            </div>
+            {nextTask && <button type="button" className="task-next" disabled={addingInline || busy || Boolean(editor)}
+              onClick={() => edit(nextTask)}>
+              <span>{nextTask.stage === "doing" ? "Continue" : "Up next"}<strong>{nextTask.title}</strong></span>
+              <ChevronRight aria-hidden="true" />
+            </button>}
+          </div>}
           {!snapshot ? <p className="task-empty" role="status">{error ? "The board could not be loaded." : "Loading tasks…"}</p>
             : !visible.length && (layout === "list" || view !== "all" || filtered) ? <div className="task-empty">
               <h3>{filtered ? "No matching tasks" : view === "archive" ? "No archived tasks" : view === "today" ? "Nothing due today" : view === "waiting" ? "Nothing needs attention" : "No tasks yet"}</h3>

@@ -32,6 +32,8 @@ import { SIDEBAR_EXPANDED_WIDTH, storedSidebarWidth, storeSidebarWidth } from ".
 import { MachineDialog } from "./components/MachineDialog.tsx";
 import { RowMenu, type RowMenuItem } from "./components/RowMenu.tsx";
 import { focusWorkspaceListToggle, modalOpen } from "./lib/focus.ts";
+import { TaskBoardContext, type TaskBoardMode } from "./lib/taskBoardContext.ts";
+import { createTaskStore } from "./lib/workspaceTasks.ts";
 import { chatReadDeadlineMs } from "./lib/chatReadDeadline.ts";
 import { withMutationDeadline } from "./lib/mutationDeadline.ts";
 import { headerCrumb, showsChat } from "./lib/headerCrumb.ts";
@@ -74,6 +76,7 @@ import { dropletAllows, endedTurn, seedStatuses, showDroplet, trackTurn, type Dr
 import { canPlayAlertSound, playAlertSound, unlockAlertSound, type AlertSoundKind } from "./lib/alertSound.ts";
 import { createAlertTurnPlayer } from "./lib/alertTurns.ts";
 
+const TaskBoard = lazy(() => import("./components/TaskBoard.tsx").then(module => ({ default: module.TaskBoard })));
 const APP_TITLE = "ALJ Harbor";
 const POLL_MS = 5000;
 
@@ -280,6 +283,11 @@ export function App() {
   useEffect(() => watchDrawerSwipe(() => drawerOpenRef.current, setDrawerOpen), []);
   // a desktop opened by a link that says so starts with the sidebar collapsed, and the address says so while it is
   const [tabsOpen, setTabsOpen] = useState(false);
+  const [taskStore] = useState(createTaskStore);
+  const [taskMode, setTaskMode] = useState<TaskBoardMode | null>(null);
+  const showTaskBoard = useCallback((mode: TaskBoardMode) => setTaskMode(mode), []);
+  const taskBoardContext = useMemo(() => ({ store: taskStore, mode: taskMode, show: showTaskBoard }), [taskStore, taskMode, showTaskBoard]);
+  useEffect(() => { if (locked) setTaskMode(null); }, [locked]);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const openSignOut = useCallback(() => setSignOutOpen(true), []);
   const closeSignOut = useCallback(() => setSignOutOpen(false), []);
@@ -1156,9 +1164,21 @@ export function App() {
   }
   if (locked) return <AccessGate reason={lockReason} initialCode={pairCode} onUnlocked={unlock} />;
 
+  const headerHasTabs = view === "chat" && tabsOpen && Boolean(snapshot && selectedPane && selectedWorkspace);
+  const workspaceTabs = snapshot && selectedPane && selectedWorkspace ? (
+    <div id="workspace-tabs" className="workspace-tabs"><TabStrip explicitlyOpened={tabsOpen} snapshot={snapshot} workspace={selectedWorkspace} selectedPane={selectedPane} onSelectPane={selectPane} onNewTab={() => actions.openNewTab()} onCloseTab={(tabId) => actions.closeTab(selectedMachineId, tabId)}
+            paneActions={(paneId) => {
+              const target = snapshot.panes.find((item) => item.pane_id === paneId);
+              if (!target || !paneActionsRef.current) return [];
+              // the strip renders before the canvas, so its items come from the canvas's previous render:
+              // an action runs against the canvas's latest one, where a snapshot change has landed
+              return paneActionsRef.current(target).map((item) => ({ ...item, run: () => (paneActionsRef.current?.(target).find((fresh) => fresh.id === item.id) ?? item).run() }));
+            }} /></div>
+  ) : null;
+
   return (
-    <MachineSessionsProvider machineIds={machines.map((machine) => machine.id)}><MachineContext.Provider value={selectedMachineId}><div className={`app${sidebarCollapsed ? " sidebar-collapsed" : ""}${sidebarCompact ? " sidebar-compact" : ""}${showCity ? " has-sidebar-scene" : ""}`} style={sidebarWidth === null ? undefined : { "--sidebar-user-w": `${sidebarWidth}px` } as CSSProperties}>
-      <header className={`app-header is-zoned${chatShown ? " is-chat" : ""}`}>
+    <MachineSessionsProvider machineIds={machines.map((machine) => machine.id)}><MachineContext.Provider value={selectedMachineId}><TaskBoardContext.Provider value={taskBoardContext}><div className={`app${sidebarCollapsed ? " sidebar-collapsed" : ""}${sidebarCompact ? " sidebar-compact" : ""}${showCity ? " has-sidebar-scene" : ""}`} style={sidebarWidth === null ? undefined : { "--sidebar-user-w": `${sidebarWidth}px` } as CSSProperties}>
+      <header className={`app-header is-zoned${chatShown ? " is-chat" : ""}${headerHasTabs ? " has-header-tabs" : ""}`}>
         {/* is-zoned tells this header from the connecting shell's, which has no zones to draw.
             .header-side is the sidebar's own top row from 769px (styles.css); below that its
             buttons sit in the bar */}
@@ -1188,7 +1208,7 @@ export function App() {
             <Search />
           </button>
         </div>
-        {headerNote ? (
+        {headerHasTabs ? workspaceTabs : headerNote ? (
           <div className="context">
             <span className="pill header-note" role="status" style={{ minWidth: 0 }}>
               <span className="context-title-text">{t(headerNote === "copied" ? "Link copied" : headerNote === "pane-closed" ? "That agent has closed: its workspace is open" : headerNote === "machine-missing" ? "That link's PC is not set up here" : "That link's workspace is closed")}</span>
@@ -1296,16 +1316,7 @@ export function App() {
         <TelemetryNotice enabled={locked === false} onOpen={() => { setSettingsSection("updates"); setSettingsOpen(true); }} />
         <MachineActionBanner machines={machines} onSetup={(machine, update = false) => { setDrawerOpen(false); setUpdateRemote(update); setMachineDialog(machine); }} />
         {layoutNotice && <p className="pane-notice" role="alert">{layoutNotice}</p>}
-        {snapshot && selectedPane && selectedWorkspace && (view === "terminal" || tabsOpen) && (
-          <div id="workspace-tabs" className="workspace-tabs"><TabStrip explicitlyOpened={tabsOpen} snapshot={snapshot} workspace={selectedWorkspace} selectedPane={selectedPane} onSelectPane={selectPane} onNewTab={() => actions.openNewTab()} onCloseTab={(tabId) => actions.closeTab(selectedMachineId, tabId)}
-            paneActions={(paneId) => {
-              const target = snapshot.panes.find((item) => item.pane_id === paneId);
-              if (!target || !paneActionsRef.current) return [];
-              // the strip renders before the canvas, so its items come from the canvas's previous render:
-              // an action runs against the canvas's latest one, where a snapshot change has landed
-              return paneActionsRef.current(target).map((item) => ({ ...item, run: () => (paneActionsRef.current?.(target).find((fresh) => fresh.id === item.id) ?? item).run() }));
-            }} /></div>
-        )}
+        {view === "terminal" && workspaceTabs}
         {/* the tab strip's panel: its id is what each tab's aria-controls points at. No tabIndex -
             the terminal (PaneTerminal) and the composer are the focusable things inside it. */}
         <main className="terminal-host">
@@ -1396,6 +1407,9 @@ export function App() {
         <FileViewer key={viewing.path} path={viewing.path} paneId={viewing.paneId} onClose={closeFile} onOpen={(path) => openFile({ ...viewing, path })} keyboardActive={!settingsOpen} />
       </MachineContext.Provider>}
       <CommandPalette key={selectedMachineId} machines={machines} onSelect={selectTarget} open={paletteOpen} onClose={() => setPaletteOpen(false)} snapshot={snapshot} online={selectedMachine?.state === "connected"} selectedPaneId={selectedPaneId} view={view} actions={actions} />
-    </div></MachineContext.Provider></MachineSessionsProvider>
+      {taskMode && <Suspense fallback={<span className="task-sidebar-loading" role="status">Loading task board…</span>}>
+        <TaskBoard store={taskStore} machines={machines} onSelect={(machine, pane) => { setDrawerOpen(false); selectTarget(machine, pane); }} initialCapture={taskMode === "capture"} onClose={() => setTaskMode(null)} />
+      </Suspense>}
+    </div></TaskBoardContext.Provider></MachineContext.Provider></MachineSessionsProvider>
   );
 }
