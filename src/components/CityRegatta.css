@@ -1,24 +1,32 @@
-.regatta-controls {
-  --regatta-top: calc(var(--marina-top) + max(var(--touch-target), 44px) + var(--space-2));
-  inset-block-start: var(--regatta-top);
-  inline-size: min(340px, calc(100% - var(--marina-right) * 2));
-  max-block-size: max(112px, calc(var(--marina-space, 100%) - var(--regatta-top) - var(--space-2)));
+.city-marina-controls.regatta-controls {
+  inset: var(--regatta-top, var(--marina-top)) auto auto var(--regatta-left, var(--marina-right));
+  inline-size: min(16rem, calc(100% - var(--space-3) * 2));
+  max-block-size: max(44px, calc(var(--marina-space, 100%) - var(--regatta-top, var(--marina-top)) - var(--space-2)));
+  padding: var(--space-2);
+  background: color-mix(in srgb, var(--bg-panel) 90%, transparent);
+  backdrop-filter: var(--glass-blur);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 .regatta-heading { display: flex; justify-content: space-between; align-items: center; min-block-size: var(--chip-h); }
-.regatta-heading h2 { margin: 0 0 var(--space-1); font-size: var(--fs-lg); color: var(--text-strong); }
+.regatta-heading h2 { margin: 0; font-size: var(--fs-sm); color: var(--text-strong); }
 .regatta-heading .icon-button { inline-size: 44px; block-size: 44px; margin-inline-end: calc(-1 * var(--space-1)); }
 .regatta-controls .btn, .regatta-controls select { min-block-size: 44px; }
 .regatta-controls .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); }
 .regatta-controls :is(.btn, .regatta-live) svg { width: var(--icon-size); height: var(--icon-size); flex: none; }
-.regatta-controls .city-marina-actions { gap: var(--space-1); }
+.regatta-controls .city-marina-actions { gap: var(--space-1); flex-wrap: nowrap; }
+.regatta-quick { flex: 1; white-space: nowrap; }
+.regatta-close { flex: none; min-block-size: 44px; min-inline-size: 36px; }
+.regatta-more { margin-top: var(--space-1); color: var(--text-dim); font-size: var(--fs-xs); }
+.regatta-more > summary { display: flex; align-items: center; justify-content: space-between; cursor: pointer; min-block-size: 44px; padding-inline: var(--space-2); }
+.regatta-more > summary svg { width: var(--icon-size); height: var(--icon-size); }
 .regatta-grid { display: grid; gap: var(--space-1); padding-block: var(--space-1); }
 .regatta-grid label { display: grid; gap: var(--space-1); color: var(--text); font-size: var(--fs-xs); }
 .regatta-grid select { width: 100%; text-overflow: ellipsis; }
 .regatta-live, .regatta-results { padding: var(--space-2) 0; }
-.regatta-live > strong, .regatta-results > strong { color: var(--accent); font-size: var(--fs-lg); }
-.regatta-live p { min-height: 2.9em; display: flex; align-items: start; gap: var(--space-2); }
+.regatta-live > strong, .regatta-results > strong { color: var(--accent); font-size: var(--fs-sm); }
+.regatta-live p { display: flex; align-items: start; gap: var(--space-2); }
+.regatta-results summary { cursor: pointer; color: var(--text); font-size: var(--fs-xs); padding-block: var(--space-2); }
 .regatta-results ol {
   display: grid;
   gap: var(--space-1);

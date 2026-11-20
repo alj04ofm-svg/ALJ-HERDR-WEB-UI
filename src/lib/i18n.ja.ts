@@ -1317,4 +1317,6 @@ export const JA: Record<string, string> = {
   "Look for the marker in the scene.": "風景の中のマーカーを探してください。",
   "Choose a landmark to highlight it in the city.": "目印を選ぶと街の中で強調表示されます。",
   "Quick task capture": "タスクをすばやく追加",
+  "Input tokens": "入力トークン",
+  "Results": "順位",
 };

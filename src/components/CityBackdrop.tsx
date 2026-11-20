@@ -24,7 +24,14 @@ const residents = [
   { berth: 59, pace: 74, offset: 21 },
   { berth: 73, pace: 103, offset: 57 },
   { berth: 88, pace: 89, offset: 72 },
+  { berth: 15, pace: 49, offset: 24 },
+  { berth: 32, pace: 101, offset: 83 },
+  { berth: 51, pace: 87, offset: 55 },
+  { berth: 68, pace: 96, offset: 16 },
+  { berth: 81, pace: 91, offset: 30 },
+  { berth: 95, pace: 72, offset: 9 },
 ];
+const giantChase = [6, 0, 9];
 const debris = Array.from({ length: 10 }, (_, index) => ({
   "--debris-x": `${13 + (index * 29 % 75)}%`,
   "--debris-y": `${14 + (index * 17 % 70)}%`,
@@ -85,10 +92,10 @@ type Landmark = typeof landmarks[number]["id"];
 type Point = { x: number; y: number };
 const initialBoats = [{ x: 21, y: 73 }, { x: 28, y: 76 }];
 const crowd = [0, 1, 2, 3, 4, 5];
-function Resident({ index }: { index: number }) {
-  return <span className="city-resident" data-resident={index} style={{
+function Resident({ index, giant = false }: { index: number; giant?: boolean }) {
+  return <span className="city-resident" data-resident={index} data-giant={giant || undefined} data-fantasy={index >= 6 || undefined} style={{
     "--resident-column": `${index % 3 * 50}%`,
-    "--resident-row": index < 3 ? "0%" : "100%",
+    "--resident-row": `${Math.floor(index % 6 / 3) * 100}%`,
     "--resident-step-offset": `-${(index * 131) % 760}ms`,
   } as CSSProperties}><i /><b /></span>;
 }
@@ -122,10 +129,14 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
   const start = (cycle + day) % buildable.length;
   const eventPhase = (cycle + day) % 7;
   const district = eventPhase === 0;
+  const giantVisit = moving && district && cycle > 0 && Math.floor((cycle + day) / 7) % 2 === 0;
   const sites = buildable.slice(start).concat(buildable.slice(0, start)).slice(0, district ? 3 : eventPhase === 3 ? 2 : 1);
   const lead = sites[0];
   const activeSites = moving && (district || eventPhase === 3) ? sites : [];
-  const crew = activeSites.map((_, position) => [0, 1].map(member => (cycle + position * 2 + member) % residents.length));
+  const available = residents.map((_, index) => index).filter(index => !giantVisit || !giantChase.includes(index));
+  const crewSize = giantVisit ? 3 : 2;
+  const crew = activeSites.map((_, position) => Array.from({ length: crewSize }, (_, member) =>
+    available[(cycle + position * crewSize + member) % available.length]!));
   const assigned = crew.flat();
   const closingLot = district && day % 2 === 0 && vacantLot < 0 ? sites.at(-1) : undefined;
   const currentCity = moving ? city : day % waterfronts.length;
@@ -189,7 +200,7 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
           </>}
           {working && <div className="city-sequence" key={cycle} data-district={district}
             style={{ "--city-damage-lag": `${district ? sites.indexOf(index) * .35 : 0}s` } as CSSProperties}>
-            {index === lead && district && <span className="city-meteor" />}
+            {index === lead && district && !giantVisit && <span className="city-meteor" />}
             <div className="city-collapse"><i /><i /></div>
             <div className="city-debris">{debris.map((style, fragment) => <i key={fragment} style={style} />)}</div>
             <span className="city-rubble" />
@@ -227,7 +238,13 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
     <span className="city-discovery-beacon" />
     <div className="city-quay-clock"><i /></div>
     <div className="city-promenade">
-      {residents.map(({ berth, pace, offset }, index) => <span className="city-pedestrian" key={index}
+      {giantVisit && lead !== undefined && <div className="city-giant-visit" key={cycle}
+        style={{ "--giant-stop": `${waterfront[lead]!.x}%` } as CSSProperties}>
+        <span className="city-giant"><Resident index={0} giant /></span>
+        {giantChase.map((person, position) => <span className="city-giant-chase" key={person}
+          style={{ "--giant-queue": position } as CSSProperties}><Resident index={person} /></span>)}
+      </div>}
+      {residents.map(({ berth, pace, offset }, index) => giantVisit && giantChase.includes(index) ? null : <span className="city-pedestrian" key={index}
         data-direction={index % 2 === 0 ? "east" : "west"}
         data-assigned={assigned.includes(index)}
         style={{
@@ -361,7 +378,8 @@ export function CityBackdrop({ animated, sceneHost, toolsHost, liveWeather }: {
       }
     }}>
       {toolsHost ? createPortal(tools, toolsHost) : tools}
-      <CityRegatta open={open} controlsId={controlId} paused={paused || !pageVisible} reduced={reduceMotion} onScene={setRaceScene}>
+      <CityRegatta open={open} anchor={toggle} onClose={(restoreFocus = true) => { setOpen(false); if (restoreFocus) toggle.current?.focus(); }}
+        controlsId={controlId} paused={paused || !pageVisible} reduced={reduceMotion} onScene={setRaceScene}>
         <div className="city-marina-tools">
           <button type="button" className="btn" aria-expanded={explore} onClick={() => { setExplore(value => !value); setDiscovery(null); }}><Compass aria-hidden="true" />{t("Explore the waterfront")}</button>
           <button type="button" className="icon-button" aria-label={t("Reset boats")} title={t("Reset boats")}

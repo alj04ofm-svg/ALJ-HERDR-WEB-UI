@@ -450,7 +450,7 @@
   flex: 1;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--space-1);
+  gap: var(--space-2);
   overflow-y: auto;
   padding: var(--space-2) var(--space-1);
   scrollbar-width: thin;
@@ -465,7 +465,7 @@
   width: 100%;
   height: auto;
   min-height: max(44px, var(--touch-target));
-  padding: var(--space-1);
+  padding: var(--space-2) var(--space-1);
   text-align: center;
   color: var(--text-dim);
 }
@@ -486,6 +486,10 @@
   position: relative;
   display: grid;
   place-items: center;
+  inline-size: 23px;
+  block-size: 23px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-elevated) 66%, transparent);
 }
 .compact-tab-mark .tab-strip-dot { position: absolute; inset-block-start: -2px; inset-inline-end: -3px; }
 .compact-tab-copy { width: 100%; min-width: 0; }
@@ -559,7 +563,8 @@
 .sidebar-shell .workspace-group.is-selected > .workspace-header .workspace-name {
   color: var(--text-strong);
 }
-.compact-tab-row[aria-current="page"]::before { width: 2px; }
+.compact-tab-row[aria-current="page"]::before { inset-block: 25%; width: 2px; }
+.compact-tab-row[aria-current="page"] .compact-tab-mark { background: var(--accent-tint); }
 .sidebar-shell .sidebar-footer-row :is(.usage-strip, .sidebar-utility) { border-radius: var(--radius-md); }
 
 .sidebar-narrow .sidebar-shell { --side-gutter: var(--space-1); --side-box: var(--space-6); }

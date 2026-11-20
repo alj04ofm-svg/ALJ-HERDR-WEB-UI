@@ -52,12 +52,12 @@ async function resolveEnglishPlace(label: string | undefined, coordinates: Weath
   } catch { return undefined; }
 }
 
-/** Explicit device lookups and re-use of an existing browser grant are always coarse. */
+/** Retain city-level precision for geocoding. The bridge rounds forecasts to a wider grid. */
 export function locateWeather(success: (coordinates: WeatherCoordinates) => void, failure: () => void): void {
   if (!window.isSecureContext || !navigator.geolocation) { failure(); return; }
   navigator.geolocation.getCurrentPosition(({ coords }) => success({
-    latitude: Math.round(coords.latitude * 10) / 10,
-    longitude: Math.round(coords.longitude * 10) / 10,
+    latitude: Math.round(coords.latitude * 100) / 100,
+    longitude: Math.round(coords.longitude * 100) / 100,
   }), failure, { enableHighAccuracy: false, maximumAge: REFRESH_MS, timeout: 10_000 });
 }
 
@@ -115,7 +115,10 @@ export function useLocalWeather(
       if (document.hidden || Date.now() - lastRequest < REFRESH_MS) return;
       lastRequest = Date.now();
       const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]);
-      void weatherRequest<CurrentWeather>("current", { latitude, longitude, ...(reverseLookup && { resolve_place: true }) }, signal).then((data) => {
+      const forecastPoint = reverseLookup ? { latitude, longitude } : {
+        latitude: Math.round(latitude * 10) / 10, longitude: Math.round(longitude * 10) / 10,
+      };
+      void weatherRequest<CurrentWeather>("current", { ...forecastPoint, ...(reverseLookup && { resolve_place: true }) }, signal).then((data) => {
         if (controller.signal.aborted) return;
         if (!Number.isFinite(data?.temperature) || typeof data.model_time !== "string" ||
             !["clear", "cloudy", "rain", "fog", "snow", "storm"].includes(data.condition)) {

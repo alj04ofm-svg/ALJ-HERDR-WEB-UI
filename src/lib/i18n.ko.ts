@@ -1315,4 +1315,6 @@ export const KO: Record<string, string> = {
   "Look for the marker in the scene.": "장면에서 표시를 찾아보세요.",
   "Choose a landmark to highlight it in the city.": "명소를 고르면 도시에서 강조 표시됩니다.",
   "Quick task capture": "작업 빠른 추가",
+  "Input tokens": "입력 토큰",
+  "Results": "순위",
 };

@@ -1270,4 +1270,6 @@ export const TR: Record<string, string> = {
   "Look for the marker in the scene.": "Sahnede işaretçiyi bul.",
   "Choose a landmark to highlight it in the city.": "Şehirde vurgulamak için bir yer seç.",
   "Quick task capture": "Hızlı görev ekleme",
+  "Input tokens": "Giriş belirteçleri",
+  "Results": "Sonuçlar",
 };

@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { ChevronDown, RefreshCw, X } from "lucide-react";
 import type { ConversationMetadata } from "../../shared/protocol.ts";
 import type { PaneModelSettings } from "../../shared/protocol.ts";
+import { ApiError } from "../lib/api.ts";
 import { useMachineApi } from "../lib/machineContext.tsx";
 import { modelLabel } from "../lib/modelName.ts";
 import { useFocusTrap } from "../lib/useFocusTrap.ts";
@@ -10,7 +11,7 @@ import { useSheetSwipe } from "../lib/sheets.ts";
 import { useT } from "../lib/i18n.ts";
 import "./ModelControl.css";
 
-export function ModelControl({ paneId, agent, metadata, connected }: { paneId: string; agent: string | null; metadata?: ConversationMetadata | null; connected: boolean }) {
+export function ModelControl({ paneId, agent, metadata, connected, onOpenTerminal }: { paneId: string; agent: string | null; metadata?: ConversationMetadata | null; connected: boolean; onOpenTerminal?: () => void }) {
   const t = useT();
   const api = useMachineApi();
   const [open, setOpen] = useState(false);
@@ -43,7 +44,10 @@ export function ModelControl({ paneId, agent, metadata, connected }: { paneId: s
   const refresh = async () => {
     setLoading(true); setError(""); setNotice("");
     try { accept(await api.fetchPaneModelSettings(paneId)); }
-    catch (e) { setError(e instanceof Error ? e.message : t("Could not read native settings. Try Refresh.")); }
+    catch (e) {
+      setSettings(null);
+      setError(e instanceof ApiError ? e.detail : t("Could not read native settings. Try Refresh."));
+    }
     finally { setLoading(false); }
   };
   const apply = async (field: "model" | "effort") => {
@@ -53,7 +57,7 @@ export function ModelControl({ paneId, agent, metadata, connected }: { paneId: s
       const actual = await api.changePaneModelSettings({ pane_id: paneId, expected: { thread_id: settings.thread_id, model: settings.model, effort: settings.effort }, ...(field === "model" ? { model } : { effort }) });
       accept(actual); setNotice(t("Applied."));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("Could not apply native settings. Refresh before retrying."));
+      setError(e instanceof ApiError ? e.detail : t("Could not apply native settings. Refresh before retrying."));
       // A timeout is an unknown outcome: read once, never retry a mutation.
       try { accept(await api.fetchPaneModelSettings(paneId)); } catch { setSettings(null); }
     } finally { setBusy(false); }
@@ -88,7 +92,11 @@ export function ModelControl({ paneId, agent, metadata, connected }: { paneId: s
           <p className="model-settings-note">{t("For this session’s next turn.")}</p>
         </>}
         {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
-        <footer><button type="button" className="btn" disabled={busy || loading || !connected} onClick={() => void refresh()}><RefreshCw aria-hidden="true" />{t("Refresh")}</button><button type="button" className="btn" disabled={busy} onClick={close}>{t("Done")}</button></footer>
+        <footer>
+          {onOpenTerminal && !native && !loading && <button type="button" className="btn" onClick={onOpenTerminal}>{t("Terminal")}</button>}
+          <button type="button" className="btn" disabled={busy || loading || !connected} onClick={() => void refresh()}><RefreshCw aria-hidden="true" />{t("Refresh")}</button>
+          <button type="button" className="btn" disabled={busy} onClick={close}>{t("Done")}</button>
+        </footer>
       </div>
     </div>, document.body)}
   </>;

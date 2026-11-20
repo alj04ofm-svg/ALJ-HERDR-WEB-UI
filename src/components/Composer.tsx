@@ -12,7 +12,6 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  type ClipboardEvent,
   type DragEvent,
   type KeyboardEvent,
   type PointerEvent as ReactPointerEvent,
@@ -86,6 +85,8 @@ export interface ComposerProps {
   onSend: (text: string, clearDraft?: string) => boolean | string | DraftRefusal | Promise<boolean | string | DraftRefusal>;
   onAbort: () => void;
   onUploadImage: (file: File, options?: import("../lib/attachmentUpload.ts").UploadOptions) => Promise<string>;
+  onShowUsage?: () => void;
+  onOpenTerminal?: () => void;
 }
 
 const MAX_IMAGES_PER_ACTION = 100;
@@ -247,6 +248,8 @@ export function Composer({
   onSend,
   onAbort,
   onUploadImage,
+  onShowUsage,
+  onOpenTerminal,
 }: ComposerProps) {
   const t = useT();
   const taskBoard = useContext(TaskBoardContext);
@@ -256,7 +259,7 @@ export function Composer({
   const { fetchPaneCommands, fetchPaneFiles } = useMachineApi();
   const { settings } = useSettings();
   const mobile = useMediaQuery("(max-width: 640px), (pointer: coarse)");
-  const usageEnabled = settings.showUsage && !mobile && machineId === "local" && providerForAgent(agent) !== null;
+  const usageEnabled = settings.showUsage && machineId === "local" && providerForAgent(agent) !== null;
   const { report: usageReport } = useUsage(usageEnabled);
   const usage = usageEnabled && usageReport !== null ? composerUsage(usageReport.providers, agent, settings.usageOrder, settings.usageHidden) : undefined;
   const usageWindows = usage === undefined ? [] : statusWindows(usage);
@@ -622,7 +625,7 @@ export function Composer({
     const element = textareaRef.current;
     if (!element) return;
     element.selectionStart = element.selectionEnd = clampedCaret;
-    if (activeRef.current) element.focus();
+    if (activeRef.current) element.focus({ preventScroll: true });
   }, []);
 
   const chooseWorkPrompt = useCallback((id: WorkPromptId) => {
@@ -817,11 +820,9 @@ export function Composer({
     [agentStatus, choices, connected, menuDismissed, menuOpen, offered, onAbort, selectCompletion, selectedIndex, send, setTextAndCaret, settings.enterSends, trigger],
   );
 
-  const onPaste = useCallback(
-    (event: ClipboardEvent<HTMLTextAreaElement>) => {
-      const images = Array.from(event.clipboardData.items)
-        .filter((item) => item.kind === "file")
-        .map((item) => item.getAsFile())
+  const pasteFiles = useCallback(
+    (event: { clipboardData: DataTransfer; preventDefault(): void }) => {
+      const images = Array.from(event.clipboardData.items, item => item.kind === "file" ? item.getAsFile() : null)
         .filter((file): file is File => file !== null);
       if (images.length === 0) return;
       event.preventDefault();
@@ -829,6 +830,33 @@ export function Composer({
     },
     [uploadImages],
   );
+
+  // Keep the toolbar and chat keyboard-accessible. Redirect an actual paste, without
+  // reclaiming focus on every click or reading the clipboard outside that gesture.
+  useEffect(() => {
+    if (!active) return;
+    const pasteIntoDraft = (event: globalThis.ClipboardEvent) => {
+      const box = textareaRef.current;
+      const target = event.target;
+      if (!box || !box.getClientRects().length || event.defaultPrevented || !event.clipboardData || modalOpen() ||
+          !(target instanceof Element) || target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='textbox'], [role='menu'], [role='listbox'], [role='dialog']")) return;
+      if (event.clipboardData.files.length) {
+        pasteFiles({ clipboardData: event.clipboardData, preventDefault: () => event.preventDefault() });
+        box.focus({ preventScroll: true });
+        return;
+      }
+      const pasted = event.clipboardData.getData("text/plain").replace(/\r\n?/g, "\n");
+      if (!pasted) return;
+      const old = box.value;
+      const { selectionStart, selectionEnd } = box;
+      const inserted = pasted.slice(0, MAX_COMPOSER_CHARS - old.length + selectionEnd - selectionStart);
+      event.preventDefault();
+      setNote(null);
+      setTextAndCaret(old.slice(0, selectionStart) + inserted + old.slice(selectionEnd), selectionStart + inserted.length);
+    };
+    document.addEventListener("paste", pasteIntoDraft);
+    return () => document.removeEventListener("paste", pasteIntoDraft);
+  }, [active, pasteFiles, setTextAndCaret]);
 
   const onDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
@@ -995,7 +1023,7 @@ export function Composer({
           // stays editable while the socket reconnects (sending waits for it): a phone's
           // dictation keyboard opens its own app and comes back, the socket may drop meanwhile,
           // and a disabled box would lose its focus and the dictated text with it
-          onPaste={onPaste}
+          onPaste={pasteFiles}
           onKeyDown={onKeyDown}
           onClick={(event) => {
             setCaret(event.currentTarget.selectionStart);
@@ -1013,7 +1041,10 @@ export function Composer({
         <div className="composer-workbar" role="group" aria-label={t("Message tools")}>
           <WorkPrompts key={draftKey} draft={text} draftKey={draftKey} onInsert={chooseQuickBrief} onChoose={chooseWorkPrompt} disabled={sending || uploading || dictation.voice.state !== "idle"} />
           <PromptRefiner key={draftKey} text={text} agent={agent} disabled={!connected || sending || uploading || dictation.voice.state !== "idle"} active={active} onApply={next => { dictation.forget(); setTextAndCaret(next, next.length); }} onNote={onRefineNote} />
-          <button type="button" className="composer-work-prompts composer-context" aria-label={t("Context")} title={t("Context")} aria-haspopup="dialog" onClick={() => setContextOpen(true)}><Layers aria-hidden="true" /><span>{t("Context")}</span></button>
+          <button type="button" className="composer-work-prompts composer-context" aria-label={t("Context and tokens")} title={t("Context and tokens")} aria-haspopup="dialog" onClick={() => setContextOpen(true)}>
+            <Layers aria-hidden="true" /><span>{t("Context")}</span>
+            {metadata?.tokens?.total != null && <span className="composer-token-total" aria-hidden="true">{new Intl.NumberFormat(undefined, { notation: "compact" }).format(metadata.tokens.total)}</span>}
+          </button>
         </div>
         {contextOpen && <ContextDetails metadata={metadata ?? null} onClose={() => setContextOpen(false)} />}
 
@@ -1090,15 +1121,16 @@ export function Composer({
             {/* Native model controls share the quiet pill with the context ring. */}
             <span className={`composer-pill${metadata?.model ? "" : " is-bare"}`}>
               {agent && <AgentMark agent={agent} size={14} />}
-              {modelShown && <ModelControl key={`${machineId}:${paneId}`} paneId={paneId} agent={agent} metadata={metadata} connected={connected} />}
+              {modelShown && <ModelControl key={`${machineId}:${paneId}`} paneId={paneId} agent={agent} metadata={metadata} connected={connected} onOpenTerminal={onOpenTerminal} />}
               {metadata?.context && <ContextRing context={metadata.context} shown={contextShown} readOnly={mobile} onToggle={() => setContextShown((open) => !open)} />}
-              {usage !== undefined && usage.problem === null && usageLimit !== undefined && <span
+              {onShowUsage && usage !== undefined && usage.problem === null && usageLimit !== undefined && <button
+                type="button" aria-haspopup="dialog" onClick={onShowUsage}
                 className={`composer-usage${usageLimit.used_percent >= HIGH_PERCENT ? " is-high" : ""}${usage.problem ? " has-problem" : ""}`}
                 title={`${usageName(usage)}\n${usageDetail}`}
               >
                 <span aria-hidden="true">{usageCaption}</span>
                 <span className="visually-hidden">{usageAccessible}</span>
-              </span>}
+              </button>}
             </span>
             {/* the chip is a button in the left controls; its count is still said here, where a change is announced */}
             {backgroundTasks > 0 && <span className="composer-task-count visually-hidden">{t(backgroundTasks === 1 ? "{n} background task" : "{n} background tasks", { n: backgroundTasks })}</span>}

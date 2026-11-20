@@ -28,6 +28,7 @@ export function ContextDetails({ metadata, onClose }: { metadata: ConversationMe
           <div><dt>{t("Latest request tokens")}</dt><dd>{number(metadata?.context?.used)}</dd></div>
           <div><dt>{t("Context window")}</dt><dd>{number(metadata?.context?.window)}</dd></div>
           <div><dt>{t("Session tokens processed")}</dt><dd>{number(metadata?.tokens?.total)}</dd></div>
+          <div><dt>{t("Input tokens")}</dt><dd>{number(metadata?.tokens?.input)}</dd></div>
           <div><dt>{t("Cached input tokens")}</dt><dd>{number(metadata?.tokens?.cached_input)}</dd></div>
           <div><dt>{t("Output tokens")}</dt><dd>{number(metadata?.tokens?.output)}</dd></div>
         </dl>

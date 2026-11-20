@@ -1754,21 +1754,9 @@ button {
 
 /* ---------- phone: an app, not a page ---------- */
 
-/* Over the chat on a phone the header is glass, as an iPhone's bar is: the transcript scrolls on
-   under it, blurred, instead of stopping at a ruled edge. Only when the transcript is right under
-   the header; a tab strip or a notice between them keeps the plain bar. The header pulls the body
-   up under itself by its own height (--header-over), and the stack gives that height back above
-   everything in it, so a prompt card, the held messages and the composer never go under the bar:
-   only the transcript reaches up into it (ChatView.css), its first line still below it, and the
-   banners start below it (PaneTerminal.css). The terminal lens keeps the bar in the flow as before. */
+/* Keep the glass header in the flow so every line can scroll fully into view. */
 @media (max-width: 768px) {
-  .app:has(> .app-body > .pane-column.is-chat > .terminal-host:first-child) {
-    --header-over: calc(var(--header-h) + env(safe-area-inset-top, 0px));
-  }
-
   .app:has(> .app-body > .pane-column.is-chat > .terminal-host:first-child) > .app-header {
-    z-index: var(--z-header);
-    margin-bottom: calc(-1 * var(--header-over));
     background: var(--bar-bg);
     -webkit-backdrop-filter: var(--glass-blur);
     backdrop-filter: var(--glass-blur);

@@ -95,6 +95,8 @@ export interface PaneTerminalProps {
   /** The selected chat paints its city behind the full app body. */
   citySceneHost?: HTMLElement | null;
   cityToolsHost?: HTMLElement | null;
+  onShowUsage?: () => void;
+  onOpenTerminal?: () => void;
   liveWeather?: ComponentProps<typeof CityBackdrop>["liveWeather"];
   /** App selected this pane itself (the selected one closed): switching to it must not take the keyboard */
   autoSelected?: boolean;
@@ -149,6 +151,8 @@ export function PaneTerminal({
   view,
   citySceneHost = null,
   cityToolsHost = null,
+  onShowUsage,
+  onOpenTerminal,
   liveWeather,
   findRequest = 0,
   active = true,
@@ -443,6 +447,10 @@ export function PaneTerminal({
     setChatMetadata((previous) => previous?.pane === pane && previous.value?.model === value?.model
       && previous.value?.reasoning_effort === value?.reasoning_effort
       && previous.value?.context?.used === value?.context?.used
+      && previous.value?.tokens?.total === value?.tokens?.total
+      && previous.value?.tokens?.input === value?.tokens?.input
+      && previous.value?.tokens?.cached_input === value?.tokens?.cached_input
+      && previous.value?.tokens?.output === value?.tokens?.output
       && previous.value?.context?.window === value?.context?.window ? previous : { pane, value });
   }, []);
   const queueStore = messageQueues;
@@ -2396,7 +2404,7 @@ export function PaneTerminal({
             onMetadata={onChatMetadata}
             onRead={onChatRead}
             greeted={greeted}
-            dockSearch={!!cityToolsHost}
+            dockSearch
             onPrompt={onChatPrompt}
             onSuggestion={onChatSuggestion}
             onRestored={onChatRestored}
@@ -2506,6 +2514,8 @@ export function PaneTerminal({
         <Composer
           key={paneId}
           paneId={paneId}
+          onShowUsage={onShowUsage}
+          onOpenTerminal={onOpenTerminal}
           autoFocus={active && !autoSelected && !coarse}
           active={active}
           agent={agent}

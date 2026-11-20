@@ -34,10 +34,10 @@ async function readInput(request: Request): Promise<unknown> {
   finally { reader.releaseLock(); }
 }
 
-function roundedCoordinates(latitude: unknown, longitude: unknown): WeatherCoordinates | null {
+function roundedCoordinates(latitude: unknown, longitude: unknown, precision = 10): WeatherCoordinates | null {
   if (typeof latitude !== "number" || Math.abs(latitude) > 90 || !Number.isFinite(latitude) ||
       typeof longitude !== "number" || Math.abs(longitude) > 180 || !Number.isFinite(longitude)) return null;
-  return { latitude: Math.round(latitude * 10) / 10, longitude: Math.round(longitude * 10) / 10 };
+  return { latitude: Math.round(latitude * precision) / precision, longitude: Math.round(longitude * precision) / precision };
 }
 
 function conditionOf(code: string): WeatherCondition {
@@ -156,6 +156,7 @@ export class WeatherService {
     url.searchParams.set("lat", String(coordinates.latitude));
     url.searchParams.set("lon", String(coordinates.longitude));
     url.searchParams.set("layer", "city");
+    url.searchParams.set("lang", "en");
     url.searchParams.set("radius", "30");
     url.searchParams.set("limit", "1");
     const entry = { until: now + ONE_DAY, result: this.upstream(url)
@@ -182,10 +183,10 @@ export class WeatherService {
         const language = typeof input.language === "string" && /^[a-z]{2}$/.test(input.language) ? input.language : "en";
         return jsonResponse(await this.search(query, language), 200, NO_STORE);
       }
-      const coordinates = roundedCoordinates(input.latitude, input.longitude);
+      const coordinates = roundedCoordinates(input.latitude, input.longitude, input.resolve_place === true ? 100 : 10);
       if (!coordinates) return fail("invalid_request", "Valid weather coordinates are required", 400);
       const [forecast, place] = await Promise.all([
-        this.forecast(coordinates),
+        this.forecast(roundedCoordinates(coordinates.latitude, coordinates.longitude)!),
         input.resolve_place === true ? this.place(coordinates) : undefined,
       ]);
       return jsonResponse({ ...forecast, ...(place && { place }) }, 200, NO_STORE);

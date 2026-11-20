@@ -1355,6 +1355,8 @@ export function App() {
                 active={active}
                 citySceneHost={active && showCity ? citySceneHost : null}
                 cityToolsHost={active && showCity ? cityToolsHost : null}
+                onShowUsage={active ? () => setUsageOpen(true) : undefined}
+                onOpenTerminal={active ? () => setView("terminal") : undefined}
                 liveWeather={active && showCity ? liveWeather : null}
                 findRequest={findRequest.paneId === item?.pane_id ? findRequest.serial : 0}
                 autoSelected={autoSelected}

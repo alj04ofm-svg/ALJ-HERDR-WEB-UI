@@ -199,6 +199,7 @@
   background: url("../brand/city-bobbleheads.webp") var(--resident-column) var(--resident-row) / 300% 200% no-repeat;
   transform-origin: center bottom;
 }
+.city-resident[data-fantasy="true"] > i { background-image: url("../brand/city-fantasy-crew.webp"); }
 .city-resident > b {
   position: absolute;
   inset: auto 27% 4%;
@@ -247,6 +248,47 @@
 @keyframes city-crew-call {
   0%, 28%, 93%, 100% { opacity: 1; }
   35%, 86% { opacity: 0; }
+}
+.city-giant-visit { position: absolute; inset: 0; }
+.city-giant, .city-giant-chase {
+  position: absolute;
+  left: var(--giant-stop);
+  opacity: 0;
+}
+.city-giant {
+  --resident-size: clamp(83px, 13cqw, 170px);
+  bottom: 0;
+  animation: city-giant-visit var(--city-event-cycle) steps(1200) infinite;
+}
+.is-animated .city-resident[data-giant="true"] > i {
+  background: url("../brand/city-harbor-giant.webp") center bottom / contain no-repeat;
+  animation: city-giant-nod var(--city-event-cycle) steps(1000) infinite;
+}
+.city-giant-chase {
+  --resident-size: clamp(19px, 2.3cqw, 33px);
+  bottom: 1px;
+  animation: city-giant-chase var(--city-event-cycle) steps(1000) calc(var(--giant-queue) * .43s) infinite;
+}
+@keyframes city-giant-visit {
+  0%, 3% { opacity: 0; transform: translateX(-35cqw) translateY(4%); }
+  6% { opacity: 1; }
+  11%, 21% { opacity: 1; transform: translateX(-50%); }
+  27% { opacity: 1; transform: translateX(12cqw) translateY(4%); }
+  31%, 100% { opacity: 0; transform: translateX(26cqw) translateY(14%); }
+}
+@keyframes city-giant-nod {
+  0%, 11%, 17%, 100% { transform: none; }
+  13%, 15% { transform: translateY(12%) rotate(-7deg); }
+  19.8% { transform: translateY(-9%) scaleY(1.07); }
+  21% { transform: translateY(8%) scaleY(.92); }
+  22% { transform: none; }
+}
+@keyframes city-giant-chase {
+  0%, 6% { opacity: 0; transform: translateX(-23cqw); }
+  8% { opacity: 1; }
+  13% { opacity: 1; transform: translateX(-84%); }
+  14.6% { opacity: 1; transform: translate(-48%, -120%) rotate(15deg) scale(.68); }
+  15.4%, 100% { opacity: 0; transform: translate(-40%, -150%) scale(.26); }
 }
 .city-river { position: absolute; inset: calc(100% - var(--city-shore)) 0 0; }
 .city-vessel {
@@ -812,6 +854,11 @@
 .city-crew-route:nth-child(2) {
   left: 53%;
   animation-delay: -3s;
+}
+.city-crew-route:nth-child(3) {
+  left: 39%;
+  bottom: -4%;
+  animation-delay: -5s;
 }
 .city-crew-route[data-route="lift"] {
   left: auto;

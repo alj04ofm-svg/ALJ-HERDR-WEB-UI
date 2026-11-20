@@ -193,9 +193,14 @@ export function useDictation(options: DictationOptions): Dictation {
   const forget = useCallback((): void => { spans.current.clear(); held.current = held.current.filter((result) => result.phase === "raw"); }, []);
 
   const press = useCallback((): void => {
+    if (!voiceRef.current.available) {
+      const reason = voiceRef.current.unavailableReason;
+      latest.current.onNote(reason ? errorNote(t, reason) : t("Ready…"));
+      return;
+    }
     if (voiceRef.current.state === "idle") { setPartial(""); latest.current.onNote(null); }
     voiceRef.current.press();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (voice.error) latest.current.onNote(errorNote(t, voice.error));
@@ -249,7 +254,7 @@ export function MicButton({ dictation, className = "" }: { dictation: Dictation;
         aria-label={label}
         aria-pressed={recording}
         title={reason ?? label}
-        disabled={!voice.available || !connected}
+        disabled={!connected}
         onPointerDown={(event) => {
           if (event.button !== 0) return;
           // focus and the soft keyboard stay where they are

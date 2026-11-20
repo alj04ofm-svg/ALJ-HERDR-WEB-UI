@@ -371,9 +371,17 @@
 
 .composer-usage {
   flex: none;
+  min-block-size: var(--control-h);
+  padding-inline: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--text-dim);
+  font: inherit;
   font-size: var(--fs-xs);
+  cursor: pointer;
 }
+.composer-usage:is(:hover, :focus-visible) { color: var(--text-strong); background: var(--accent-tint); }
 
 .composer-usage.is-high {
   color: var(--status-blocked);
@@ -1361,6 +1369,7 @@
   white-space: nowrap;
 }
 .composer-workbar .composer-briefs { color: var(--text-strong); font-weight: var(--fw-medium); }
+.composer-workbar .composer-token-total { color: var(--text-strong); font-variant-numeric: tabular-nums; }
 .composer-workbar .composer-briefs-chevron { width: var(--space-3); height: var(--space-3); opacity: .7; }
 .composer-surface {
   background: color-mix(in srgb, var(--bg-panel) 94%, var(--bg-elevated));

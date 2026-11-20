@@ -1319,4 +1319,6 @@ export const ZH: Record<string, string> = {
   "Look for the marker in the scene.": "请在场景中寻找标记。",
   "Choose a landmark to highlight it in the city.": "选择地标即可在城市中高亮显示。",
   "Quick task capture": "快速记录任务",
+  "Input tokens": "输入令牌",
+  "Results": "排名",
 };

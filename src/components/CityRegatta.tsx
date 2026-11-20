@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { ChevronDown, Flag, Radio, Shuffle, X } from "lucide-react";
 import { FLEET_TYPES, RACE_WEATHERS, PREP_MS, START_MS, harborCourse, makeRegatta, raceProgress, type Entrant, type RaceWeather, type RegattaPlan } from "../lib/regatta.ts";
 import { useT } from "../lib/i18n.ts";
@@ -13,6 +13,8 @@ function boatKind(kind: Entrant["kind"], t: ReturnType<typeof useT>) {
 
 interface Props {
   open: boolean;
+  anchor: RefObject<HTMLButtonElement>;
+  onClose(restoreFocus?: boolean): void;
   controlsId: string;
   paused: boolean;
   reduced: boolean;
@@ -20,7 +22,7 @@ interface Props {
   children: ReactNode;
 }
 
-export function CityRegatta({ open, controlsId, paused, reduced, onScene, children }: Props) {
+export function CityRegatta({ open, anchor, onClose, controlsId, paused, reduced, onScene, children }: Props) {
   const t = useT();
   const [custom, setCustom] = useState(false);
   const [count, setCount] = useState(4);
@@ -68,18 +70,41 @@ export function CityRegatta({ open, controlsId, paused, reduced, onScene, childr
     if (open && phase === "finish" && headline.current === document.activeElement) finish.current?.focus({ preventScroll: true });
   }, [open, plan, phase]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const panel = controls.current;
     const scene = panel?.parentElement;
     const composer = scene?.closest(".terminal-host")?.querySelector(".composer");
-    if (!panel || !scene || !composer) return;
-    const measure = () => panel.style.setProperty("--marina-space", `${composer.getBoundingClientRect().top - scene.getBoundingClientRect().top}px`);
+    const trigger = anchor.current;
+    if (!panel || !scene || !trigger) return;
+    const measure = () => {
+      const bounds = scene.getBoundingClientRect();
+      const button = trigger.getBoundingClientRect();
+      const width = panel.offsetWidth;
+      const left = button.left < bounds.left + bounds.width / 2 ? button.left : button.right - width;
+      const top = Math.max(6, button.bottom - bounds.top + 6);
+      panel.style.setProperty("--regatta-left", `${Math.max(6, Math.min(bounds.width - width - 6, left - bounds.left))}px`);
+      panel.style.setProperty("--regatta-top", `${top}px`);
+      panel.style.setProperty("--marina-space", `${(composer?.getBoundingClientRect().top ?? bounds.bottom) - bounds.top}px`);
+    };
     const observer = new ResizeObserver(measure);
     observer.observe(scene);
-    observer.observe(composer);
+    observer.observe(trigger);
+    observer.observe(panel);
+    if (composer) observer.observe(composer);
     measure();
     return () => observer.disconnect();
-  }, [open]);
+  }, [anchor, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const dismissOutside = (event: PointerEvent) => {
+      if (!(event.target instanceof Element) || controls.current?.contains(event.target) ||
+        anchor.current?.closest(".city-tools")?.contains(event.target) || event.target.closest(".city-racer")) return;
+      onClose(false);
+    };
+    document.addEventListener("pointerdown", dismissOutside);
+    return () => document.removeEventListener("pointerdown", dismissOutside);
+  }, [anchor, onClose, open]);
 
   useEffect(() => {
     const track = overlay.current;
@@ -205,17 +230,17 @@ export function CityRegatta({ open, controlsId, paused, reduced, onScene, childr
         </div> : phase === "finish" ? <div className="regatta-results">
           <strong>{result}</strong>
           <p>{plan.entrants[pick ?? -1] === winner ? t("You picked the winner.") : t("Your pick was {boat}.", { boat: plan.entrants[pick ?? -1]?.name ?? "" })}</p>
-          <ol>{[...plan.entrants].sort((a, b) => a.finish - b.finish).map(boat => <li key={boat.name}><span>{boat.name}</span><time>{(boat.finish / 1000).toFixed(2)}s</time></li>)}</ol>
+          <details><summary>{t("Results")}</summary><ol>{[...plan.entrants].sort((a, b) => a.finish - b.finish).map(boat => <li key={boat.name}><span>{boat.name}</span><time>{(boat.finish / 1000).toFixed(2)}s</time></li>)}</ol></details>
           <button type="button" className="btn" ref={finish} onClick={() => draw(false)}>{t("Race again")}</button>
         </div> : <div className="regatta-live">
           <strong>{paused ? t("Race paused") : phase === "prepare" ? t("Preparing the marina") : phase === "race" ? t("Race in progress") : phase}</strong>
           <p><Radio aria-hidden="true" />{setpiece || t("Waiting for the green light.")}</p>
         </div>}
       </> : <>
-        <div className="regatta-heading"><h2>{t("Marina")}</h2></div>
         <div className="city-marina-actions">
           <button type="button" className="btn btn-primary regatta-quick" onClick={() => draw(true)}><Shuffle aria-hidden="true" />{t("Quick race")}</button>
-          <button type="button" className="btn" aria-expanded={custom} onClick={() => setCustom(value => !value)}>{t("Race setup")} <ChevronDown aria-hidden="true" /></button>
+          <button type="button" className="btn" aria-expanded={custom} onClick={() => setCustom(value => !value)}>{t("Race setup")}</button>
+          <button type="button" className="icon-button regatta-close" aria-label={t("Close")} onClick={() => onClose()}><X aria-hidden="true" /></button>
         </div>
         {custom ? <form className="regatta-grid" onSubmit={event => { event.preventDefault(); draw(false); }}>
           <label>{t("Fleet size")}<select className="select" value={count} onChange={event => setCount(Number(event.target.value))}>{[2, 3, 4, 5, 6].map(n => <option key={n}>{n}</option>)}</select></label>
@@ -227,7 +252,7 @@ export function CityRegatta({ open, controlsId, paused, reduced, onScene, childr
             {RACE_WEATHERS.map(kind => <option value={kind} key={kind}>{kind === "clear" ? t("Clear skies") : kind === "fog" ? t("Coastal fog") : t("Rain showers")}</option>)}
           </select></label>
           <button type="submit" className="btn">{t("Show lineup")}</button>
-        </form> : children}
+        </form> : <details className="regatta-more"><summary>{t("Marina")} <ChevronDown aria-hidden="true" /></summary>{children}</details>}
       </>}
     </div>}
     {phase && <span className="visually-hidden" role="status">{result || (phase === "prepare" ? setpiece : phase === "race" ? t("Race in progress") : phase)}</span>}

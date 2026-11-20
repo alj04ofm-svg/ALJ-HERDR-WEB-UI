@@ -240,12 +240,13 @@ export function WeatherWidget({ onSceneWeather, toolsHostRef }: {
     condition === "fog" ? t("Fog") : condition === "rain" ? t("Rain") :
     condition === "snow" ? t("Snow") : condition === "storm" ? t("Thunderstorms") : "";
   let detail = prefs.date ? formatters.date.format(now) : "";
-  const place = data?.place ?? (prefs.location === "device" ? t("This device") : englishWeatherLabel(prefs.location?.label));
-  const cityName = prefs.place ? place?.split(",")[0] : undefined;
-  if (cityName) detail += detail ? ` · ${cityName}` : cityName;
+  const namedPlace = data?.place ?? (prefs.location === "device" ? undefined : englishWeatherLabel(prefs.location?.label));
+  const place = namedPlace ?? (prefs.location === "device" ? t("This device") : undefined);
+  const cityName = prefs.place ? namedPlace?.split(",")[0] : undefined;
   if (prefs.temperature && weather.kind === "loading") detail = t("Getting weather…");
   if (prefs.temperature && weather.kind === "needs-location") detail = t("Set location");
   if (prefs.temperature && weather.kind === "failed") detail = t("Weather unavailable");
+  if (cityName) detail = detail ? `${cityName} · ${detail}` : cityName;
   const temperature = data && prefs.temperature ? formatters.temperature.format(prefs.unit === "F" ? data.temperature * 1.8 + 32 : data.temperature) : "";
   const time = prefs.time ? formatters.time.format(now) : "";
   return <>
