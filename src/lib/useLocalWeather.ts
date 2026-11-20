@@ -25,6 +25,33 @@ export function searchWeatherLocations(input: WeatherSearchRequest, signal: Abor
   return weatherRequest("search", input, signal);
 }
 
+export function englishWeatherLabel(label: string | undefined): string | undefined {
+  const latin = (part: string) => {
+    const letters = [...part.matchAll(/\p{L}/gu)].map(match => match[0]);
+    return letters.length > 0 && letters.every(letter => /\p{Script=Latin}/u.test(letter));
+  };
+  const parts = label?.split(",").map(part => part.trim()) ?? [];
+  if (!parts[0] || !latin(parts[0])) return;
+  return parts.filter(latin).join(", ");
+}
+
+async function resolveEnglishPlace(label: string | undefined, coordinates: WeatherCoordinates, signal: AbortSignal) {
+  const query = label?.split(",")[0]?.trim();
+  if (!query || query.length < 2 || query.length > 100) return;
+  try {
+    const { locations } = await searchWeatherLocations({ query, language: "en" }, signal);
+    // Use the same approximate point as the forecast. Identically named towns elsewhere are irrelevant.
+    const distance = (place: WeatherCoordinates) => Math.hypot(
+      place.latitude - coordinates.latitude,
+      Math.min(Math.abs(place.longitude - coordinates.longitude), 360 - Math.abs(place.longitude - coordinates.longitude)) *
+        Math.cos(coordinates.latitude * Math.PI / 180),
+    );
+    const nearby = locations.filter(place => englishWeatherLabel(place.label) && distance(place) < .31)
+      .sort((first, second) => distance(first) - distance(second));
+    return englishWeatherLabel(nearby[0]?.label);
+  } catch { return undefined; }
+}
+
 /** Explicit device lookups and re-use of an existing browser grant are always coarse. */
 export function locateWeather(success: (coordinates: WeatherCoordinates) => void, failure: () => void): void {
   if (!window.isSecureContext || !navigator.geolocation) { failure(); return; }
@@ -77,22 +104,31 @@ export function useLocalWeather(
   const coordinates = location === "device" ? device : location;
   const latitude = coordinates?.latitude;
   const longitude = coordinates?.longitude;
-  const key = coordinates ? `${latitude},${longitude},${resolvePlace}` : null;
+  const savedLabel = resolvePlace && location && location !== "device" ? location.label : undefined;
+  const reverseLookup = resolvePlace && location === "device";
+  const key = coordinates ? `${latitude},${longitude},${reverseLookup},${savedLabel ?? ""}` : null;
   useEffect(() => {
-    if (!active || key === null) return;
+    if (!active || key === null || latitude === undefined || longitude === undefined) return;
     const controller = new AbortController();
     let lastRequest = 0;
     const refresh = () => {
       if (document.hidden || Date.now() - lastRequest < REFRESH_MS) return;
       lastRequest = Date.now();
       const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]);
-      void weatherRequest<CurrentWeather>("current", { latitude, longitude, ...(resolvePlace && { resolve_place: true }) }, signal).then((data) => {
+      void weatherRequest<CurrentWeather>("current", { latitude, longitude, ...(reverseLookup && { resolve_place: true }) }, signal).then((data) => {
         if (controller.signal.aborted) return;
         if (!Number.isFinite(data?.temperature) || typeof data.model_time !== "string" ||
             !["clear", "cloudy", "rain", "fog", "snow", "storm"].includes(data.condition)) {
           throw new WeatherRequestError("weather_unavailable");
         }
-        setReading({ key, state: { kind: "ready", data } });
+        const name = savedLabel ?? data.place;
+        const place = englishWeatherLabel(name);
+        setReading({ key, state: { kind: "ready", data: { ...data, place } } });
+        if (!name || place) return;
+        void resolveEnglishPlace(name, { latitude, longitude },
+          AbortSignal.any([controller.signal, AbortSignal.timeout(8_000)])).then(place => {
+          if (!controller.signal.aborted && place) setReading({ key, state: { kind: "ready", data: { ...data, place } } });
+        });
       }).catch((error: unknown) => {
         if (controller.signal.aborted) return;
         const code = error instanceof WeatherRequestError ? error.code : "weather_unavailable";
@@ -107,7 +143,7 @@ export function useLocalWeather(
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", refresh);
     };
-  }, [active, key, latitude, longitude, retry, resolvePlace]);
+  }, [active, key, latitude, longitude, retry, reverseLookup, savedLabel]);
 
   if (!active || !location) return { kind: "off" };
   if (key === null) return { kind: "needs-location" };

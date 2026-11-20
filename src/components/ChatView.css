@@ -39,10 +39,26 @@
   --chat-fs-xl: calc(var(--fs-xl) * var(--chat-scale, 1));
 }
 
+.chat-search-dock {
+  position: absolute;
+  inset: var(--space-1) var(--space-3) auto;
+  z-index: 2;
+  pointer-events: none;
+}
+.chat-search-dock .conversation-search {
+  position: static;
+  height: max(44px, var(--touch-target));
+}
+.chat-view.has-docked-search {
+  inset-block-start: calc(max(44px, var(--touch-target)) + var(--space-1));
+  padding-block-start: var(--space-2);
+  scroll-padding-top: var(--space-2);
+}
+
 /* From 769px the header over the chat has no bar and no rule (styles.css): the transcript
    scrolls under a short fade instead. Not under a tab strip or a notice, which draw their own rule. */
 @media (min-width: 769px) {
-  .terminal-host:first-child .chat-view::before {
+  .terminal-host:first-child .chat-view:not(.has-docked-search)::before {
     content: "";
     position: sticky;
     top: calc(-1 * var(--space-4));

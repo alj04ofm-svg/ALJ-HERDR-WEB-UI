@@ -1,13 +1,13 @@
-import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type Ref } from "react";
 import { createPortal } from "react-dom";
 import { Cloud, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, LocateFixed, Search, SlidersHorizontal, Sun, X } from "lucide-react";
 import type { WeatherCondition, WeatherCoordinates, WeatherLocation } from "../../shared/protocol.ts";
-import { useLocale, useT } from "../lib/i18n.ts";
+import { useT } from "../lib/i18n.ts";
 import { useSettings } from "../lib/settings.ts";
 import { usePhoneSheetBack } from "../lib/sheetHistory.ts";
 import { useSheetSwipe } from "../lib/sheets.ts";
 import { useFocusTrap } from "../lib/useFocusTrap.ts";
-import { locateWeather, searchWeatherLocations, useLocalWeather, WeatherRequestError } from "../lib/useLocalWeather.ts";
+import { englishWeatherLabel, locateWeather, searchWeatherLocations, useLocalWeather, WeatherRequestError } from "../lib/useLocalWeather.ts";
 import { DEFAULT_WEATHER, type WeatherPreferences } from "../lib/weatherPreferences.ts";
 import "./WeatherWidget.css";
 
@@ -54,12 +54,11 @@ interface WeatherDialogProps {
   onClose: () => void;
   onRetry: () => void;
   failure: string | null;
-  devicePlace?: string;
+  place?: string;
 }
 
-function WeatherDialog({ prefs, onPrefs, onDevice, onClose, onRetry, failure, devicePlace }: WeatherDialogProps) {
+function WeatherDialog({ prefs, onPrefs, onDevice, onClose, onRetry, failure, place }: WeatherDialogProps) {
   const t = useT();
-  const { resolvedLanguage } = useSettings();
   const id = useId();
   const surface = useFocusTrap<HTMLDivElement>(true);
   const searchField = useRef<HTMLInputElement>(null);
@@ -85,9 +84,12 @@ function WeatherDialog({ prefs, onPrefs, onDevice, onClose, onRetry, failure, de
     if (query.trim().length < 2 || pending) return;
     const controller = begin("city");
     try {
-      const result = await searchWeatherLocations({ query: query.trim(), language: resolvedLanguage },
+      const result = await searchWeatherLocations({ query: query.trim(), language: "en" },
         AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]));
-      if (!controller.signal.aborted) setMatches(result.locations);
+      if (!controller.signal.aborted) setMatches(result.locations.flatMap(location => {
+        const label = englishWeatherLabel(location.label);
+        return label ? [{ ...location, label }] : [];
+      }));
     } catch (reason: unknown) {
       if (!controller.signal.aborted) setError(lookupError(reason instanceof WeatherRequestError ? reason.code : "", t));
     } finally {
@@ -149,7 +151,7 @@ function WeatherDialog({ prefs, onPrefs, onDevice, onClose, onRetry, failure, de
                 onPrefs({ location: null });
               }}>{t("Turn weather off")}</button>}
             </div>
-            {prefs.location && <p role="status">{t("Weather for {place}", { place: prefs.location === "device" ? devicePlace ?? t("This device") : prefs.location.label })}</p>}
+            {place && <p role="status">{t("Weather for {place}", { place })}</p>}
             {failure && <div className="weather-location-actions">
               <p className="weather-error" role="alert">{lookupError(failure, t)}</p>
               <button type="button" className="btn btn-ghost" onClick={onRetry}>{t("Retry")}</button>
@@ -210,20 +212,22 @@ function WeatherDialog({ prefs, onPrefs, onDevice, onClose, onRetry, failure, de
   );
 }
 
-export function WeatherWidget({ onSceneWeather }: { onSceneWeather?: (weather: SceneWeather | null) => void }) {
+export function WeatherWidget({ onSceneWeather, toolsHostRef }: {
+  onSceneWeather?: (weather: SceneWeather | null) => void;
+  toolsHostRef: Ref<HTMLDivElement>;
+}) {
   const t = useT();
-  const locale = useLocale();
   const { settings: { weatherWidget: prefs }, update } = useSettings();
   const [open, setOpen] = useState(false);
   const [device, setDevice] = useState<WeatherCoordinates | null>(null);
   const [retry, setRetry] = useState(0);
   const now = useClock();
   const formatters = useMemo(() => ({
-    time: new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" }),
-    date: new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric" }),
-    temperature: new Intl.NumberFormat(locale, { style: "unit", unit: prefs.unit === "F" ? "fahrenheit" : "celsius", maximumFractionDigits: 0 }),
-  }), [locale, prefs.unit]);
-  const weather = useLocalWeather(prefs.location, device, setDevice, prefs.temperature || prefs.matchScene || prefs.place, retry, prefs.place && prefs.location === "device");
+    time: new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }),
+    date: new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }),
+    temperature: new Intl.NumberFormat("en-US", { style: "unit", unit: prefs.unit === "F" ? "fahrenheit" : "celsius", maximumFractionDigits: 0 }),
+  }), [prefs.unit]);
+  const weather = useLocalWeather(prefs.location, device, setDevice, prefs.temperature || prefs.matchScene || prefs.place, retry, prefs.place);
   const data = weather.kind === "ready" ? weather.data : null;
   const scene = prefs.matchScene && data ? data.condition === "snow" ? "cloudy" : data.condition : null;
   useEffect(() => {
@@ -236,34 +240,36 @@ export function WeatherWidget({ onSceneWeather }: { onSceneWeather?: (weather: S
     condition === "fog" ? t("Fog") : condition === "rain" ? t("Rain") :
     condition === "snow" ? t("Snow") : condition === "storm" ? t("Thunderstorms") : "";
   let detail = prefs.date ? formatters.date.format(now) : "";
-  if (prefs.place && prefs.location) {
-    const place = prefs.location === "device" ? data?.place || t("This device") : prefs.location.label;
-    detail += detail ? ` · ${place}` : place;
-  }
+  const place = data?.place ?? (prefs.location === "device" ? t("This device") : englishWeatherLabel(prefs.location?.label));
+  const cityName = prefs.place ? place?.split(",")[0] : undefined;
+  if (cityName) detail += detail ? ` · ${cityName}` : cityName;
   if (prefs.temperature && weather.kind === "loading") detail = t("Getting weather…");
   if (prefs.temperature && weather.kind === "needs-location") detail = t("Set location");
   if (prefs.temperature && weather.kind === "failed") detail = t("Weather unavailable");
   const temperature = data && prefs.temperature ? formatters.temperature.format(prefs.unit === "F" ? data.temperature * 1.8 + 32 : data.temperature) : "";
   const time = prefs.time ? formatters.time.format(now) : "";
   return <>
-    <button className="sky-widget" type="button" data-position={prefs.position} data-size={prefs.size} data-font={prefs.font} data-style={prefs.style}
-      aria-haspopup="dialog" aria-label={`${t("Sky widget")}${[time, temperature, description, detail].filter(Boolean).map((part) => `, ${part}`).join("")}`}
-      onClick={() => setOpen(true)}>
-      <Icon aria-hidden="true" />
-      {(time || temperature || detail) && <span className="sky-widget-copy" aria-hidden="true">
-        {(time || temperature) && <span className="sky-widget-values">
-          {time && <time dateTime={now.toISOString()}>{time}</time>}
-          {temperature && <span className="sky-widget-temp">{temperature}</span>}
+    <div className="sky-widget-row" data-position={prefs.position}>
+      <button className="sky-widget" type="button" data-size={prefs.size} data-font={prefs.font} data-style={prefs.style}
+        aria-haspopup="dialog" aria-label={`${t("Sky widget")}${[time, temperature, description, detail].filter(Boolean).map((part) => `, ${part}`).join("")}`}
+        onClick={() => setOpen(true)}>
+        <Icon aria-hidden="true" />
+        {(time || temperature || detail) && <span className="sky-widget-copy" aria-hidden="true">
+          {(time || temperature) && <span className="sky-widget-values">
+            {time && <time dateTime={now.toISOString()}>{time}</time>}
+            {temperature && <span className="sky-widget-temp">{temperature}</span>}
+          </span>}
+          {detail && <span className="sky-widget-detail">{detail}</span>}
         </span>}
-        {detail && <span className="sky-widget-detail">{detail}</span>}
-      </span>}
-    </button>
+      </button>
+      <div className="sky-widget-tools" ref={toolsHostRef} />
+    </div>
     {open && <WeatherDialog prefs={prefs}
       onPrefs={(patch) => {
         if (patch.location !== undefined && patch.location !== "device") setDevice(null);
         if (patch.location) setRetry(count => count + 1);
         update({ weatherWidget: { ...prefs, ...patch } });
       }} onDevice={setDevice} onClose={() => setOpen(false)} onRetry={() => setRetry(count => count + 1)}
-      devicePlace={data?.place} failure={weather.kind === "failed" ? weather.code : null} />}
+      place={place} failure={weather.kind === "failed" ? weather.code : null} />}
   </>;
 }

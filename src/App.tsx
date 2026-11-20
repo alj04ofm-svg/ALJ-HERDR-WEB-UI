@@ -326,6 +326,7 @@ export function App() {
   };
   const [liveWeather, setLiveWeather] = useState<SceneWeather | null>(null);
   const [citySceneHost, setCitySceneHost] = useState<HTMLDivElement | null>(null);
+  const [cityToolsHost, setCityToolsHost] = useState<HTMLDivElement | null>(null);
   const [lens, setLens] = useState<{ key: string; view: PaneView }>({ key: "", view: "terminal" });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [findRequest, setFindRequest] = useState<{ paneId: string | null; serial: number }>({ paneId: null, serial: 0 });
@@ -1329,8 +1330,8 @@ export function App() {
         {view === "terminal" && workspaceTabs}
         {/* the tab strip's panel: its id is what each tab's aria-controls points at. No tabIndex -
             the terminal (PaneTerminal) and the composer are the focusable things inside it. */}
-        <main className="terminal-host">
-          {showCity && <WeatherWidget onSceneWeather={setLiveWeather} />}
+        <main className={`terminal-host${showCity ? " has-sky-widget" : ""}`}>
+          {showCity && <WeatherWidget onSceneWeather={setLiveWeather} toolsHostRef={setCityToolsHost} />}
           {/* the panel sits inside main, so the page keeps its main landmark; it draws no box */}
           <div id={PANE_TABPANEL_ID} className="terminal-tabpanel" role={tabPanelLabel === null || (view !== "terminal" && !tabsOpen) ? undefined : "tabpanel"} aria-label={tabPanelLabel ?? undefined}>
           <PaneCanvas key={selectedMachineId} snapshot={snapshot} pane={selectedPane} selectedPaneId={selectedPaneId} onSelect={selectPane} onChanged={actions.refresh} actionsRef={paneActionsRef}
@@ -1353,6 +1354,7 @@ export function App() {
                 view={active ? view : storedView(lenses, item!.pane_id, selectedMachineId, item!.agent != null, terminalAttach)}
                 active={active}
                 citySceneHost={active && showCity ? citySceneHost : null}
+                cityToolsHost={active && showCity ? cityToolsHost : null}
                 liveWeather={active && showCity ? liveWeather : null}
                 findRequest={findRequest.paneId === item?.pane_id ? findRequest.serial : 0}
                 autoSelected={autoSelected}

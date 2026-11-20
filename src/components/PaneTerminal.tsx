@@ -94,6 +94,7 @@ export interface PaneTerminalProps {
   active?: boolean;
   /** The selected chat paints its city behind the full app body. */
   citySceneHost?: HTMLElement | null;
+  cityToolsHost?: HTMLElement | null;
   liveWeather?: ComponentProps<typeof CityBackdrop>["liveWeather"];
   /** App selected this pane itself (the selected one closed): switching to it must not take the keyboard */
   autoSelected?: boolean;
@@ -147,6 +148,7 @@ export function PaneTerminal({
   machineName = "",
   view,
   citySceneHost = null,
+  cityToolsHost = null,
   liveWeather,
   findRequest = 0,
   active = true,
@@ -2356,7 +2358,7 @@ export function PaneTerminal({
           onClose={() => { setFindOpen(false); if (activeRef.current && !coarse) termRef.current?.focus(); }} />
       )}
       {hasCity && (
-        <CityBackdrop animated={settings.atmosphere === "studio"} sceneHost={citySceneHost} liveWeather={liveWeather} />
+        <CityBackdrop animated={settings.atmosphere === "studio"} sceneHost={citySceneHost} toolsHost={cityToolsHost} liveWeather={liveWeather} />
       )}
       <div className="terminal-surface">
         {/* xterm hides its rendered rows from assistive technology, so the region around the
@@ -2394,6 +2396,7 @@ export function PaneTerminal({
             onMetadata={onChatMetadata}
             onRead={onChatRead}
             greeted={greeted}
+            dockSearch={!!cityToolsHost}
             onPrompt={onChatPrompt}
             onSuggestion={onChatSuggestion}
             onRestored={onChatRestored}

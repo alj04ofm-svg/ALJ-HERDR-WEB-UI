@@ -1,6 +1,7 @@
 import { memo, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { Clock3, CloudSun, Compass, Pause, Play, Rabbit, Sailboat, Ship } from "lucide-react";
+import { harborBanner } from "../lib/harborBanners.ts";
 import { useT } from "../lib/i18n.ts";
 import { useMediaQuery } from "../lib/useMediaQuery.ts";
 import { usePageVisible } from "../lib/visibility.ts";
@@ -15,53 +16,27 @@ const waterfront = [
 ] as const;
 const rebuildOrder = [2, 1, 3, 0];
 const dayNumber = (date = new Date()) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000;
+const waterfronts = ["harbor", "london", "singapore"] as const;
+const residents = [
+  { berth: 7, pace: 77, offset: 12 },
+  { berth: 24, pace: 96, offset: 46 },
+  { berth: 41, pace: 85, offset: 38 },
+  { berth: 59, pace: 74, offset: 21 },
+  { berth: 73, pace: 103, offset: 57 },
+  { berth: 88, pace: 89, offset: 72 },
+];
+const debris = Array.from({ length: 14 }, (_, index) => ({
+  "--debris-x": `${13 + (index * 29 % 75)}%`,
+  "--debris-y": `${14 + (index * 17 % 70)}%`,
+  "--debris-size": `${2 + index % 4}px`,
+  "--debris-wind": `${(index * 19 % 59) - 29}px`,
+  "--debris-spin": `${(index * 83 % 330) - 165}deg`,
+  "--debris-delay": `${index % 7 * .065}s`,
+} as CSSProperties));
 const constructionFloors = [0, 1, 2, 3, 4, 5];
 const weatherModes = ["auto", "clear", "fog", "rain"] as const;
 type MarinaWeather = typeof weatherModes[number];
 type LiveWeather = "clear" | "cloudy" | "rain" | "fog" | "storm";
-const bannerMessages = [
-  "Do what matters first.",
-  "Give the agent a failing test.",
-  "Pick one thing to finish.",
-  "Ask what could invalidate it.",
-  "Reopen with a clear next step.",
-  "Tell the agent what must stay.",
-  "Small steps still count.",
-  "Ask for files and line numbers.",
-  "Try the hardest case first.",
-  "Give each agent a clear owner.",
-  "Check what users see on failure.",
-  "Protect your focus.",
-  "Send a runnable example.",
-  "Write down the decision.",
-  "Ask the agent to check its diff.",
-  "Make the next step clear.",
-  "Set a clear stopping point.",
-  "Read the first failing line.",
-  "Let the quiet work compound.",
-  "Ask for the smallest safe fix.",
-  "Keep a way to roll back.",
-  "Turn a hunch into a check.",
-  "Leave a note for tomorrow.",
-  "Make it work, then polish.",
-  "Ask what the tests missed.",
-  "Name the input and output.",
-  "Check a real user flow.",
-  "Leave it easier to use.",
-  "Review one change at a time.",
-  "Move one priority forward.",
-  "Ask for evidence before merging.",
-  "Read the diff before shipping.",
-  "Take a breath. Start again.",
-  "Finish what moves the work.",
-  "Have the agent list unknowns.",
-  "Write a test for the old bug.",
-  "Clear one blocker before lunch.",
-  "Re-run the check after edits.",
-  "Make the handoff easy to resume.",
-  "Timebox the investigation.",
-] as const;
-
 // The façade sprites provide the edge of each building. Each slot covers a small part of its window grid.
 const windowLights = waterfront.map(({ columns, rows }, lot) => Array.from({ length: 9 }, (_, index) => {
   const column = (index * 3 + Math.floor(index / 2) + lot) % columns;
@@ -120,19 +95,19 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
 }) {
   const [cycle, setCycle] = useState(0);
   const [bannerPass, setBannerPass] = useState(0);
-  const [day, setDay] = useState(dayNumber);
+  const [skyTime, setSkyTime] = useState(() => new Date());
+  const day = dayNumber(skyTime);
+  const [city, setCity] = useState(() => dayNumber() % waterfronts.length);
   const [rebuilt, setRebuilt] = useState<{ day: number; versions: Record<number, number>; cleared?: number } | null>(null);
   useEffect(() => {
-    const sync = () => setDay(dayNumber());
-    const now = new Date();
-    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    const timer = window.setTimeout(sync, tomorrow.getTime() - now.getTime());
+    const sync = () => { if (!document.hidden) setSkyTime(new Date()); };
+    const timer = window.setTimeout(sync, 300_000 - skyTime.getTime() % 300_000);
     document.addEventListener("visibilitychange", sync);
     return () => {
       window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", sync);
     };
-  }, [day]);
+  }, [skyTime]);
   const dailyBuildings = rebuilt?.day === day ? rebuilt : null;
   const vacantLot = dailyBuildings?.cleared ?? (day % 3 === 0 ? day % waterfront.length : -1);
   const buildable = rebuildOrder.filter(index => index !== vacantLot);
@@ -142,14 +117,31 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
   const sites = buildable.slice(start).concat(buildable.slice(0, start)).slice(0, district ? 3 : eventPhase === 3 ? 2 : 1);
   const lead = sites[0];
   const closingLot = district && day % 2 === 0 && vacantLot < 0 ? sites.at(-1) : undefined;
+  const currentCity = moving ? city : day % waterfronts.length;
+  const nextCity = (currentCity + 1) % waterfronts.length;
+  const month = skyTime.getMonth();
+  const season = ["winter", "spring", "summer", "autumn"][Math.floor((month + 1) / 3) % 4];
+  const hour = skyTime.getHours() + skyTime.getMinutes() / 60;
+  const dayLength = season === "summer" ? 16 : season === "winter" ? 9 : 12;
+  const daylight = Math.max(0, Math.cos((hour - 13) * Math.PI / dayLength));
+  const twilight = Math.max(0, 1 - Math.abs(daylight - .26) * 4);
 
   useEffect(() => { setBannerPass(0); }, [day]);
 
-  return <div className={`city-backdrop${moving ? " is-animated" : ""}${paused ? " is-paused" : ""}`} data-weather={event?.weather ?? weather} data-regatta-light={event ? (event.sunset ? "sunset" : "floodlit") : undefined} data-discovery={discovery ?? undefined} aria-hidden="true">
+  return <div className={`city-backdrop${moving ? " is-animated" : ""}${paused ? " is-paused" : ""}`}
+    data-city={waterfronts[currentCity]} data-season={season} data-weather={event?.weather ?? weather}
+    data-regatta-light={event ? (event.sunset ? "sunset" : "floodlit") : undefined}
+    data-discovery={discovery ?? undefined} aria-hidden="true"
+    style={{ "--city-daylight": daylight, "--city-twilight": twilight } as CSSProperties}>
     <div className="city-panorama">
-      <span className="city-skyline-lights">
+      {(moving && district ? [currentCity, nextCity] : [currentCity]).map((index, position) =>
+        <div key={index} className={`city-panorama-plate${position ? " is-arriving" : ""}`}
+          data-view={waterfronts[index]}>
+          {daylight > .07 && <div className="city-panorama-day" />}
+        </div>)}
+      {currentCity === 0 && <span className="city-skyline-lights">
         {skylineLights.map((style, index) => <i key={index} style={style} />)}
-      </span>
+      </span>}
     </div>
     <div className="city-sky-haze" />
     <div className="city-gulls"><i /><i /><i /></div>
@@ -159,11 +151,12 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
         const versions = { ...dailyBuildings?.versions };
         for (const site of sites) versions[site] = (versions[site] ?? 0) + 1;
         setRebuilt({ day, versions, cleared: closingLot ?? dailyBuildings?.cleared });
+        setCity(nextCity);
       }
       setCycle(index => index + 1);
     }}>
       {waterfront.map(({ x, height, width }, index) => {
-        const working = moving && sites.includes(index);
+        const working = moving && (district || eventPhase === 3) && sites.includes(index);
         const variant = index + day + (dailyBuildings?.versions[index] ?? 0);
         const architecture = waterfront[variant % waterfront.length]!.architecture;
         const nextArchitecture = waterfront[(variant + 1) % waterfront.length]!.architecture;
@@ -182,19 +175,19 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
           {clearing ? <span className="city-quay-lot is-opening" />
             : alternate && <div className="city-site-replacement" data-architecture={nextArchitecture}><span className="city-facade" /></div>}
           </>}
-          {working && <div className="city-sequence" key={cycle} data-arrival={cycle % 2 === 0 ? "west" : "east"}>
-            {index === lead && (district
-              ? <><span className="city-meteor" /><span className="city-district-flash" /></>
-              : <div className="city-flight"><span /></div>)}
+          {working && <div className="city-sequence" key={cycle} data-district={district}
+            style={{ "--city-damage-lag": `${district ? sites.indexOf(index) * .35 : 0}s` } as CSSProperties}>
+            {index === lead && district && <span className="city-meteor" />}
             {(district || index === lead) && <div className="city-impact" />}
-            <div className="city-collapse"><i /><i /><i /></div>
-            <div className="city-impact-dust"><i /><i /></div>
+            <div className="city-collapse"><i /></div>
+            <div className="city-debris">{debris.map((style, fragment) => <i key={fragment} style={style} />)}</div>
+            <div className="city-impact-dust"><i /><i /><i /></div>
             <div className="city-impact-glint" />
             <span className="city-rubble" />
             {[-1, 1].map(direction => <div className="city-evacuation" key={direction} style={{ "--evac-direction": direction } as CSSProperties}>
               {crowd.map(person => <span key={person} style={{ "--evac-person": person } as CSSProperties}><i /></span>)}
             </div>)}
-            <div className="city-works">
+            <div className="city-works" data-architecture={alternate ? nextArchitecture : undefined}>
               <span className="city-foundation" />
               <span className="city-site-fencing" />
               <span className="city-scaffold" />
@@ -225,10 +218,15 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
     <span className="city-discovery-beacon" />
     <div className="city-quay-clock"><i /></div>
     <div className="city-promenade">
-      <span className="city-pedestrian" />
-      <span className="city-pedestrian" />
-      <span className="city-pedestrian" />
-      <span className="city-pedestrian" />
+      {residents.map(({ berth, pace, offset }, index) => <span className="city-pedestrian" key={index}
+        data-direction={index % 2 === 0 ? "east" : "west"}
+        style={{
+          "--resident-berth": `${berth}%`,
+          "--resident-duration": `${pace}s`,
+          "--resident-delay": `-${offset}s`,
+          "--resident-column": `${index % 3 * 50}%`,
+          "--resident-row": index < 3 ? "0%" : "100%",
+        } as CSSProperties}><i /></span>)}
     </div>
     <div className="city-water-lights" />
     <div className="city-ripples" />
@@ -251,11 +249,11 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
     <div className="city-lantern" />
     <div className="city-plane" onAnimationIteration={event => {
       if (event.target === event.currentTarget && event.animationName === "city-banner-pass") {
-        setBannerPass(pass => (pass + 1) % bannerMessages.length);
+        setBannerPass(pass => pass + 1);
       }
     }}>
       <span />
-      <b className="city-plane-banner">{bannerMessages[(bannerPass + (day % 10) * 4) % bannerMessages.length]}</b>
+      <b className="city-plane-banner">{harborBanner(day, bannerPass)}</b>
     </div>
     <div className="city-weather-fog"><i /><i /></div>
     <div className="city-weather-rain">
@@ -267,9 +265,10 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
   </div>;
 });
 
-export function CityBackdrop({ animated, sceneHost, liveWeather }: {
+export function CityBackdrop({ animated, sceneHost, toolsHost, liveWeather }: {
   animated: boolean;
   sceneHost: HTMLElement | null;
+  toolsHost: HTMLElement | null;
   liveWeather?: LiveWeather | null;
 }) {
   const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
@@ -337,22 +336,23 @@ export function CityBackdrop({ animated, sceneHost, liveWeather }: {
   const manualBoats = open || raceScene !== null;
   const scene = <CityScene moving={moving} weather={weather === "auto" ? liveWeather ?? weather : weather}
     paused={paused || !pageVisible} manualBoats={manualBoats} event={raceScene} discovery={open && explore ? discovery : null} />;
+  const tools = <div className="city-tools">
+    <button ref={toggle} type="button" className="icon-button" aria-label={t("Marina controls")} title={t("Marina controls")}
+      aria-expanded={open} aria-controls={open ? controlId : undefined} onClick={() => setOpen(value => !value)}><Sailboat aria-hidden="true" /></button>
+    <button type="button" className="icon-button" aria-label={t(paused ? "Resume marina" : "Pause marina")} title={t(paused ? "Resume marina" : "Pause marina")}
+      onClick={togglePause} disabled={reduceMotion}>{paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}</button>
+  </div>;
 
   return <>
     {sceneHost ? createPortal(scene, sceneHost) : scene}
-    {animated && <div className={`city-interactions${paused || !pageVisible ? " is-paused" : ""}`} ref={playArea} onKeyDown={event => {
+    {animated && <div className={`city-interactions${paused || !pageVisible ? " is-paused" : ""}`} data-tools-in-sky={!!toolsHost} ref={playArea} onKeyDown={event => {
       if (open && event.key === "Escape") {
         event.stopPropagation();
         setOpen(false);
         toggle.current?.focus();
       }
     }}>
-      <div className="city-tools">
-        <button ref={toggle} type="button" className="icon-button" aria-label={t("Marina controls")} title={t("Marina controls")}
-          aria-expanded={open} aria-controls={open ? controlId : undefined} onClick={() => setOpen(value => !value)}><Sailboat aria-hidden="true" /></button>
-        <button type="button" className="icon-button" aria-label={t(paused ? "Resume marina" : "Pause marina")} title={t(paused ? "Resume marina" : "Pause marina")}
-          onClick={togglePause} disabled={reduceMotion}>{paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}</button>
-      </div>
+      {toolsHost ? createPortal(tools, toolsHost) : tools}
       <CityRegatta open={open} controlsId={controlId} paused={paused || !pageVisible} reduced={reduceMotion} onScene={setRaceScene}>
         <div className="city-marina-tools">
           <button type="button" className="btn" aria-expanded={explore} onClick={() => { setExplore(value => !value); setDiscovery(null); }}><Compass aria-hidden="true" />{t("Explore the waterfront")}</button>

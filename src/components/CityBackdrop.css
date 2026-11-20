@@ -22,13 +22,58 @@
   right: auto;
   width: 100%;
   translate: -50% 0;
-  background: url("../brand/city-harbor.webp") center / 100% 100% no-repeat;
+  --city-season-saturation: .90;
+  --city-season-hue: 0deg;
+  filter: brightness(calc(.77 + var(--city-daylight, .4) * .36)) saturate(var(--city-season-saturation))
+    hue-rotate(var(--city-season-hue)) sepia(calc(var(--city-twilight, 0) * .10));
+  transition: filter 18s linear;
 }
+.city-panorama-plate, .city-panorama-day {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.city-panorama-plate[data-view="harbor"] { background-image: url("../brand/city-harbor.webp"); }
+.city-panorama-plate[data-view="london"] { background-image: url("../brand/city-london.webp"); }
+.city-panorama-plate[data-view="singapore"] { background-image: url("../brand/city-singapore.webp"); }
+.city-panorama-plate[data-view="harbor"] .city-panorama-day { background-image: url("../brand/city-harbor-day.webp"); }
+.city-panorama-plate[data-view="london"] .city-panorama-day { background-image: url("../brand/city-london-day.webp"); }
+.city-panorama-plate[data-view="singapore"] .city-panorama-day { background-image: url("../brand/city-singapore-day.webp"); }
+.city-panorama-day {
+  opacity: clamp(0, calc((var(--city-daylight) - .14) * 1.17), 1);
+  transition: opacity 18s linear;
+}
+.city-panorama-plate.is-arriving {
+  opacity: 0;
+  animation: city-restore-skyline var(--city-event-cycle) steps(480) infinite;
+}
+@keyframes city-restore-skyline {
+  0%, 73% { opacity: 0; }
+  96%, 100% { opacity: 1; }
+}
+.city-backdrop[data-season="winter"] .city-panorama { --city-season-saturation: .78; --city-season-hue: 5deg; }
+.city-backdrop[data-season="summer"] .city-panorama { --city-season-saturation: 1.05; }
+.city-backdrop[data-season="autumn"] .city-panorama { --city-season-hue: -7deg; }
+.city-backdrop:not(.is-animated) :is(.city-panorama, .city-panorama-day),
+.city-backdrop.is-paused :is(.city-panorama, .city-panorama-day) { transition: none; }
+.city-backdrop:not([data-city="harbor"], [data-discovery]) :is(.city-roof-sign, .city-quay-clock) { visibility: hidden; }
 .city-veil {
   background: linear-gradient(to bottom, var(--bg) 0%, color-mix(in srgb, var(--bg) 90%, transparent) 13%,
     color-mix(in srgb, var(--bg) 68%, transparent) 35%, color-mix(in srgb, var(--bg) 24%, transparent) 67%,
     color-mix(in srgb, var(--bg) 22%, transparent) 87%, color-mix(in srgb, var(--bg) 55%, transparent));
 }
+.city-veil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(var(--bg) 22%, transparent 78%);
+  opacity: calc(var(--city-daylight, 0) * .41);
+  transition: opacity 18s linear;
+}
+.city-backdrop:not(.is-animated) .city-veil::after,
+.city-backdrop.is-paused .city-veil::after { transition: none; }
 [data-theme="light"] .city-veil {
   background: linear-gradient(var(--bg) 15%, color-mix(in srgb, var(--bg) 78%, transparent) 64%, color-mix(in srgb, var(--bg) 64%, transparent));
 }
@@ -47,10 +92,10 @@
   transform: translateX(-50%);
   --city-roof: color-mix(in srgb, var(--status-working) 34%, var(--bg-elevated));
 }
-:is(.city-site, .city-site-replacement)[data-architecture="brick"] { --city-architecture: url("../brand/city-brick.webp"); }
-:is(.city-site, .city-site-replacement)[data-architecture="stone"] { --city-architecture: url("../brand/city-stone.webp"); }
-:is(.city-site, .city-site-replacement)[data-architecture="glass"] { --city-architecture: url("../brand/city-glass.webp"); }
-:is(.city-site, .city-site-replacement)[data-architecture="deco"] { --city-architecture: url("../brand/city-deco.webp"); }
+:is(.city-site, .city-site-replacement, .city-works)[data-architecture="brick"] { --city-architecture: url("../brand/city-brick.webp"); }
+:is(.city-site, .city-site-replacement, .city-works)[data-architecture="stone"] { --city-architecture: url("../brand/city-stone.webp"); }
+:is(.city-site, .city-site-replacement, .city-works)[data-architecture="glass"] { --city-architecture: url("../brand/city-glass.webp"); }
+:is(.city-site, .city-site-replacement, .city-works)[data-architecture="deco"] { --city-architecture: url("../brand/city-deco.webp"); }
 .city-quay-lot {
   position: absolute;
   inset: auto -8% 0;
@@ -71,6 +116,7 @@
 .city-room-lights, .city-skyline-lights {
   position: absolute;
   inset: 0;
+  opacity: calc(1 - var(--city-daylight, 0) * .9);
 }
 .city-room-lights {
   mask: var(--city-architecture) center bottom / 100% 100% no-repeat;
@@ -135,20 +181,30 @@
 }
 .city-pedestrian {
   position: absolute;
-  left: 4%;
+  left: var(--resident-berth);
   bottom: 2px;
-  width: 12px;
-  height: 19px;
-  background: url("../brand/city-commuter.webp") center bottom / contain no-repeat;
+  width: clamp(18px, 2.3cqw, 34px);
+  aspect-ratio: 1;
+  filter: drop-shadow(1px 2px 1px var(--bg));
+}
+.city-pedestrian i {
+  position: absolute;
+  inset: 0;
+  background: url("../brand/city-residents.webp") var(--resident-column) var(--resident-row) / 300% 200% no-repeat;
   transform-origin: bottom center;
 }
-.city-pedestrian:nth-child(2) { left: 63%; scale: -1 1; filter: hue-rotate(40deg); }
-.is-animated .city-pedestrian { animation: city-cross 23s steps(200) infinite; }
-.is-animated .city-pedestrian:nth-child(2) { animation-direction: reverse; animation-delay: -14s; left: 0; }
-.city-pedestrian:nth-child(3) { left: 0; filter: hue-rotate(154deg); }
-.city-pedestrian:nth-child(4) { left: 0; scale: -1 1; filter: saturate(.62); }
-.is-animated .city-pedestrian:nth-child(3) { animation-delay: -12s; animation-duration: 30s; }
-.is-animated .city-pedestrian:nth-child(4) { animation-direction: reverse; animation-delay: -23s; animation-duration: 34s; }
+.city-pedestrian[data-direction="west"] i { scale: -1 1; }
+.is-animated .city-pedestrian {
+  left: -5%;
+  animation: city-cross var(--resident-duration) steps(1600) var(--resident-delay) infinite;
+}
+.is-animated .city-pedestrian[data-direction="west"] { animation-direction: reverse; }
+.is-animated .city-pedestrian i { animation: city-resident-step .8s steps(12) infinite; }
+@keyframes city-resident-step {
+  0%, 50%, 100% { transform: none; }
+  25% { transform: translateY(-1px) rotate(2deg); }
+  75% { transform: translateY(-1px) rotate(-2deg); }
+}
 .city-river { position: absolute; inset: calc(100% - var(--city-shore)) 0 0; }
 .city-vessel {
   --city-foam: color-mix(in srgb, var(--text-strong) 74%, var(--status-working));
@@ -251,7 +307,7 @@
   20%, 49% { opacity: 0; transform: scaleX(.18); }
 }
 
-.city-plane, .city-flight {
+.city-plane {
   width: clamp(29px, 7cqw, 98px);
   aspect-ratio: 3.1;
 }
@@ -263,7 +319,7 @@
   display: none;
 }
 [data-theme="light"] .city-plane { z-index: 1; opacity: .82; }
-.city-plane span, .city-flight span {
+.city-plane span {
   display: block;
   width: 100%;
   height: 100%;
@@ -311,7 +367,7 @@
   inset: 0;
   animation: city-fill-lot var(--city-event-cycle) steps(140) infinite;
 }
-.city-meteor, .city-district-flash {
+.city-meteor {
   position: absolute;
   left: 50%;
   bottom: 59%;
@@ -325,39 +381,27 @@
   filter: drop-shadow(0 1px 8px var(--accent));
   animation: city-meteor-trail var(--city-event-cycle) steps(380) infinite;
 }
-.city-district-flash {
-  width: clamp(110px, 31cqw, 440px);
-  aspect-ratio: 2.7;
-  background: radial-gradient(ellipse at center, var(--text-strong), var(--accent) 15%, var(--status-blocked) 31%, transparent 67%);
-  animation: city-district-flash var(--city-event-cycle) steps(240) infinite;
-}
 @keyframes city-meteor-trail {
   0%, 12% { opacity: 0; transform: translate(clamp(-400px, -30cqw, -150px), -38cqh) rotate(25deg); }
   15% { opacity: .92; }
   20% { opacity: .94; transform: translate(-96%, -2%) rotate(25deg); }
   20.5%, 100% { opacity: 0; transform: translate(-96%, -2%) rotate(25deg); }
 }
-@keyframes city-district-flash {
-  0%, 20% { opacity: 0; transform: translate(-50%, 30%) scale(.08); }
-  21% { opacity: .76; transform: translate(-50%, 28%) scale(.55); }
-  27%, 100% { opacity: 0; transform: translate(-50%, 18%) scale(1.4); }
-}
-@keyframes city-leave-lot { 0%, 20% { opacity: 1; } 20.5%, 100% { opacity: 0; } }
+@keyframes city-leave-lot { 0%, 20% { opacity: 1; } 20.35%, 100% { opacity: 0; } }
 @keyframes city-leave-reflection { 0%, 20% { opacity: .36; } 31%, 100% { opacity: 0; } }
-@keyframes city-fill-lot { 0%, 77% { opacity: 0; } 83%, 100% { opacity: 1; } }
-.city-flight, .city-impact, .city-rubble {
+@keyframes city-fill-lot {
+  0%, 53% { clip-path: inset(100% 0 0); opacity: 0; }
+  56% { clip-path: inset(91% 0 0); opacity: .9; }
+  82%, 100% { clip-path: inset(0); opacity: 1; }
+}
+.city-quay-lot.is-opening { animation-name: city-open-yard; }
+@keyframes city-open-yard { 0%, 47% { opacity: 0; } 69%, 100% { opacity: 1; } }
+.city-impact, .city-rubble {
   position: absolute;
   left: 50%;
   bottom: 83%;
   opacity: 0;
 }
-.city-flight { animation: city-flight var(--city-event-cycle) steps(240) infinite; }
-.city-sequence[data-arrival="east"] .city-flight {
-  --city-arrival-x: 105cqw;
-  --city-arrival-end: 2%;
-  --city-flight-angle: -12deg;
-}
-.city-sequence[data-arrival="east"] .city-flight span { scale: -1 1; }
 .city-impact {
   width: clamp(40px, 9cqw, 112px);
   aspect-ratio: 1.15;
@@ -365,7 +409,7 @@
   background:
     radial-gradient(ellipse at 45% 47%, var(--text-strong), var(--accent) 18%, transparent 42%),
     radial-gradient(ellipse at 60% 55%, var(--status-blocked), transparent 54%);
-  animation: city-impact var(--city-event-cycle) steps(240) infinite;
+  animation: city-impact var(--city-event-cycle) steps(620) var(--city-damage-lag, 0s) infinite;
 }
 .city-impact-glint {
   position: absolute;
@@ -378,20 +422,39 @@
 .city-collapse {
   position: absolute;
   inset: 0;
+  clip-path: inset(-18% -35% 0);
 }
 .city-collapse i {
   position: absolute;
   inset: 0;
   opacity: 0;
-  clip-path: inset(var(--section-top) 0 var(--section-bottom));
   background: var(--city-architecture) center bottom / 100% 100% no-repeat;
   filter: var(--city-facade-tone);
-  transform-origin: 47% 92%;
-  animation: city-collapse var(--city-event-cycle) steps(200) infinite;
+  transform-origin: 48% 92%;
+  animation: city-collapse var(--city-event-cycle) steps(1200) infinite;
 }
-.city-collapse i:nth-child(1) { --section-top: 0%; --section-bottom: 69%; --section-drop: 54%; --section-lean: -11deg; }
-.city-collapse i:nth-child(2) { --section-top: 31%; --section-bottom: 33%; --section-drop: 41%; --section-lean: 7deg; }
-.city-collapse i:nth-child(3) { --section-top: 67%; --section-bottom: 0%; --section-drop: 20%; --section-lean: -3deg; }
+.city-debris { position: absolute; inset: 0 -18%; }
+.city-debris i {
+  position: absolute;
+  top: var(--debris-y);
+  left: var(--debris-x);
+  width: var(--debris-size);
+  aspect-ratio: 1.4;
+  background: color-mix(in srgb, var(--bg-elevated) 58%, var(--text-dim));
+  clip-path: polygon(0 44%, 24% 0, 85% 18%, 100% 69%, 53% 100%, 10% 89%);
+  opacity: 0;
+  animation: city-fragment var(--city-event-cycle) steps(800)
+    calc(var(--debris-delay) + var(--city-damage-lag, 0s)) infinite;
+}
+.city-debris i:nth-child(3n) { background: var(--text-dim); }
+@keyframes city-fragment {
+  0%, 20.4% { opacity: 0; top: var(--debris-y); }
+  20.7% { opacity: .86; top: calc(var(--debris-y) - 5%); transform: translateX(0) rotate(0); }
+  22.8% { opacity: .76; top: 96%; transform: translateX(var(--debris-wind)) rotate(var(--debris-spin)); }
+  23.3% { opacity: .55; top: 91%; }
+  23.9%, 27% { opacity: .38; top: 96%; transform: translateX(var(--debris-wind)) rotate(var(--debris-spin)); }
+  30%, 100% { opacity: 0; top: 96%; }
+}
 .city-impact-dust {
   position: absolute;
   inset: 0 -70%;
@@ -408,15 +471,23 @@
   top: 10%;
   left: 10%;
   transform-origin: 53% 72%;
-  animation: city-smoke-loft var(--city-event-cycle) steps(240) infinite;
+  animation: city-smoke-loft var(--city-event-cycle) steps(680) var(--city-damage-lag, 0s) infinite;
 }
-.city-impact-dust i:last-child {
+.city-impact-dust i:nth-child(2) {
   bottom: -8%;
   left: 10%;
   width: 86%;
   filter: brightness(.85);
   transform-origin: 40% 75%;
-  animation: city-dust-roll var(--city-event-cycle) steps(240) infinite;
+  animation: city-dust-roll var(--city-event-cycle) steps(700) var(--city-damage-lag, 0s) infinite;
+}
+.city-impact-dust i:nth-child(3) {
+  bottom: -2%;
+  left: 3%;
+  width: 94%;
+  filter: brightness(.78);
+  scale: -1 1;
+  animation: city-dust-roll var(--city-event-cycle) steps(700) calc(var(--city-damage-lag, 0s) + .4s) infinite;
 }
 @keyframes city-reflect {
   0%, 20%, 83%, 100% { opacity: .36; }
@@ -429,6 +500,8 @@
 @container (max-width: 420px) {
   .city-site { height: calc(var(--city-height) * .65); }
   .city-panorama { width: 195%; }
+  .city-panorama-plate[data-view="london"] { translate: 14% 0; }
+  .city-panorama-plate[data-view="singapore"] { translate: -14% 0; }
 }
 
 .city-works {
@@ -597,7 +670,7 @@
   inset: 0;
   --city-floor-height: calc(100% / 6);
   --city-floor-top: calc(100% - (var(--city-floor) + 1) * var(--city-floor-height));
-  --city-install-delay: calc(var(--city-floor) * 2.35s);
+  --city-install-delay: calc(var(--city-floor) * 3s);
 }
 
 .city-frame, .city-module {
@@ -681,8 +754,9 @@
   42%, 47% { opacity: .89; }
 }
 @keyframes city-place-module {
-  0%, 47.1% { opacity: 0; }
-  47.45%, 100% { opacity: 1; }
+  0%, 47% { opacity: 0; transform: translateY(-30%); }
+  52%, 54% { opacity: .82; transform: translateY(0); }
+  60%, 100% { opacity: 0; transform: translateY(0); }
 }
 @keyframes city-mast {
   0%, 35%, 89%, 100% { transform: scaleY(.1); opacity: 0; }
@@ -770,57 +844,56 @@
 .city-site[data-target="true"] .city-rubble {
   inset: auto -23% 0;
   height: 22%;
-  clip-path: polygon(0 100%, 8% 55%, 24% 70%, 31% 12%, 44% 52%, 54% 37%, 62% 64%, 72% 26%, 83% 74%, 93% 60%, 100% 100%);
-  background: linear-gradient(var(--border-strong), var(--bg-elevated));
+  background: url("../brand/city-rubble.webp") center bottom / contain no-repeat;
+  filter: brightness(.72) saturate(.72) drop-shadow(1px 2px 2px var(--bg));
   transform-origin: bottom center;
   animation: city-rubble var(--city-event-cycle) steps(120) infinite;
 }
 
-@keyframes city-flight {
-  0%, 5% { transform: translate(var(--city-arrival-x, -105cqw), -130px) rotate(var(--city-flight-angle, 12deg)); opacity: 0; }
-  8% { opacity: 1; }
-  19% { transform: translate(var(--city-arrival-end, -95%), 9%) rotate(var(--city-flight-angle, 12deg)); opacity: 1; }
-  20%, 100% { transform: translate(0, 0) rotate(var(--city-flight-angle, 12deg)); opacity: 0; }
-}
-
 @keyframes city-impact {
-  0%, 19% { opacity: 0; transform: translate(-52%, 51%) scale(.2); }
-  20.5% { opacity: .98; transform: translate(-49%, 49%) scale(.65); }
-  23% { opacity: .40; transform: translate(-43%, 39%) scale(.94); }
-  27%, 100% { opacity: 0; transform: translate(-44%, 45%) scale(1.32); }
+  0%, 19.9% { opacity: 0; transform: translate(-52%, 68%) scale(.14); }
+  20.1% { opacity: .68; transform: translate(-49%, 64%) scale(.45); }
+  20.9% { opacity: .15; transform: translate(-43%, 56%) scale(.86); }
+  22%, 100% { opacity: 0; transform: translate(-44%, 51%) scale(1.08); }
 }
 @keyframes city-impact-glint {
-  0%, 19%, 26%, 100% { opacity: 0; }
-  21% { opacity: .63; }
+  0%, 19.9%, 23%, 100% { opacity: 0; }
+  20.2% { opacity: .34; }
 }
 @keyframes city-collapse {
-  0%, 20%, 33%, 100% { opacity: 0; }
-  20.4% { opacity: 1; transform: none; }
-  24.5% { opacity: .86; transform: translateY(calc(var(--section-drop) * .38)) rotate(calc(var(--section-lean) * .60)); }
-  31% { opacity: 0; transform: translateY(var(--section-drop)) rotate(var(--section-lean)); }
+  0%, 20% { opacity: 0; transform: none; }
+  20.15% { opacity: 1; transform: none; }
+  20.55% { opacity: 1; transform: translate(1%, 2%) rotate(1deg); }
+  21.25% { opacity: 1; transform: translate(4%, 11%) rotate(4deg); }
+  22.2% { opacity: 1; transform: translate(9%, 42%) rotate(9deg); }
+  23.3% { opacity: .85; transform: translate(13%, 83%) rotate(15deg); }
+  24.4%, 100% { opacity: 0; transform: translate(15%, 105%) rotate(18deg); }
 }
 @keyframes city-smoke-loft {
-  0%, 20%, 50%, 100% { opacity: 0; }
-  22% { opacity: .72; transform: translate(-8%, -22%) scale(.56); }
-  27% { opacity: .86; transform: translate(2%, -49%) scale(.92); }
-  38% { opacity: .42; transform: translate(24%, -81%) scale(1.10); }
-  49% { opacity: .04; transform: translate(50%, -110%) scale(1.34); }
+  0%, 20%, 52%, 100% { opacity: 0; }
+  22% { opacity: .72; transform: translate(-8%, -1%) scale(.41); }
+  26% { opacity: .86; transform: translate(1%, -39%) scale(.88); }
+  35% { opacity: .55; transform: translate(15%, -71%) scale(1.15); }
+  51% { opacity: .04; transform: translate(49%, -111%) scale(1.45); }
 }
 @keyframes city-dust-roll {
-  0%, 23%, 49%, 100% { opacity: 0; }
-  26% { opacity: .73; transform: translate(-7%, 3%) scale(.65, .60); }
-  32% { opacity: .93; transform: translate(3%, 14%) scale(1.22, .89); }
-  47% { opacity: .13; transform: translate(22%, 26%) scale(1.5, .81); }
+  0%, 21%, 53%, 100% { opacity: 0; }
+  24% { opacity: .82; transform: translate(-7%, 2%) scale(.65, .61); }
+  29% { opacity: .91; transform: translate(3%, 10%) scale(1.22, .89); }
+  47% { opacity: .16; transform: translate(22%, 21%) scale(1.52, .81); }
 }
 @keyframes city-rebuild {
-  0%, 20%, 83%, 100% { opacity: 1; }
-  20.5%, 78% { opacity: 0; }
+  0%, 20% { opacity: 1; clip-path: none; }
+  20.35%, 54% { opacity: 0; clip-path: inset(100% 0 0); }
+  58% { opacity: .9; clip-path: inset(88% 0 0); }
+  83%, 100% { opacity: 1; clip-path: inset(0); }
 }
 
 @keyframes city-rubble {
   0%, 21% { transform: scale(.6, .2); opacity: 0; }
-  30%, 34% { transform: scale(1); opacity: 1; }
-  45%, 100% { transform: scale(.69, .25); opacity: 0; }
+  24%, 34% { transform: scale(1); opacity: 1; }
+  40% { transform: scale(.86, .77); opacity: .85; }
+  48%, 100% { transform: scale(.56, .3); opacity: 0; }
 }
 
 @keyframes city-works {
@@ -944,6 +1017,8 @@
   border-radius: var(--radius-pill);
 }
 .city-tools .icon-button { border-radius: var(--radius-pill); }
+.sky-widget-tools .city-tools { position: static; }
+.city-interactions[data-tools-in-sky="true"] .city-marina-controls { --regatta-top: var(--marina-top); }
 .city-tools [aria-expanded="true"] { color: var(--accent); background: var(--bg-hover); }
 .city-marina-controls {
   inset-block-start: calc(var(--marina-top) + max(var(--touch-target), 44px) + var(--space-2));
@@ -994,7 +1069,6 @@
 .city-racer-1 .city-vessel { width: 63%; }
 .city-racer:disabled { opacity: 1; pointer-events: none; }
 @media (max-width: 768px) {
-  .city-interactions { --marina-top: calc(var(--header-over, 0px) + 56px + var(--space-2)); }
   .city-tools .icon-button { min-width: 44px; min-height: 44px; }
   .city-weather-control > svg { display: none; }
 }
@@ -1078,10 +1152,23 @@
     radial-gradient(ellipse 13% 2.2% at 24% 82%, var(--status-working), transparent);
   opacity: 0;
 }
-.is-animated .city-ripples { animation: city-ripples 5s steps(36) infinite alternate; }
+.city-backdrop { --city-current-width: 2%; --city-current-period: 7s; }
+.city-backdrop[data-city="london"] { --city-current-width: 5%; --city-current-period: 4s; }
+.city-backdrop[data-city="singapore"] { --city-current-width: 1.5%; --city-current-period: 10s; }
+.city-ripples::before {
+  content: "";
+  position: absolute;
+  inset: 2% 0 0;
+  mask-image: linear-gradient(transparent, var(--text) 34%, var(--text) 88%, transparent);
+  background:
+    repeating-linear-gradient(175deg, transparent 0 21px, color-mix(in srgb, var(--text) 18%, transparent) 22px, transparent 23px 33px),
+    repeating-linear-gradient(183deg, transparent 0 14px, color-mix(in srgb, var(--bg) 30%, transparent) 15px 18px, transparent 19px 29px);
+  mix-blend-mode: soft-light;
+}
+.is-animated .city-ripples { animation: city-ripples var(--city-current-period) steps(90) infinite alternate; }
 @keyframes city-ripples {
-  from { transform: translateX(-2%) scaleY(.94); opacity: .10; }
-  to { transform: translateX(2%) scaleY(1.05); opacity: .28; }
+  from { transform: translateX(calc(var(--city-current-width) * -1)) scaleY(.97); opacity: .11; }
+  to { transform: translateX(var(--city-current-width)) scaleY(1.04); opacity: .32; }
 }
 
 .city-sky-haze {

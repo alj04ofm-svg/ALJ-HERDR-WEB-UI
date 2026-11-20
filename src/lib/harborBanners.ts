@@ -1,0 +1,100 @@
+// Each pass changes topic. The local date offsets the order and where each topic starts.
+const messages = [
+  [ // Priorities
+    "What matters most by tonight?",
+    "Choose a finish line before you start.",
+    "Which step unblocks someone else?",
+    "Put the riskiest assumption first.",
+    "Cut one thing from today's list.",
+    "If time halves, what still ships?",
+    "Make room for the work that compounds.",
+    "Name one thing to leave until tomorrow.",
+  ],
+  [ // Agent collaboration
+    "Give your agent a failing example.",
+    "Say what the agent must preserve.",
+    "Ask the agent to cite files and lines.",
+    "Give each agent a distinct job.",
+    "Have the agent show its verification.",
+    "Describe the user outcome first.",
+    "Hand off the diff, the test and the risk.",
+    "Ask what would disprove its answer.",
+  ],
+  [ // Energy and grounding
+    "Rest before your attention runs out.",
+    "Look away from the screen for a moment.",
+    "Take a short walk before deciding.",
+    "Drink some water. Then pick one step.",
+    "Leave a little margin between tasks.",
+    "A pause can give you your judgment back.",
+    "Give your shoulders a moment to relax.",
+    "Do the demanding work while you feel fresh.",
+  ],
+  [ // Quality and delivery
+    "Try the empty state with a real user.",
+    "Keep a rollback within reach.",
+    "Test what happens halfway through.",
+    "Read the error as the user would.",
+    "Find one path your tests never take.",
+    "Make the first run as good as the tenth.",
+    "See what a slow connection reveals.",
+    "Verify the build people actually use.",
+  ],
+  [ // Momentum
+    "Finish one small promise to yourself.",
+    "Open the file. Take the next small step.",
+    "One good decision can change the day.",
+    "A rough first pass gives you direction.",
+    "Count the hard things you learned.",
+    "You can start again from right here.",
+    "Clear one blocker and call that progress.",
+    "Close a loop before opening another.",
+  ],
+  [ // Communication
+    "Make the next decision easy to find.",
+    "Name the owner and the next step.",
+    "Say what changed in one sentence.",
+    "Show an example before adding a rule.",
+    "Leave a note your future self can use.",
+    "Ask what someone needs to move forward.",
+    "Write the handoff before you forget.",
+    "When unsure, ask a specific question.",
+  ],
+  [ // Creative thinking
+    "What would make this delightful once?",
+    "Try the simplest version for ten minutes.",
+    "Think of one option you'd usually skip.",
+    "Give the rough idea a small prototype.",
+    "Look at the problem from the user's seat.",
+    "Ask which constraint is actually fixed.",
+    "Fix the part that makes you hesitate.",
+    "Compare two real examples side by side.",
+  ],
+  [ // Focus habits
+    "Put the stray idea on paper and return.",
+    "Leave only the tabs this task needs.",
+    "Set a stopping time for the rabbit hole.",
+    "Start one quiet block without alerts.",
+    "Save your place before switching tasks.",
+    "Check messages after the next milestone.",
+    "Write the question you're answering.",
+    "Set a checkpoint you can verify.",
+  ],
+  [ // Reflection
+    "What moved forward since yesterday?",
+    "What kept interrupting the work?",
+    "What did the hardest task teach you?",
+    "Which step will be easier next time?",
+    "Write down the useful surprise.",
+    "Keep the shortcut that really helped.",
+    "What would you do differently tomorrow?",
+    "Leave one clear place to start next time.",
+  ],
+] as const;
+
+export function harborBanner(day: number, pass: number): string {
+  const topic = (day + pass) % messages.length;
+  const options = messages[topic]!;
+  const round = Math.floor(pass / messages.length);
+  return options[(day * 3 + topic + round) % options.length]!;
+}

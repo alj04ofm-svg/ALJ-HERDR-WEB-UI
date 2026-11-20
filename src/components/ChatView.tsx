@@ -82,6 +82,7 @@ export interface ChatViewProps {
   onRead?: (paneId: string, read: ChatRead | null) => void;
   /** the composer shows its greeting: the chat's own "nothing yet" line stays out */
   greeted?: boolean;
+  dockSearch?: boolean;
   /** the agent's waiting prompt, for the composer to answer too */
   onPrompt?: (paneId: string, prompt: InteractivePrompt | null) => void;
   /** with no prompt waiting, the next prompt the agent suggests (Claude's grey input text) */
@@ -619,7 +620,7 @@ function TerminalFallback({ paneId, onRetry }: { paneId: string; onRetry: () => 
 }
 
 // the app re-renders on every pane-status and poll; an unchanged transcript sits those out
-export const ChatView = memo(function ChatView({ paneId, refreshKey, invalidationKey = 0, onConversationWatch, conversationPushes = false, onTerminalOutput, sentKey = 0, connected, ended, agent, agentStatus, onMetadata, onRead, greeted = false, onPrompt, onSuggestion, onRestored, promptRefreshKey = 0, pendingAnswer = null, onPendingAnswerDone, promptDock = null, onPromptAnswered }: ChatViewProps) {
+export const ChatView = memo(function ChatView({ paneId, refreshKey, invalidationKey = 0, onConversationWatch, conversationPushes = false, onTerminalOutput, sentKey = 0, connected, ended, agent, agentStatus, onMetadata, onRead, greeted = false, dockSearch = false, onPrompt, onSuggestion, onRestored, promptRefreshKey = 0, pendingAnswer = null, onPendingAnswerDone, promptDock = null, onPromptAnswered }: ChatViewProps) {
   const t = useT();
   const { fetchPaneConversation, fetchPanePromptState, fetchPaneTranscript } = useMachineApi();
   const { settings } = useSettings();
@@ -1039,8 +1040,11 @@ export const ChatView = memo(function ChatView({ paneId, refreshKey, invalidatio
 
   // Native transcripts can share a timestamp across commentary and final turns.
   const turnKeyOccurrences = new Map<string, number>();
-  return <ChatPaneContext.Provider value={paneId}><ChatHistoryContext.Provider value={historyId ?? ""}><div className="chat-view" ref={scroller} onScroll={onScroll} role="log" aria-live="polite" aria-label={t("conversation of {pane}", { pane: paneId })}>
-    <ConversationSearch key={paneId} container={scroller} revision={shownTurns} />
+  const search = <ConversationSearch key={paneId} container={scroller} revision={shownTurns} />;
+  return <ChatPaneContext.Provider value={paneId}><ChatHistoryContext.Provider value={historyId ?? ""}>
+  {dockSearch && <div className="chat-search-dock">{search}</div>}
+  <div className={`chat-view${dockSearch ? " has-docked-search" : ""}`} ref={scroller} onScroll={onScroll} role="log" aria-live="polite" aria-label={t("conversation of {pane}", { pane: paneId })}>
+    {!dockSearch && search}
     <div className="chat-transcript" data-conversation-source={state.conversationSource}>
       {/* the conversation below is not all the file holds: a /tree left these behind, and pi moved
           its leaf without writing anything, so nothing here could say they were ever there. First
