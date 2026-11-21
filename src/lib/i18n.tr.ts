@@ -1277,4 +1277,5 @@ export const TR: Record<string, string> = {
   "Microphone access confirmed": "Mikrofon erişimi doğrulandı",
   "Could not access the microphone": "Mikrofona erişilemedi",
   "Browser dictation is unavailable. Add an OpenAI API key to transcribe.": "Tarayıcıda dikte kullanılamıyor. Yazıya dökmek için bir OpenAI API anahtarı ekleyin.",
+  "This paste exceeds the message limit. Your draft was kept. Paste a smaller section or attach the text as a file.": "Bu yapıştırma ileti sınırını aşıyor. Taslağınız korundu. Daha kısa bir bölüm yapıştırın veya metni dosya olarak ekleyin.",
 };

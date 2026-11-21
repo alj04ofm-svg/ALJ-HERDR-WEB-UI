@@ -32,6 +32,18 @@ const COLUMNS: { stage: TaskStage; label: string; includes: TaskStage[] }[] = [
   { stage: "needs-you", label: "Attention", includes: ["needs-you", "review"] },
   { stage: "done", label: "Done", includes: ["done"] },
 ];
+const TASK_COMPARE_FIELDS = [
+  ["title", "Title"], ["notes", "Notes"], ["stage", "Stage"], ["scope", "Area"], ["priority", "Priority"],
+  ["project", "Project"], ["due", "Due date"], ["due_time", "Due time"], ["checklist", "Checklist"], ["archived", "Archived"],
+] as const;
+
+function taskFieldText(task: WorkspaceTask, field: typeof TASK_COMPARE_FIELDS[number][0]): string {
+  if (field === "checklist") return task.checklist.map(item => `${item.done ? "Complete" : "Open"} · ${item.title}`).join("\n");
+  if (field === "archived") return task.archived ? "Yes" : "No";
+  if (field === "stage") return TASK_STAGE_LABELS[task.stage];
+  return task[field] ?? "";
+}
+
 const DRAG_TYPE = "application/x-herdr-task";
 const PRIORITY_WEIGHT: Record<WorkspaceTask["priority"], number> = { urgent: 2, high: 1, normal: 0 };
 
@@ -87,14 +99,21 @@ function BoardCard({ task, today, canMove, disabled, canComplete, completionDisa
   </article>;
 }
 
-function NotesEditor({ editor, projects, itemText, setItemText, patch, onBack, onSave, onReload, busy, conflict, externallyChanged, projectArchived }: {
+function NotesEditor({ editor, projects, itemText, setItemText, patch, onBack, onSave, onReload, busy, conflict, externallyChanged, savedTask, projectArchived }: {
   editor: Editor; projects: string[]; itemText: string; setItemText(value: string): void;
   patch(values: Partial<WorkspaceTask>): void; onBack(): void; onSave(task: WorkspaceTask): void;
-  onReload(): void; busy: boolean; conflict: boolean; externallyChanged: boolean; projectArchived: boolean;
+  onReload(): void; busy: boolean; conflict: boolean; externallyChanged: boolean; savedTask?: WorkspaceTask; projectArchived: boolean;
 }) {
   const { draft, isNew } = editor;
   const title = useRef<HTMLInputElement>(null);
   const listId = useId();
+  const differences = savedTask && externallyChanged
+    ? TASK_COMPARE_FIELDS.flatMap(([field, label]) => {
+      const yours = taskFieldText(draft, field);
+      const saved = taskFieldText(savedTask, field);
+      return yours !== saved ? [{ label, yours, saved }] : [];
+    })
+    : [];
   const canAdd = Boolean(itemText.trim()) && draft.checklist.length < 100;
   const createItem = () => ({ id: taskId(), title: itemText.trim(), done: false });
   const addItem = () => {
@@ -116,10 +135,20 @@ function NotesEditor({ editor, projects, itemText, setItemText, patch, onBack, o
       <h3>{isNew ? "New task" : "Task details"}</h3>
     </header>
     {externallyChanged && <div className="task-feedback" role="alert">
-      <span>This task changed on another device. Load that version to continue editing.</span>
-      <button type="button" className="btn" onClick={onReload}>Load saved task</button>
+      <span>{savedTask ? "This task changed on another device. Load the saved version to continue editing." : "This task is missing from the refreshed board."}</span>
+      {savedTask && <button type="button" className="btn" onClick={onReload}>Load saved task</button>}
     </div>}
     <fieldset className="task-editor-fields" disabled={busy}>
+      {differences.length > 0 && <details className="task-compare">
+        <summary>Compare with saved task ({differences.length})</summary>
+        <dl>
+          {differences.map(({ label, yours, saved }) => <div key={label}>
+            <dt>{label}</dt>
+            <dd><strong>Your draft</strong><p>{yours || "Empty"}</p></dd>
+            <dd><strong>Saved version</strong><p>{saved || "Empty"}</p></dd>
+          </div>)}
+        </dl>
+      </details>}
       <label>Title<input ref={title} className="input" required maxLength={240} value={draft.title} onChange={event => patch({ title: event.target.value })} placeholder="What needs to happen?" /></label>
       <label className="task-notes-field">Notes<textarea className="input" rows={6} maxLength={12000} value={draft.notes} onChange={event => patch({ notes: event.target.value })} placeholder="Add context, links, or next steps…" /></label>
       <div className="task-editor-row">
@@ -338,7 +367,8 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   const visible = tasks.filter(task => (task.archived || Boolean(archivedProject(snapshot, task.project))) === (view === "archive")
     && (scope === "all" || task.scope === scope)
     && (!project || (task.project === project || task.project.startsWith(`${project} / `)))
-    && (!queryText || `${task.title} ${task.notes} ${task.project}`.toLocaleLowerCase().includes(queryText))
+    && (!queryText || `${task.title} ${task.notes} ${task.project}`.toLocaleLowerCase().includes(queryText)
+      || task.checklist.some(item => item.title.toLocaleLowerCase().includes(queryText)))
     && (view !== "today" || (task.stage !== "done" && (task.stage === "doing" || task.priority === "urgent" || Boolean(task.due && task.due <= today))))
     && (view !== "waiting" || task.stage === "needs-you" || task.stage === "review"));
   const projects = taskProjects(snapshot);
@@ -356,6 +386,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     ?? lanes.find(lane => lane.tasks.length)?.stage ?? "inbox");
   const filtered = scope !== "all" || Boolean(queryText);
   const hasFilters = filtered || view !== "all";
+  const viewLabel = VIEW_OPTIONS.find(option => option.id === view)?.label;
   const canMove = !pending && !dirty && !conflict;
   const addingInline = inlineStage !== null;
 
@@ -394,7 +425,11 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
       closeInline(stage);
     } else requestAnimationFrame(() => inlineField.current?.focus());
   }
-  function clearFilters() { setScope("all"); setView("all"); setQuery(""); }
+  function chooseView(next: TaskFilter) {
+    if (next !== "archive" && archivedProject(snapshot, project)) setProject("");
+    setView(next);
+  }
+  function clearFilters() { setScope("all"); chooseView("all"); setQuery(""); }
   function chooseProject(path: string) {
     const archived = archivedProject(snapshot, path);
     setProject(path);
@@ -527,7 +562,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
             }) : <div className="task-empty"><h3>No agents need attention</h3><p>Working agents and requests for input appear here.</p></div>}
           </div> : <>
           {showFilters && <div className="task-filters">
-            <select className="select" aria-label="Task filter" disabled={addingInline} value={view} onChange={event => { const next = event.target.value as TaskFilter; if (next !== "archive" && archivedProject(snapshot, project)) setProject(""); setView(next); }}><option value="all">All tasks</option>{VIEW_OPTIONS.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}</select>
+            <select className="select" aria-label="Task filter" disabled={addingInline} value={view} onChange={event => chooseView(event.target.value as TaskFilter)}><option value="all">All tasks</option>{VIEW_OPTIONS.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}</select>
             <select className="select" aria-label="Task area" disabled={addingInline} value={scope} onChange={event => setScope(event.target.value as typeof scope)}><option value="all">All areas</option><option value="business">Business</option><option value="personal">Personal</option></select>
           </div>}
           {createProject && <form className="task-project-form" onSubmit={event => void addProject(event)}>
@@ -535,6 +570,14 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
             <select className="select" aria-label="Parent project" value={parent} onChange={event => setParent(event.target.value)}><option value="">Top level</option>{activeProjects.map(name => <option key={name}>{name}</option>)}</select>
             <button className="btn btn-primary" type="submit" disabled={!canMove}>Create project</button>
           </form>}
+          {(view !== "all" || scope !== "all") && <div className="task-active-filters" role="group" aria-label="Applied filters">
+            {view !== "all" && <button type="button" className="btn" disabled={addingInline} aria-label={`Remove ${viewLabel} filter`} onClick={() => { filterButton.current?.focus(); chooseView("all"); }}>
+              {viewLabel}<X aria-hidden="true" />
+            </button>}
+            {scope !== "all" && <button type="button" className="btn" disabled={addingInline} aria-label={scope === "business" ? "Remove Business filter" : "Remove Personal filter"} onClick={() => { filterButton.current?.focus(); setScope("all"); }}>
+              {scope === "business" ? "Business" : "Personal"}<X aria-hidden="true" />
+            </button>}
+          </div>}
           <div className="task-lens">
             <h3>{view === "archive" ? "Archive" : view === "today" ? "Today" : view === "waiting" ? "Needs attention" : project || "All tasks"}</h3>
             {snapshot && <span>{count} {count === 1 ? "task" : "tasks"}</span>}
@@ -618,7 +661,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
           patch={values => { setEditor(previous => previous && ({ ...previous, draft: { ...previous.draft, ...values } })); setConfirm(null); }}
           onBack={() => attemptExit("board")} onSave={task => void update(task, true)}
           onReload={() => { if (dirty) setConfirm("reload"); else if (activeTask) setEditor({ original: activeTask, draft: { ...activeTask }, isNew: false }); else exitEditor(); }}
-          busy={busy} conflict={conflict || pending === "load"} externallyChanged={externallyChanged} projectArchived={Boolean(archivedProject(snapshot, editor.draft.project))} />}
+          busy={busy} conflict={conflict || pending === "load"} externallyChanged={externallyChanged} savedTask={activeTask ?? undefined} projectArchived={Boolean(archivedProject(snapshot, editor.draft.project))} />}
       </div>
       {projectPanel && snapshot && <TaskProjectActions key={projectPanel.path + projectPanel.mode} panel={projectPanel}
         snapshot={snapshot} projects={projects} busy={busy} blocked={conflict} feedback={conflict ? `${error} Close this panel to reload.` : error || (busy ? "Saving project…" : status)} onPanel={setProjectPanel}

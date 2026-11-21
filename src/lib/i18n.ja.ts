@@ -1324,4 +1324,5 @@ export const JA: Record<string, string> = {
   "Microphone access confirmed": "マイクへのアクセスを確認しました",
   "Could not access the microphone": "マイクにアクセスできませんでした",
   "Browser dictation is unavailable. Add an OpenAI API key to transcribe.": "ブラウザーの音声入力を利用できません。文字起こしには OpenAI API キーを追加してください。",
+  "This paste exceeds the message limit. Your draft was kept. Paste a smaller section or attach the text as a file.": "貼り付けるとメッセージの上限を超えます。下書きは保持されています。短い部分を貼り付けるか、テキストをファイルとして添付してください。",
 };

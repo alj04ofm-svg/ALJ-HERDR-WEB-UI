@@ -1322,4 +1322,5 @@ export const KO: Record<string, string> = {
   "Microphone access confirmed": "마이크 접근 확인 완료",
   "Could not access the microphone": "마이크에 접근할 수 없습니다",
   "Browser dictation is unavailable. Add an OpenAI API key to transcribe.": "브라우저 받아쓰기를 사용할 수 없습니다. 음성을 텍스트로 변환하려면 OpenAI API 키를 추가하세요.",
+  "This paste exceeds the message limit. Your draft was kept. Paste a smaller section or attach the text as a file.": "붙여넣을 내용이 메시지 한도를 초과합니다. 초안은 유지되었습니다. 더 짧게 나누어 붙여넣거나 텍스트를 파일로 첨부하세요.",
 };

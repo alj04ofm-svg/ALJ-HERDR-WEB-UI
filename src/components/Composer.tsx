@@ -833,8 +833,28 @@ export function Composer({
     [uploadImages],
   );
 
-  // Keep the toolbar and chat keyboard-accessible. Redirect an actual paste, without
-  // reclaiming focus on every click or reading the clipboard outside that gesture.
+  const pasteText = useCallback((event: { clipboardData: DataTransfer; preventDefault(): void }, box: HTMLTextAreaElement, redirect: boolean) => {
+    if (event.clipboardData.files.length || Array.from(event.clipboardData.items).some(item => item.kind === "file")) {
+      pasteFiles(event);
+      if (redirect) box.focus({ preventScroll: true });
+      return;
+    }
+    const pasted = event.clipboardData.getData("text/plain").replace(/\r\n?/g, "\n");
+    if (!pasted) return;
+    const { value, selectionStart, selectionEnd } = box;
+    if (value.length - (selectionEnd - selectionStart) + pasted.length > MAX_COMPOSER_CHARS) {
+      event.preventDefault();
+      setNote(t("This paste exceeds the message limit. Your draft was kept. Paste a smaller section or attach the text as a file."));
+      return;
+    }
+    // Allow the browser to record in-field paste in its native undo history.
+    if (!redirect) return;
+    event.preventDefault();
+    setNote(null);
+    setTextAndCaret(value.slice(0, selectionStart) + pasted + value.slice(selectionEnd), selectionStart + pasted.length);
+  }, [pasteFiles, setTextAndCaret, t]);
+
+  // Redirect an actual paste while keeping editable controls and modal input independent.
   useEffect(() => {
     if (!active) return;
     const pasteIntoDraft = (event: globalThis.ClipboardEvent) => {
@@ -842,23 +862,11 @@ export function Composer({
       const target = event.target;
       if (!box || !box.getClientRects().length || event.defaultPrevented || !event.clipboardData || modalOpen() ||
           !(target instanceof Element) || target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='textbox'], [role='menu'], [role='listbox'], [role='dialog']")) return;
-      if (event.clipboardData.files.length) {
-        pasteFiles({ clipboardData: event.clipboardData, preventDefault: () => event.preventDefault() });
-        box.focus({ preventScroll: true });
-        return;
-      }
-      const pasted = event.clipboardData.getData("text/plain").replace(/\r\n?/g, "\n");
-      if (!pasted) return;
-      const old = box.value;
-      const { selectionStart, selectionEnd } = box;
-      const inserted = pasted.slice(0, MAX_COMPOSER_CHARS - old.length + selectionEnd - selectionStart);
-      event.preventDefault();
-      setNote(null);
-      setTextAndCaret(old.slice(0, selectionStart) + inserted + old.slice(selectionEnd), selectionStart + inserted.length);
+      pasteText({ clipboardData: event.clipboardData, preventDefault: () => event.preventDefault() }, box, true);
     };
     document.addEventListener("paste", pasteIntoDraft);
     return () => document.removeEventListener("paste", pasteIntoDraft);
-  }, [active, pasteFiles, setTextAndCaret]);
+  }, [active, pasteText]);
 
   const onDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
@@ -1025,7 +1033,7 @@ export function Composer({
           // stays editable while the socket reconnects (sending waits for it): a phone's
           // dictation keyboard opens its own app and comes back, the socket may drop meanwhile,
           // and a disabled box would lose its focus and the dictated text with it
-          onPaste={pasteFiles}
+          onPaste={(event) => pasteText(event, event.currentTarget, false)}
           onKeyDown={onKeyDown}
           onClick={(event) => {
             setCaret(event.currentTarget.selectionStart);

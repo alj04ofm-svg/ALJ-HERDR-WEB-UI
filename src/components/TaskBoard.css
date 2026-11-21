@@ -122,6 +122,9 @@
 .task-search { flex: 1; min-width: 0; max-width: 21rem; margin-inline-start: auto; position: relative; }
 .task-search svg { position: absolute; inset-inline-start: var(--space-3); inset-block-start: 50%; transform: translateY(-50%); color: var(--text-dim); pointer-events: none; }
 .task-search input { padding-inline-start: calc(var(--space-3) + 20px); }
+.task-active-filters { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-2) var(--task-edge) 0; }
+.task-active-filters .btn { border-radius: var(--radius-pill); font-size: var(--fs-xs); }
+.task-active-filters svg { width: 13px; height: 13px; }
 .task-lens {
   display: flex;
   align-items: baseline;
@@ -214,6 +217,13 @@
 .task-editor-fields :is(.input, .select) { width: 100%; min-width: 0; }
 .task-notes-field textarea { min-height: 106px; padding: var(--space-2) var(--space-3); line-height: var(--lh-base); resize: vertical; }
 .task-editor-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-2); }
+.task-compare { padding: var(--space-2); border: var(--hairline) solid var(--border-strong); border-radius: var(--radius-md); }
+.task-compare summary { cursor: pointer; color: var(--text-strong); padding: var(--space-2); }
+.task-compare dl { display: grid; gap: var(--space-3); margin: var(--space-2); }
+.task-compare dl > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.task-compare dt { grid-column: 1 / -1; font-weight: var(--fw-semibold); }
+.task-compare dd { margin: 0; font-size: var(--fs-xs); }
+.task-compare p { max-height: 8rem; overflow: auto; margin: var(--space-1) 0 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-dim); }
 .task-editor-footer { display: flex; justify-content: flex-end; align-items: center; gap: var(--space-2); flex: none; padding: var(--space-3) var(--task-edge); border-top: var(--hairline) solid var(--border); }
 .task-editor-footer .btn-ghost { margin-inline-end: auto; }
 .task-checklist { min-width: 0; margin: 0; padding: 0; border: 0; }

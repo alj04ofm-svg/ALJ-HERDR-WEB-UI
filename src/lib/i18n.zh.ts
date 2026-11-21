@@ -1326,4 +1326,5 @@ export const ZH: Record<string, string> = {
   "Microphone access confirmed": "已确认可以访问麦克风",
   "Could not access the microphone": "无法访问麦克风",
   "Browser dictation is unavailable. Add an OpenAI API key to transcribe.": "浏览器听写不可用。请添加 OpenAI API 密钥以转写音频。",
+  "This paste exceeds the message limit. Your draft was kept. Paste a smaller section or attach the text as a file.": "粘贴内容超出消息长度限制。草稿已保留。请粘贴较短的内容，或将文本作为文件附加。",
 };

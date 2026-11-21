@@ -9,6 +9,8 @@ const messages = [
     "If time halves, what still ships?",
     "Make room for the work that compounds.",
     "Name one thing to leave until tomorrow.",
+    "What can you finish before lunch?",
+    "Pick the work only you can do.",
   ],
   [ // Agent collaboration
     "Give your agent a failing example.",
@@ -19,6 +21,8 @@ const messages = [
     "Describe the user outcome first.",
     "Hand off the diff, the test and the risk.",
     "Ask what would disprove its answer.",
+    "Ask for one risk that remains.",
+    "Give your agent a narrow test case.",
   ],
   [ // Energy and grounding
     "Rest before your attention runs out.",
@@ -29,6 +33,8 @@ const messages = [
     "A pause can give you your judgment back.",
     "Give your shoulders a moment to relax.",
     "Do the demanding work while you feel fresh.",
+    "Put a real break on the calendar.",
+    "Set a pace you can keep tomorrow.",
   ],
   [ // Quality and delivery
     "Try the empty state with a real user.",
@@ -39,6 +45,8 @@ const messages = [
     "Make the first run as good as the tenth.",
     "See what a slow connection reveals.",
     "Verify the build people actually use.",
+    "Test recovery after a failed save.",
+    "Check the smallest supported screen.",
   ],
   [ // Momentum
     "Finish one small promise to yourself.",
@@ -49,6 +57,8 @@ const messages = [
     "You can start again from right here.",
     "Clear one blocker and call that progress.",
     "Close a loop before opening another.",
+    "Start with the part you can verify.",
+    "Choose one unfinished thing to close.",
   ],
   [ // Communication
     "Make the next decision easy to find.",
@@ -59,6 +69,8 @@ const messages = [
     "Ask what someone needs to move forward.",
     "Write the handoff before you forget.",
     "When unsure, ask a specific question.",
+    "Write the decision beside the reason.",
+    "Link to the work so others can verify it.",
   ],
   [ // Creative thinking
     "What would make this delightful once?",
@@ -69,6 +81,8 @@ const messages = [
     "Ask which constraint is actually fixed.",
     "Fix the part that makes you hesitate.",
     "Compare two real examples side by side.",
+    "Sketch the flow before adding a control.",
+    "Try the idea on the narrowest screen.",
   ],
   [ // Focus habits
     "Put the stray idea on paper and return.",
@@ -79,6 +93,8 @@ const messages = [
     "Check messages after the next milestone.",
     "Write the question you're answering.",
     "Set a checkpoint you can verify.",
+    "Name the file before opening another tab.",
+    "Save the next action before taking a break.",
   ],
   [ // Reflection
     "What moved forward since yesterday?",
@@ -89,12 +105,17 @@ const messages = [
     "Keep the shortcut that really helped.",
     "What would you do differently tomorrow?",
     "Leave one clear place to start next time.",
+    "What became easier because of this work?",
+    "Record one cue that helped you focus.",
   ],
 ] as const;
 
 export function harborBanner(day: number, pass: number): string {
-  const topic = (day + pass) % messages.length;
+  const flyoverInterval = 17;
+  if (pass % flyoverInterval === flyoverInterval - 1) return "ALJ";
+  const messagePass = pass - Math.floor(pass / flyoverInterval);
+  const topic = (day + messagePass) % messages.length;
   const options = messages[topic]!;
-  const round = Math.floor(pass / messages.length);
+  const round = Math.floor(messagePass / messages.length);
   return options[(day * 3 + topic + round) % options.length]!;
 }
