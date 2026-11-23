@@ -43,6 +43,8 @@ export function DevicesPanel({ pairUrl, auth, onPaired }: DevicesPanelProps) {
   const t = useT();
   const [devices, setDevices] = useState<PairedDevice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
+  const [pairing, setPairing] = useState(false);
   /** the demo, or an older server: there is no device list here */
   const [unavailable, setUnavailable] = useState(false);
   const [code, setCode] = useState<PairingCode | null>(null);
@@ -52,51 +54,92 @@ export function DevicesPanel({ pairUrl, auth, onPaired }: DevicesPanelProps) {
   const [justPaired, setJustPaired] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const linkRef = useRef<HTMLAnchorElement>(null);
-  const known = useRef(new Set<string>());
+  const known = useRef<Set<string> | null>(null);
+  const issued = useRef<PairingCode | null>(null);
+  const pairCodeFocus = useRef<HTMLParagraphElement>(null);
+  const pairCard = useRef<HTMLDivElement>(null);
+  const pairButton = useRef<HTMLButtonElement>(null);
+  const restorePairFocus = useRef(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (watch = issued.current) => {
     try {
       const list = await fetchDevices();
-      setDevices(list);
-      setError(null);
-      // a device that appeared while a code was out just paired with it
-      const fresh = list.filter((d) => !known.current.has(d.id));
-      if (known.current.size > 0 || list.length === 0) for (const d of fresh) { setJustPaired(d.label); setCode(null); }
+      if (watch && issued.current !== watch) return;
+      const previous = known.current;
       known.current = new Set(list.map((d) => d.id));
+      setDevices(list);
+      setListError(null);
+      setUnavailable(false);
+      if (watch && previous) {
+        const fresh = list.find((d) => !previous.has(d.id));
+        if (fresh) {
+          restorePairFocus.current = Boolean(pairCard.current?.contains(document.activeElement));
+          setJustPaired(fresh.label);
+          issued.current = null;
+          setCode(null);
+        }
+      }
     } catch (e) {
-      setDevices([]);
+      if (watch && issued.current !== watch) return;
       if (e instanceof ApiError && e.status === 404) setUnavailable(true);
-      setError(e instanceof ApiError && e.status === 404 ? t("Devices are managed on a real server.") : e instanceof Error ? e.message : String(e));
+      setListError(e instanceof ApiError && e.status === 404 ? t("Devices are managed on a real server.") : e instanceof Error ? e.message : String(e));
     }
   }, [t]);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (code) pairCodeFocus.current?.focus();
+    else if (restorePairFocus.current) {
+      restorePairFocus.current = false;
+      pairButton.current?.focus();
+    }
+  }, [code]);
 
   // while a code is out: count it down, and watch for the device it lets in
   useEffect(() => {
     if (code === null) return;
     const tick = () => {
       const ms = Date.parse(code.expires_at) - Date.now();
-      if (ms <= 0) { setCode(null); return; }
+      if (ms <= 0) {
+        restorePairFocus.current = Boolean(pairCard.current?.contains(document.activeElement));
+        issued.current = null;
+        setCode(null);
+        setError(t("The pairing code expired. Get a new code to connect your device."));
+        return;
+      }
       setLeft(`${Math.floor(ms / 60_000)}:${String(Math.floor((ms % 60_000) / 1000)).padStart(2, "0")}`);
     };
     tick();
     const timer = window.setInterval(tick, 1000);
-    const poll = window.setInterval(() => void load(), POLL_MS);
-    return () => { window.clearInterval(timer); window.clearInterval(poll); };
+    let stopped = false;
+    let poll: number;
+    const pollDevices = async () => {
+      await load(code);
+      if (!stopped) poll = window.setTimeout(() => void pollDevices(), POLL_MS);
+    };
+    poll = window.setTimeout(() => void pollDevices(), POLL_MS);
+    return () => { stopped = true; window.clearInterval(timer); window.clearTimeout(poll); };
   }, [code, load]);
 
-  const pair = async () => {
+  const pair = async (self = false) => {
+    if (pairing) return;
+    setPairing(true);
     setJustPaired(null);
-    try { setCode(await startPairing()); setError(null); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-  };
-  /** an "open" browser pairs itself: a code, used at once, so the gate closes to everyone else */
-  const pairSelf = async () => {
+    setError(null);
+    setLinkCopied(false);
     try {
       const fresh = await startPairing();
-      await pairDevice(fresh.code, deviceLabel(navigator.userAgent, navigator.maxTouchPoints ?? 0));
-      await load();
-      onPaired?.();
+      if (self) {
+        await pairDevice(fresh.code, deviceLabel(navigator.userAgent, navigator.maxTouchPoints ?? 0));
+        issued.current = null;
+        setCode(null);
+        await load();
+        onPaired?.();
+      } else {
+        issued.current = fresh;
+        setCode(fresh);
+      }
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setPairing(false); }
   };
   const rename = async () => {
     if (!renaming) return;
@@ -109,14 +152,51 @@ export function DevicesPanel({ pairUrl, auth, onPaired }: DevicesPanelProps) {
   };
 
   const spaced = code ? `${code.code.slice(0, 3)} ${code.code.slice(3)}` : "";
-  const qrValue = code && pairUrl ? `${pairUrl.replace(/\/$/, "")}/?pair=${code.code}` : null;
+  const qrValue = code && pairUrl ? `${pairUrl.replace(/\/$/, "")}/#pair=${code.code}` : null;
 
   return (
     <div className="devices-panel">
+      {justPaired !== null && <p className="settings-hint" role="status">{t("Paired: {name}.", { name: justPaired })}</p>}
+      {code === null ? (
+        <div className="devices-pair-start">
+          <div>
+            <p className="settings-label">{t("Connect your phone")}</p>
+            <p className="settings-description">{t("Get a six-digit code to sign in on another device.")}</p>
+          </div>
+          <button ref={pairButton} type="button" className="btn btn-primary" onClick={() => void pair()} disabled={unavailable || devices === null || pairing}>{t(pairing ? "Loading…" : "Pair a device")}</button>
+        </div>
+      ) : (
+        <div className="devices-pairing" ref={pairCard}>
+          <div className="devices-pair-details">
+            <p className="settings-label">{t("On the other device, enter this code")}</p>
+            <p ref={pairCodeFocus} tabIndex={-1} className="devices-code">{spaced}</p>
+            <p className="settings-description">
+              {t(qrValue !== null ? "Or scan the QR code: it opens the app with the code filled in." : "Open the app's address on that device and enter it.")}
+              {left && <> {t("Expires in {time}.", { time: left })}</>}
+            </p>
+            {qrValue !== null && (
+              <p className="devices-link">
+                <span className="settings-description">{t("Or send this link to it:")}</span>
+                <a ref={linkRef} href={qrValue}>{t("Pairing link")}</a>
+                <button type="button" className="btn btn-ghost" onClick={() => void copyText(qrValue, linkRef.current).then((ok) => { if (ok) { setLinkCopied(true); window.setTimeout(() => setLinkCopied(false), 1600); } })}>{t(linkCopied ? "Copied" : "Copy")}</button>
+              </p>
+            )}
+            <div className="phone-actions">
+              <button type="button" className="btn" disabled={pairing} onClick={() => void pair()}><RefreshCw aria-hidden="true" />{t("New code")}</button>
+              <button type="button" className="btn btn-ghost" disabled={pairing} onClick={() => { issued.current = null; restorePairFocus.current = true; setCode(null); }}>{t("Done")}</button>
+            </div>
+          </div>
+          {qrValue !== null && <QrCode value={qrValue} label={t("Scan to pair this device")} />}
+        </div>
+      )}
       {auth?.via !== undefined && <p className={auth.via === "open" ? "settings-hint devices-open" : "settings-description"}>{t(VIA[auth.via])}</p>}
-      {auth?.via === "open" && <div className="phone-actions"><button type="button" className="btn btn-primary" onClick={() => void pairSelf()}>{t("Pair this device now")}</button></div>}
+      {auth?.via === "open" && <div className="phone-actions"><button type="button" className="btn btn-primary" disabled={pairing} onClick={() => void pair(true)}>{t("Pair this device now")}</button></div>}
       <p className="settings-description">{t("A paired device gets in on its own, from anywhere it can reach this server, until you revoke it here. A code comes from this screen on the PC or on a device already paired, or from the pair command in the PC's terminal.")}</p>
-      {devices === null ? <p className="settings-hint" role="status">{t("Loading…")}</p> : devices.length === 0 ? (
+      {listError && <div className="devices-load-error" role="status">
+        <p className="settings-hint">{listError}</p>
+        {!unavailable && <button type="button" className="btn" onClick={() => void load()}>{t("Retry")}</button>}
+      </div>}
+      {devices === null ? listError === null && <p className="settings-hint" role="status">{t("Loading…")}</p> : devices.length === 0 ? (
         <p className="settings-hint">{t("No devices paired yet.")}</p>
       ) : (
         <ul className="devices-list">
@@ -145,32 +225,6 @@ export function DevicesPanel({ pairUrl, auth, onPaired }: DevicesPanelProps) {
             </li>
           ))}
         </ul>
-      )}
-      {justPaired !== null && <p className="settings-hint" role="status">{t("Paired: {name}.", { name: justPaired })}</p>}
-      {code === null ? (
-        <div className="phone-actions"><button type="button" className="btn btn-primary" onClick={() => void pair()} disabled={unavailable}>{t("Pair a device")}</button></div>
-      ) : (
-        <div className="devices-pairing" role="status">
-          {qrValue !== null && <QrCode value={qrValue} label={t("QR code that pairs a phone with code {code}", { code: code.code })} />}
-          <div>
-            <p className="settings-label">{t("On the other device, enter this code")}</p>
-            <p className="devices-code">{spaced}</p>
-            <p className="settings-description">
-              {t(qrValue !== null ? "Or scan the QR code: it opens the app with the code filled in." : "Open the app's address on that device and enter it.")} {t("Expires in {time}.", { time: left })}
-            </p>
-            {qrValue !== null && (
-              <p className="devices-link">
-                <span className="settings-description">{t("Or send this link to it:")}</span>
-                <a ref={linkRef} href={qrValue}>{qrValue}</a>
-                <button type="button" className="btn btn-ghost" onClick={() => void copyText(qrValue, linkRef.current).then((ok) => { if (ok) { setLinkCopied(true); window.setTimeout(() => setLinkCopied(false), 1600); } })}>{t(linkCopied ? "Copied" : "Copy")}</button>
-              </p>
-            )}
-            <div className="phone-actions">
-              <button type="button" className="btn" onClick={() => void pair()}><RefreshCw aria-hidden="true" />{t("New code")}</button>
-              <button type="button" className="btn btn-ghost" onClick={() => setCode(null)}>{t("Done")}</button>
-            </div>
-          </div>
-        </div>
       )}
       {error !== null && <p className="settings-hint" role="alert">{error}</p>}
     </div>

@@ -215,7 +215,7 @@ export function App() {
   // the WebSocket, never mounts before that is known
   const [locked, setLocked] = useState<boolean | null>(null);
   const [lockReason, setLockReason] = useState<AccessRefusal | null>(null);
-  /** the code a scanned QR brought along (`?pair=CODE`), taken off the address at once */
+  /** the code a scanned QR brought along (URL fragment), taken off the address at once */
   const [pairCode] = useState(() => takePairCode());
   const [auth, setAuth] = useState<HealthAuth | null>(null);
   const canSignOut = auth?.authenticated === true && (auth.via === "token" || auth.via === "device");

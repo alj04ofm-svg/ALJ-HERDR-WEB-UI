@@ -44,14 +44,20 @@ export function deviceLabel(userAgent: string, maxTouchPoints = 0): string {
   return browser ? `${device} · ${browser}` : device;
 }
 
-/** The `?pair=CODE` a QR code carries, taken off the address at once so it stays out of history and referrers. */
+/** Pairing QR codes keep the code in the fragment, outside the HTTP request. Read older links too. */
 export function takePairCode(): string {
   if (typeof window === "undefined") return "";
   const url = new URL(window.location.href);
-  const code = url.searchParams.get("pair") ?? "";
-  if (code !== "") {
+  const fragment = new URLSearchParams(url.hash.slice(1));
+  const fragmentCode = fragment.get("pair");
+  const queryCode = url.searchParams.get("pair");
+  if (fragmentCode !== null || queryCode !== null) {
+    if (fragmentCode !== null) {
+      fragment.delete("pair");
+      url.hash = fragment.toString();
+    }
     url.searchParams.delete("pair");
     window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
   }
-  return code.replace(/\D/g, "").slice(0, 6);
+  return (fragmentCode ?? queryCode ?? "").replace(/\D/g, "").slice(0, 6);
 }

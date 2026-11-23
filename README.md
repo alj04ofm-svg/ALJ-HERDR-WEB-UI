@@ -33,6 +33,8 @@ Open [http://127.0.0.1:7317](http://127.0.0.1:7317) and choose **New workspace**
 
 This repository contains source code and bundled artwork. Each installation connects to the owner's own herdr session through its local bridge. The server listens on loopback by default, and anonymous install and update telemetry is off by default in this edition. For access from another device, use a private tunnel or configure authentication before exposing the bridge. [Access and safety](docs/guide.md#access-and-safety)
 
+Share the GitHub repository link so friends can run their own instance. A pairing code, pairing QR, or pairing link grants access to the instance that issued it. Keep those private and use mock data in screenshots and logs.
+
 Task data is saved in your connection server’s state directory and shared among the interact devices paired to that instance. Use a separate instance and state directory per owner. If you choose **Organize with Codex**, the draft note is sent to Codex using the host’s existing ChatGPT sign-in. Regular task editing and plain drafts need no AI provider.
 
 ## Update

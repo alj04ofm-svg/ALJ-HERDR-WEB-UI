@@ -73,12 +73,14 @@ function Plan({ plan, loading, onRefresh }: PhonePanelProps) {
 }
 
 function Address({ url, title }: { url: string; title: string }) {
+  const t = useT();
   return (
     <div className="phone-address">
       <QrCode value={url} label={`QR code: ${url}`} />
       <div>
         <p className="settings-label">{title}</p>
         <p className="phone-url"><a href={url} target="_blank" rel="noreferrer">{url}</a></p>
+        <p className="settings-description">{t("This QR opens the app. For a pairing code, use Pair a device in Devices.")}</p>
       </div>
     </div>
   );
@@ -103,5 +105,5 @@ function Command({ command }: { command: string }) {
 
 function Sharing() {
   const t = useT();
-  return <p className="settings-hint">{t("Your own Tailscale devices get in as you; with an access token set, each asks for it once. Anyone else's device, or a LAN or public address, needs pairing: Devices, below.")} <a href={README_SAFETY} target="_blank" rel="noreferrer">{t("Access and safety")}</a></p>;
+  return <p className="settings-hint">{t("Your own Tailscale devices get in as you; with an access token set, each asks for it once. Anyone else's device, or a LAN or public address, needs a code from Devices.")} <a href={README_SAFETY} target="_blank" rel="noreferrer">{t("Access and safety")}</a></p>;
 }

@@ -669,6 +669,9 @@ function DevicesPage({ auth }: { auth: HealthAuth | null }) {
   const pairUrl = plan.kind === "here" || plan.kind === "served" ? plan.url : isLoopbackHost(window.location.hostname) ? null : window.location.origin;
   return (
     <>
+      <SettingsGroup title={t("Devices")} section="devices">
+        <div className="settings-item"><DevicesPanel pairUrl={pairUrl} auth={auth} /></div>
+      </SettingsGroup>
       <SettingsGroup title={t("Phone")} section="phone">
         <div className="settings-item"><PhonePanel plan={plan} loading={access === undefined} onRefresh={loadAccess} /></div>
         <SettingsRow label={t("Keep screen on")} description={t("While a terminal or chat pane is open. Requires HTTPS or localhost and a supported browser.")}>
@@ -679,9 +682,6 @@ function DevicesPage({ auth }: { auth: HealthAuth | null }) {
         </SettingsRow>
       </SettingsGroup>
 
-      <SettingsGroup title={t("Devices")} section="devices">
-        <div className="settings-item"><DevicesPanel pairUrl={pairUrl} auth={auth} /></div>
-      </SettingsGroup>
     </>
   );
 }
