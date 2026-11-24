@@ -60,6 +60,7 @@ export function TaskCapture({ note, onNote, onClose, onDraft, projects, project,
   }
 
   function plainDraft() {
+    controller.current?.abort();
     const [first = "", ...rest] = note.trim().split("\n");
     onDraft({ title: first.slice(0, 240), notes: [first.slice(240), ...rest].filter(Boolean).join("\n") });
   }
@@ -79,7 +80,7 @@ export function TaskCapture({ note, onNote, onClose, onDraft, projects, project,
     <div className="task-capture-actions">
       {voice.available && <button type="button" className="icon-button" disabled={busy || voice.state === "transcribing"} aria-label={voice.state === "recording" ? "Finish dictation" : "Dictate task"} onClick={voice.press}>{voice.state === "recording" ? <Square /> : <AudioLines />}</button>}
       {voice.state !== "idle" && <small role="status">{voice.state === "recording" ? "Recording…" : voice.state === "transcribing" ? "Transcribing…" : "Opening mic…"}</small>}
-      <button type="button" className="btn" disabled={!ready || busy || voice.state !== "idle" || !note.trim()} onClick={plainDraft}>Draft <ArrowRight aria-hidden="true" /></button>
+      <button type="button" className="btn" disabled={!ready || voice.state !== "idle" || !note.trim()} onClick={plainDraft}>{busy ? "Use manual draft" : "Draft"} <ArrowRight aria-hidden="true" /></button>
       {configured && <button type="button" className="btn btn-primary" disabled={!ready || busy || voice.state !== "idle" || !note.trim()} onClick={() => void organize()}>{busy ? "Organizing…" : "Organize with Codex"}</button>}
     </div>
   </section>;

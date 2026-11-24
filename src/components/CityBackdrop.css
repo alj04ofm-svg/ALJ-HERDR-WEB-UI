@@ -77,6 +77,18 @@
 [data-theme="light"] .city-veil {
   background: linear-gradient(var(--bg) 15%, color-mix(in srgb, var(--bg) 78%, transparent) 64%, color-mix(in srgb, var(--bg) 64%, transparent));
 }
+.app:has(.chat-view .chat-turn) .city-veil::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 56% 35%, color-mix(in srgb, var(--bg) 22%, transparent), transparent 68%);
+}
+.app:has(.chat-view .chat-turn) .city-plane {
+  filter: opacity(.45);
+}
+.app:has(.composer-text:focus:not(:placeholder-shown)) .city-plane {
+  visibility: hidden;
+}
 .city-site-clock {
   position: absolute;
   inset: 42% 0 var(--city-quay);
@@ -379,10 +391,10 @@
 }
 .is-animated .city-river .city-docked-yacht {
   left: var(--city-berth);
-  animation: city-yacht-docking 96s steps(720) -24s infinite;
+  animation: city-yacht-docking 96s steps(720) var(--west-berth-offset) infinite;
 }
 .is-animated .city-river .city-docked-yacht::after {
-  animation: city-berth-wake 96s steps(270) -24s infinite;
+  animation: city-berth-wake 96s steps(270) var(--west-berth-offset) infinite;
 }
 .city-guest-yacht {
   --city-channel: 17%;
@@ -391,7 +403,7 @@
 }
 .city-guest-yacht::before { filter: sepia(.28) drop-shadow(0 2px 2px var(--bg)); }
 .is-animated .city-river .city-guest-yacht,
-.is-animated .city-river .city-guest-yacht::after { animation-duration: 109s; animation-delay: -31s; }
+.is-animated .city-river .city-guest-yacht::after { animation-duration: 109s; animation-delay: var(--east-berth-offset); }
 @keyframes city-yacht-docking {
   0%, 100% { transform: translate(0, 0); }
   0%, 48%, 100% { scale: 1 1; }
@@ -401,6 +413,7 @@
   35% { transform: translate(7cqw, 3cqh) rotate(4deg); }
   48%, 52% { transform: translate(88cqw, 10cqh); }
   70% { transform: translate(45cqw, 8cqh); }
+  79% { transform: translate(13cqw, 4cqh) rotate(-1deg); }
   82% { transform: translate(6cqw, 2cqh) rotate(-3deg); }
   87%, 93% { transform: translate(0, 0); }
 }

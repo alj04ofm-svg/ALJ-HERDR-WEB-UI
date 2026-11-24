@@ -80,7 +80,7 @@ export interface ComposerProps {
   restored?: string | null;
   /** an empty chat's greeting: it stands over the composer's column and takes no row of its own */
   greeting?: ReactNode;
-  hasPendingMessages?: boolean;
+  pendingTarget?: string;
   /** true: sent, clear the box; a string: keep the text and say why; a DraftRefusal: the same, and the
    * note offers to send again with `clearDraft`, which clears that draft from the terminal first; a
    * promise settles to any of them */
@@ -248,7 +248,7 @@ export function Composer({
   suggestion = null,
   restored = null,
   greeting = null,
-  hasPendingMessages = false,
+  pendingTarget,
   onSend,
   onAbort,
   onUploadImage,
@@ -915,8 +915,7 @@ export function Composer({
     : text.trim() ? composerDrafts.isUnsaved(draftKey)
       ? { text: t("Draft kept in this tab"), icon: TriangleAlert }
       : { text: t("Draft saved on this device"), icon: FileCheck2 }
-    : delivery === "sent" ? { text: t("Sent to terminal"), icon: Send }
-    : delivery === "pending" && hasPendingMessages ? { text: t("Check pending messages above"), icon: Clock3 } : null;
+    : delivery === "sent" ? { text: t("Sent to terminal"), icon: Send } : null;
   const menuId = `composer-menu-${paneId}`;
   // the arrow keys move the selection, not the focus (it stays in the box), so the browser does not scroll to it
   useEffect(() => {
@@ -1107,7 +1106,7 @@ export function Composer({
             <Plus aria-hidden="true" />
           </button>
           {taskBoard && <button type="button" className="icon-button composer-capture" aria-label={t("Quick task capture")} title={t("Quick task capture")}
-            aria-haspopup="dialog" onClick={() => taskBoard.show("capture")}><ClipboardPlus aria-hidden="true" /></button>}
+            aria-haspopup="dialog" data-labeled={cardWidth >= 620 || undefined} onClick={() => taskBoard.show("capture")}><ClipboardPlus aria-hidden="true" />{cardWidth >= 620 && <span>{t("Tasks")}</span>}</button>}
           <details className="composer-tools" onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
             <summary className="icon-button" aria-label={t("More composer tools")} title={t("More composer tools")}><Ellipsis aria-hidden="true" /></summary>
             <div className="composer-tools-panel">
@@ -1159,7 +1158,7 @@ export function Composer({
               {agent && <AgentMark agent={agent} size={14} />}
               {modelShown && <ModelControl key={`${machineId}:${paneId}`} paneId={paneId} agent={agent} metadata={metadata} connected={connected} onOpenTerminal={onOpenTerminal} />}
               {metadata?.context && <ContextRing context={metadata.context} shown={contextShown} readOnly={mobile} onToggle={() => setContextShown((open) => !open)} />}
-              {onShowUsage && usage !== undefined && usage.problem === null && usageLimit !== undefined && <button
+              {onShowUsage && usage !== undefined && usageLimit !== undefined && <button
                 type="button" aria-haspopup="dialog" onClick={onShowUsage}
                 className={`composer-usage${usageLimit.used_percent >= HIGH_PERCENT ? " is-high" : ""}${usage.problem ? " has-problem" : ""}`}
                 title={`${usageName(usage)}\n${usageDetail}`}
@@ -1202,7 +1201,15 @@ export function Composer({
             </button>
           )}
         </div>
-        <div className="composer-delivery" role="status">{receipt && <><receipt.icon aria-hidden="true" /><span>{receipt.text}</span></>}</div>
+        <div className="composer-delivery" role="status">{receipt ? <><receipt.icon aria-hidden="true" /><span>{receipt.text}</span></> : pendingTarget && (
+          <a href={`#${pendingTarget}`} onClick={event => {
+            const list = document.getElementById(pendingTarget);
+            if (!list) return;
+            event.preventDefault();
+            list.focus({ preventScroll: true });
+            list.scrollIntoView({ block: "nearest" });
+          }}><Clock3 aria-hidden="true" />{t("Queued messages")}</a>
+        )}</div>
       </div>
       {/* said while typing, before the send: after it the browser is already open and the reader is
           already in the state the words describe. Not a block — the text still goes, and pi runs the

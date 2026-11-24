@@ -1,6 +1,7 @@
 /** Native workspace tabs, pointer and keyboard reordering, and per-tab actions. */
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Ellipsis, Folder, FolderMinus, FolderPlus, Pencil, Plus, Terminal, X } from "lucide-react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { createPortal } from "react-dom";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Ellipsis, Folder, FolderMinus, FolderPlus, Pencil, Plus, Search, Terminal, X } from "lucide-react";
 
 import "./TabStrip.css";
 
@@ -16,6 +17,9 @@ import { SOLO_PANE_QUERY } from "../lib/paneCanvas.ts";
 import { rosterPanes } from "../lib/dagPane.ts";
 import { useMachineApi, useMachineId } from "../lib/machineContext.tsx";
 import { useMediaQuery } from "../lib/useMediaQuery.ts";
+import { useFocusTrap } from "../lib/useFocusTrap.ts";
+import { usePhoneSheetBack } from "../lib/sheetHistory.ts";
+import { useSheetSwipe } from "../lib/sheets.ts";
 import { useTabReorder } from "../lib/useTabReorder.ts";
 import { moveSidebarRow, saveSidebarLayout, sidebarRowKey, useSidebarLayout } from "../lib/sidebarLayout.ts";
 import { paneStatus, rollupStatus } from "../lib/status.ts";
@@ -29,6 +33,46 @@ const said = (reason: unknown): string => reason instanceof ApiError ? reason.de
 
 /** the pane each tab was last seen on, per PC: a tab clicked again opens where it was left */
 const lastViewed = new Map<string, string>();
+
+function TabSearch({ items, workspace, close }: { items: RowMenuItem[]; workspace: string; close(): void }) {
+  const t = useT();
+  const title = useId();
+  const field = useRef<HTMLInputElement>(null);
+  const surface = useFocusTrap<HTMLDivElement>(true, { initialFocus: field });
+  const [query, setQuery] = useState("");
+  usePhoneSheetBack(close);
+  useSheetSwipe(surface, close);
+  const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const results = items.filter(item => {
+    const text = `${item.label} ${item.hint ?? ""}`.toLocaleLowerCase();
+    return words.every(word => text.includes(word));
+  });
+  return createPortal(<div className="modal-scrim" onClick={event => { if (event.target === event.currentTarget) close(); }}>
+    <div className="modal tab-search" ref={surface} role="dialog" aria-modal="true" aria-labelledby={title} tabIndex={-1}
+      onKeyDown={event => {
+        if (event.nativeEvent.isComposing) return;
+        if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(); }
+        if (event.key === "ArrowDown" && event.target === field.current) {
+          event.preventDefault();
+          surface.current?.querySelector<HTMLButtonElement>(".tab-search-result")?.focus();
+        }
+      }}>
+      <header><div><h2 id={title}>{t("All tabs")}</h2><p>{workspace}</p></div>
+        <button type="button" className="icon-button" aria-label={t("Close")} onClick={close}><X aria-hidden="true" /></button></header>
+      <form className="tab-search-field" onSubmit={event => { event.preventDefault(); if (results[0]) { close(); results[0].run(); } }}>
+        <Search aria-hidden="true" /><input ref={field} className="input" type="search" aria-label={t("Search tabs")} placeholder={t("Search tabs")} value={query} onChange={event => setQuery(event.target.value)} />
+      </form>
+      <div className="tab-search-results">
+        {results.length === 0 && <p role="status">{t("No matching tabs")}</p>}
+        {results.map(item => <button type="button" key={item.id} className="tab-search-result btn"
+          aria-current={item.current ? "true" : undefined} onClick={() => { close(); item.run(); }}>
+          <item.icon aria-hidden="true" /><span><strong>{item.label}</strong>{item.hint && <small>{item.hint}</small>}</span>
+          {item.current && <Check aria-hidden="true" />}
+        </button>)}
+      </div>
+    </div>
+  </div>, document.body);
+}
 
 export interface TabStripProps {
   snapshot: SessionSnapshot;
@@ -57,7 +101,8 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
   const cramped = useMediaQuery("(max-width: 768px) and (max-height: 600px)");
   const strip = useRef<HTMLDivElement>(null);
   const [picker, setPicker] = useState<{ anchor: HTMLElement; tab: HerdrTab; point?: { x: number; y: number }; previousFocus: HTMLElement | null; touch: boolean } | null>(null);
-  const [switcher, setSwitcher] = useState<HTMLElement | null>(null);
+  const [switcher, setSwitcher] = useState(false);
+  const closeSwitcher = () => setSwitcher(false);
   const [grouping, setGrouping] = useState(false);
   const sidebarLayout = useSidebarLayout();
   const [editing, setEditing] = useState<{ tabId: string; value: string } | null>(null);
@@ -83,7 +128,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
     if (previousOwner.current === owner) return;
     previousOwner.current = owner;
     // Native IDs can repeat on another PC. A pending dialog never changes its target PC.
-    setPicker(null); setSwitcher(null); setGrouping(false); setEditing(null); setConfirm(null); setSent(null); setError(null);
+    setPicker(null); setSwitcher(false); setGrouping(false); setEditing(null); setConfirm(null); setSent(null); setError(null);
     refocus.current = null; closed.current = null;
   }, [owner]);
   const panes = rosterPanes(snapshot.panes.filter((pane) => pane.workspace_id === workspace.workspace_id), selectedPane.pane_id);
@@ -307,7 +352,7 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
     const context = event.type === "contextmenu";
     const anchor = event.currentTarget;
     const tabButton = anchor.parentElement?.querySelector<HTMLElement>('[role="tab"]') ?? null;
-    setSwitcher(null);
+    setSwitcher(false);
     setGrouping(false);
     setPicker(!context && picker?.tab.tab_id === tab.tab_id ? null : { anchor, tab,
       point: context && (event.clientX !== 0 || event.clientY !== 0) ? { x: event.clientX, y: event.clientY } : undefined,
@@ -473,15 +518,20 @@ export function TabStrip({ snapshot, workspace, selectedPane, onSelectPane, onNe
         {showClosing && !confirm && <span className="tab-strip-progress" role="status">{t("Closing tab…")}</span>}
       </div>
       <button type="button" className="tab-strip-switch icon-button" aria-label={t("All tabs")} title={t("All tabs")}
-        aria-haspopup="menu" aria-expanded={switcher !== null}
-        onClick={event => { setPicker(null); setSwitcher(switcher ? null : event.currentTarget); }}><ChevronDown aria-hidden="true" /></button>
+        aria-haspopup="dialog" aria-expanded={switcher}
+        onClick={() => { setPicker(null); setSwitcher(true); }}><ChevronDown aria-hidden="true" /></button>
       </div>
-      {switcher && <RowMenu anchor={switcher} title={t("Tabs")} subtitle={workspace.label} variant="actions"
-        onClose={() => setSwitcher(null)} items={tabsInGroupOrder().map(({ tab, divider }): RowMenuItem => ({
-          divider, id: tab.tab_id, label: nameOf(tab), icon: Terminal, current: tab.tab_id === selectedPane.tab_id,
-          hint: groupName(tab),
-          run: () => { const pane = paneFor(tab); if (pane) onSelectPane(pane.pane_id); },
-        }))} />}
+      {switcher && <TabSearch workspace={workspace.label} close={closeSwitcher} items={tabsInGroupOrder().map(({ tab }): RowMenuItem => {
+        const states = panesOf(tab).map(paneStatus);
+        const status = states.includes("blocked") ? t("Needs input") : states.includes("working") ? t("Working") : undefined;
+        const pane = paneFor(tab);
+        const label = nameOf(tab);
+        const paneTitle = pane ? displayPaneTitle(pane) : null;
+        return { id: tab.tab_id, label, icon: Terminal, current: tab.tab_id === selectedPane.tab_id,
+          hint: [groupName(tab), status, paneTitle !== label ? paneTitle : null].filter(Boolean).join(" · "),
+          run: () => { if (pane) onSelectPane(pane.pane_id); },
+        };
+      })} />}
       {picker && <RowMenu key={grouping ? "groups" : "actions"} anchor={picker.anchor} point={picker.point} restoreFocusTo={picker.previousFocus}
         title={grouping ? t("Group with…") : nameOf(picker.tab)} subtitle={grouping ? nameOf(picker.tab) : workspace.label} variant="actions" items={grouping ? [{ id: "back", label: t("Back to actions"), icon: ArrowLeft, run: () => { setGrouping(false); setPicker(picker); } }, ...groupItems(picker.tab)] : pickerItems(picker.tab, picker.touch)} align="start" onClose={() => setPicker(null)} />}
       {confirm && <ConfirmDialog title={confirm.title} body={confirm.body} confirmLabel={t("Close tab")} pendingLabel={t("Closing tab…")} onConfirm={async () => { await close(confirm.tab); setConfirm(null); }} onClose={() => setConfirm(null)} />}

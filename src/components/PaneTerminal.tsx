@@ -198,6 +198,7 @@ export function PaneTerminal({
   const [terminal, setTerminal] = useState<Terminal | null>(null);
   const [searchState, setSearchState] = useState<TerminalSearchState | null>(null);
   const viewportId = useId();
+  const pendingId = useId();
   const viewportIntent = useMemo(() => new ViewportIntentGate(), [machineId, paneId]);
   const viewportSearching = useSyncExternalStore(viewportIntent.subscribe, viewportIntent.isSearching, viewportIntent.isSearching);
   const [mouseReporting, setMouseReporting] = useState(false);
@@ -2490,6 +2491,7 @@ export function PaneTerminal({
       )}
       {presented && paneId !== null && chatView && !observing && queueOwner !== null && pending.length > 0 && <PendingMessages
         key={`pending-${queueOwner}`}
+        id={pendingId}
         active={active}
         messages={pending.map((message) => !message.serverOwned || pendingMessages.isOwned(queueOwner, message.id, pendingScopeRef.current)
           ? message : { ...message, serverOwned: false, state: "uncertain" as const })}
@@ -2527,7 +2529,7 @@ export function PaneTerminal({
           plan={plan}
           backgroundWait={backgroundWait}
           metadata={chatMetadata?.pane === paneId ? chatMetadata.value : null}
-          hasPendingMessages={pending.length > 0}
+          pendingTarget={pending.length > 0 ? pendingId : undefined}
           connected={connected && !held}
           answerHint={answering === null ? null
             : pendingAnswer?.promptId === answering.id ? t("Confirm your answer in the card above, or type another…") : answerHint(answering)}

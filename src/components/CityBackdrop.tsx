@@ -160,7 +160,12 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
     data-city={waterfronts[currentCity]} data-season={season} data-weather={event?.weather ?? weather}
     data-regatta-light={event ? (event.sunset ? "sunset" : "floodlit") : undefined}
     data-discovery={discovery ?? undefined} aria-hidden="true"
-    style={{ "--city-daylight": daylight, "--city-twilight": twilight } as CSSProperties}>
+    style={{
+      "--city-daylight": daylight,
+      "--city-twilight": twilight,
+      "--west-berth-offset": `-${21 + day % 9}s`,
+      "--east-berth-offset": `-${59 + day % 11}s`,
+    } as CSSProperties}>
     <div className="city-panorama">
       {(moving && district ? [currentCity, nextCity] : [currentCity]).map((index, position) =>
         <div key={index} className={`city-panorama-plate${position ? " is-arriving" : ""}`}

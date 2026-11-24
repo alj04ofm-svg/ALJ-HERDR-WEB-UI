@@ -25,6 +25,9 @@ type TaskFilter = "all" | typeof VIEW_OPTIONS[number]["id"];
 type Layout = "list" | "board" | "agents";
 const LAYOUTS = [{ id: "list", label: "List", Icon: List }, { id: "board", label: "Board", Icon: Columns3 }, { id: "agents", label: "Agents", Icon: Radio }] as const;
 const LAYOUT_KEY = "herdr-web-ui:tasks-layout";
+const needsAttention = (task: WorkspaceTask) => task.stage === "needs-you" || task.stage === "review";
+const belongsToday = (task: WorkspaceTask, today: string) => task.due === today || task.stage !== "done"
+  && (task.stage === "doing" || needsAttention(task) || task.priority === "urgent" || Boolean(task.due && task.due < today));
 type Editor = { original: WorkspaceTask; draft: WorkspaceTask; isNew: boolean };
 const COLUMNS: { stage: TaskStage; label: string; includes: TaskStage[] }[] = [
   { stage: "inbox", label: "To do", includes: ["inbox", "next"] },
@@ -192,7 +195,7 @@ function NotesEditor({ editor, projects, itemText, setItemText, patch, onBack, o
 export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSelect, source, onResume, initialCapture = false }: { initialCapture?: boolean; onClose(): void; store?: TaskStore; machines?: Machine[]; onSelect?(machine: string, pane: string): void; source?: TaskSource; onResume?(machine: string, pane: string, reply: TaskSource["reply"]): void }) {
   const [store] = useState(() => suppliedStore ?? createTaskStore());
   const { snapshot, error, pending, conflict } = useTaskStore(store);
-  const [view, setView] = useState<TaskFilter>("all");
+  const [view, setView] = useState<TaskFilter>("today");
   const [layout, setLayout] = useState<Layout>(() => {
     try { if (localStorage.getItem(LAYOUT_KEY) === "board") return "board"; } catch { /* layout is optional */ }
     return "list";
@@ -328,6 +331,8 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
       setCaptureTask(null);
       setCaptureChoice(null);
       chooseProject(destination);
+    } else if (editor?.isNew && view === "today" && !belongsToday(task, localTaskDay())) {
+      chooseView("all");
     }
     setStatus(fromEditor ? task.archived ? "Task archived." : activeTask?.archived ? "Task restored." : "Task saved." : `Moved to ${TASK_STAGE_LABELS[task.stage]}.`);
     if (fromEditor) exitEditor();
@@ -377,8 +382,8 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     && (!project || (task.project === project || task.project.startsWith(`${project} / `)))
     && (!queryText || `${task.title} ${task.notes} ${task.project}`.toLocaleLowerCase().includes(queryText)
       || task.checklist.some(item => item.title.toLocaleLowerCase().includes(queryText)))
-    && (view !== "today" || (task.stage !== "done" && (task.stage === "doing" || task.priority === "urgent" || Boolean(task.due && task.due <= today))))
-    && (view !== "waiting" || task.stage === "needs-you" || task.stage === "review"));
+    && (view !== "today" || belongsToday(task, today))
+    && (view !== "waiting" || needsAttention(task)));
   const projects = taskProjects(snapshot);
   const activeProjects = projects.filter(path => !archivedProject(snapshot, path));
   const suggestedProject = captureChoice ?? (activeProjects.includes(project) ? project : store.lastCaptureProject());
@@ -387,8 +392,9 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   const projectTasks = tasks.filter(task => !task.archived && !archivedProject(snapshot, task.project)
     && (!project || task.project === project || task.project.startsWith(`${project} / `))
     && (scope === "all" || task.scope === scope));
-  const completed = projectTasks.filter(task => task.stage === "done").length;
-  const nextTask = nextFocusTask(projectTasks, today);
+  const progressTasks = view === "today" ? projectTasks.filter(task => task.due === today) : projectTasks;
+  const completed = progressTasks.filter(task => task.stage === "done").length;
+  const nextTask = nextFocusTask(view === "today" ? projectTasks.filter(task => belongsToday(task, today)) : projectTasks, today);
   const lanes = COLUMNS.map(column => ({ ...column, tasks: visible.filter(task => column.includes.includes(task.stage)) }));
   const selectedStage = phoneStage ?? (lanes.find(lane => lane.stage === "doing" && lane.tasks.length)?.stage
     ?? lanes.find(lane => lane.tasks.length)?.stage ?? "inbox");
@@ -430,6 +436,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     const task = { ...newTask(scope === "personal" ? "personal" : "business", project, stage), title };
     if (await store.save(task)) {
       setStatus("Task added.");
+      if (view === "today" && !belongsToday(task, localTaskDay())) chooseView("all");
       closeInline(stage);
     } else requestAnimationFrame(() => inlineField.current?.focus());
   }
@@ -591,27 +598,29 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
             <select className="select" aria-label="Parent project" value={parent} onChange={event => setParent(event.target.value)}><option value="">Top level</option>{activeProjects.map(name => <option key={name}>{name}</option>)}</select>
             <button className="btn btn-primary" type="submit" disabled={!canMove}>Create project</button>
           </form>}
-          {(view !== "all" || scope !== "all") && <div className="task-active-filters" role="group" aria-label="Applied filters">
-            {view !== "all" && <button type="button" className="btn" disabled={addingInline} aria-label={`Remove ${viewLabel} filter`} onClick={() => { filterButton.current?.focus(); chooseView("all"); }}>
+          <div className="task-active-filters" role="group" aria-label="Task scope">
+            <button type="button" className="btn" disabled={addingInline} aria-pressed={view === "today"} onClick={() => chooseView("today")}>Today</button>
+            <button type="button" className="btn" disabled={addingInline} aria-pressed={view === "all"} onClick={() => chooseView("all")}>All tasks</button>
+            {view !== "all" && view !== "today" && <button type="button" className="btn" disabled={addingInline} aria-label={`Remove ${viewLabel} filter`} onClick={() => { filterButton.current?.focus(); chooseView("all"); }}>
               {viewLabel}<X aria-hidden="true" />
             </button>}
             {scope !== "all" && <button type="button" className="btn" disabled={addingInline} aria-label={scope === "business" ? "Remove Business filter" : "Remove Personal filter"} onClick={() => { filterButton.current?.focus(); setScope("all"); }}>
               {scope === "business" ? "Business" : "Personal"}<X aria-hidden="true" />
             </button>}
-          </div>}
+          </div>
           <div className="task-lens">
             <h3>{view === "archive" ? "Archive" : view === "today" ? "Today" : view === "waiting" ? "Needs attention" : project || "All tasks"}</h3>
             {snapshot && <span>{count} {count === 1 ? "task" : "tasks"}</span>}
           </div>
-          {snapshot && projectTasks.length > 0 && view === "all" && !queryText && <div className="task-momentum">
-            <div className="task-momentum-meter">
-              <div><strong>{completed === projectTasks.length ? "All caught up" : "Progress"}</strong><span>{completed} / {projectTasks.length} complete</span></div>
-              <div className="task-progress-track" role="progressbar" aria-label="Tasks complete"
-                aria-valuenow={completed} aria-valuemin={0} aria-valuemax={projectTasks.length}
-                aria-valuetext={`${completed} of ${projectTasks.length} tasks complete`}>
-                <span style={{ width: `${completed / projectTasks.length * 100}%` }} />
+          {snapshot && (progressTasks.length > 0 || nextTask) && (view === "all" || view === "today") && !queryText && <div className="task-momentum">
+            {progressTasks.length > 0 && <div className="task-momentum-meter">
+              <div><strong>{view === "today" ? "Due today" : completed === progressTasks.length ? "All caught up" : "Progress"}</strong><span>{completed} / {progressTasks.length} complete</span></div>
+              <div className="task-progress-track" role="progressbar" aria-label={view === "today" ? "Tasks due today complete" : "Tasks complete"}
+                aria-valuenow={completed} aria-valuemin={0} aria-valuemax={progressTasks.length}
+                aria-valuetext={`${completed} of ${progressTasks.length} tasks complete`}>
+                <span style={{ width: `${completed / progressTasks.length * 100}%` }} />
               </div>
-            </div>
+            </div>}
             {nextTask && <button type="button" className="task-next" disabled={addingInline || busy || Boolean(editor)}
               onClick={() => edit(nextTask)}>
               <span>{nextTask.stage === "doing" ? "Continue" : "Up next"}<strong>{nextTask.title}</strong></span>
@@ -620,8 +629,8 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
           </div>}
           {!snapshot ? <p className="task-empty" role="status">{error ? "The board could not be loaded." : "Loading tasks…"}</p>
             : !visible.length && (layout === "list" || view !== "all" || filtered) ? <div className="task-empty">
-              <h3>{filtered ? "No matching tasks" : view === "archive" ? "No archived tasks" : view === "today" ? "Nothing due today" : view === "waiting" ? "Nothing needs attention" : "No tasks yet"}</h3>
-              {filtered ? <button type="button" className="btn" onClick={clearFilters}>Clear filters</button> : view === "all" && <button type="button" className="btn" onClick={() => startTask()}><Plus aria-hidden="true" />Add a task</button>}
+              <h3>{filtered ? "No matching tasks" : view === "archive" ? "No archived tasks" : view === "today" ? "Nothing on deck today" : view === "waiting" ? "Nothing needs attention" : "No tasks yet"}</h3>
+              {filtered ? <button type="button" className="btn" onClick={clearFilters}>Clear filters</button> : (view === "all" || view === "today") && <button type="button" className="btn" onClick={() => startTask()}><Plus aria-hidden="true" />Add a task</button>}
             </div> : layout === "board" && view !== "archive" ? <>
               <label className="task-phone-lane"><span>Stage</span><select className="select" value={selectedStage} disabled={addingInline} onChange={event => setPhoneStage(event.target.value as TaskStage)}>{lanes.map(lane => <option key={lane.stage} value={lane.stage}>{lane.label} ({lane.tasks.length})</option>)}</select></label>
               <div className="task-columns">

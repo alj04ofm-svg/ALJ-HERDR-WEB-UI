@@ -124,6 +124,7 @@
 .task-search input { padding-inline-start: calc(var(--space-3) + 20px); }
 .task-active-filters { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-2) var(--task-edge) 0; }
 .task-active-filters .btn { border-radius: var(--radius-pill); font-size: var(--fs-xs); }
+.task-active-filters .btn[aria-pressed="true"] { background: var(--accent-tint); color: var(--text-strong); border-color: var(--accent); }
 .task-active-filters svg { width: 13px; height: 13px; }
 .task-lens {
   display: flex;

@@ -1419,7 +1419,8 @@
   background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--bg) 38%, transparent));
 }
 
-.composer .composer-capture { color: var(--text-dim); }
+.composer .composer-capture { color: var(--text-dim); gap: var(--space-1); }
+.composer .composer-capture[data-labeled] { width: auto; padding-inline: var(--space-2); font-size: var(--fs-xs); }
 .composer .composer-capture:is(:hover, :focus-visible) { color: var(--accent); background: var(--accent-tint); }
 .terminal-stack.is-chat .composer-surface:has(.composer-text:focus-visible) {
   border-color: color-mix(in srgb, var(--status-working) 52%, var(--border));
@@ -1451,11 +1452,21 @@
   line-height: var(--lh-base);
 }
 
-.composer-delivery > svg {
+.composer-delivery svg {
   flex: none;
   inline-size: var(--space-3);
   block-size: var(--space-3);
   color: var(--text-dim);
+}
+
+.composer-delivery a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--space-5);
+  color: var(--text-strong);
+  text-underline-offset: .2em;
+  pointer-events: auto;
 }
 
 [data-keyboard] .composer-delivery {

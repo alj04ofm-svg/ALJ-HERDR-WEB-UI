@@ -8,6 +8,7 @@ import { useMachineApi } from "../lib/machineContext.tsx";
 import { modelLabel } from "../lib/modelName.ts";
 import { useFocusTrap } from "../lib/useFocusTrap.ts";
 import { useSheetSwipe } from "../lib/sheets.ts";
+import { usePhoneSheetBack } from "../lib/sheetHistory.ts";
 import { useT } from "../lib/i18n.ts";
 import "./ModelControl.css";
 
@@ -20,6 +21,7 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [checkedAt, setCheckedAt] = useState<Date | null>(null);
   const [model, setModel] = useState("");
   const [effort, setEffort] = useState("");
   const readGeneration = useRef(0);
@@ -27,12 +29,15 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
   const trap = useFocusTrap<HTMLDivElement>(open);
   const close = useCallback(() => { if (!busy) setOpen(false); }, [busy]);
   useSheetSwipe(trap, open && !busy ? close : null);
-  const accept = useCallback((next: PaneModelSettings) => { setSettings(next); setModel(next.model ?? ""); setEffort(next.effort ?? ""); }, []);
+  usePhoneSheetBack(() => { if (busy) return false; close(); }, open);
+  const accept = useCallback((next: PaneModelSettings) => {
+    setSettings(next); setModel(next.model ?? ""); setEffort(next.effort ?? ""); setCheckedAt(new Date());
+  }, []);
   // Always re-read native values after reload; never persist a cosmetic model preference.
   useEffect(() => {
     const generation = ++readGeneration.current;
     const live = () => readGeneration.current === generation;
-    setSettings(null); setError(""); setNotice(""); setOpen(false); setLoading(false);
+    setSettings(null); setError(""); setNotice(""); setCheckedAt(null); setLoading(false);
     if (agent === "codex" && connected) {
       setLoading(true);
       void api.fetchPaneModelSettings(paneId).then(next => { if (live()) accept(next); }).catch(() => {}).finally(() => { if (live()) setLoading(false); });
@@ -60,14 +65,21 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
   };
   const apply = async (field: "model" | "effort") => {
     if (!settings?.supported || !settings.thread_id || !settings.model || busy) return;
+    const generation = readGeneration.current;
     setBusy(true); setError(""); setNotice("");
     try {
       const actual = await api.changePaneModelSettings({ pane_id: paneId, expected: { thread_id: settings.thread_id, model: settings.model, effort: settings.effort }, ...(field === "model" ? { model } : { effort }) });
-      accept(actual); setNotice(t("Applied."));
+      if (readGeneration.current === generation) { accept(actual); setNotice(t("Applied.")); }
     } catch (e) {
+      if (readGeneration.current !== generation) return;
       setError(e instanceof ApiError ? e.detail : t("Could not apply native settings. Refresh before retrying."));
       // A timeout is an unknown outcome: read once, never retry a mutation.
-      try { accept(await api.fetchPaneModelSettings(paneId)); } catch { setSettings(null); }
+      try {
+        const actual = await api.fetchPaneModelSettings(paneId);
+        if (readGeneration.current === generation) accept(actual);
+      } catch {
+        if (readGeneration.current === generation) setSettings(null);
+      }
     } finally { setBusy(false); }
   };
   const native = settings?.supported;
@@ -89,7 +101,9 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
       <div className="modal model-settings" ref={trap} role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1} aria-busy={busy || loading}>
         <header><h2 id={id}>{t("Model and reasoning")}</h2><button type="button" className="icon-button" aria-label={t("Close")} onClick={close} disabled={busy}><X aria-hidden="true" /></button></header>
         {loading && <p role="status">{t("Reading native settings…")}</p>}
-        {!loading && !native && !error && <p role="status">{settings?.reason ?? t("Native settings are unavailable. Try Refresh.")}</p>}
+        {!connected && <p role="status">{t("Reconnecting…")}</p>}
+        {connected && !loading && !native && !error && <p role="status">{settings?.reason ?? t("Native settings are unavailable. Try Refresh.")}</p>}
+        {settings && checkedAt && <p className="model-settings-note">{t("Last checked {when}", { when: checkedAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" }) })}</p>}
         {native && <>
           <div className="model-settings-field"><label htmlFor={`${id}-model`}>{t("Model")}</label><div><select className="select" id={`${id}-model`} value={model} onChange={e => setModel(e.target.value)} disabled={busy || loading}>
             {!settings.models.some(m => m.id === settings.model) && <option value={settings.model!}>{settings.model} ({t("Current")})</option>}

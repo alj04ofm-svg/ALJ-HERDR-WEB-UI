@@ -7,6 +7,7 @@ import { useT } from "../lib/i18n.ts";
 import "./PendingMessages.css";
 
 interface Props {
+  id: string;
   messages: PendingMessageView[];
   active?: boolean;
   connected: boolean;
@@ -31,7 +32,7 @@ export function pendingStatus(message: Pick<PendingMessageView, "state" | "error
 }
 
 /** Pending text is separate from the transcript; Send now acts on its ID, never on its text. */
-export function PendingMessages({ messages, active = true, connected, blocked, unsaved, isBusy, onSendNow, onDiscard }: Props) {
+export function PendingMessages({ id, messages, active = true, connected, blocked, unsaved, isBusy, onSendNow, onDiscard }: Props) {
   const t = useT();
   const activeRef = useRef(active);
   activeRef.current = active;
@@ -45,7 +46,7 @@ export function PendingMessages({ messages, active = true, connected, blocked, u
     next?.focus({ preventScroll: true });
   };
   const review = messages.some(message => !message.serverOwned);
-  return <ol ref={rootRef} className="pending-messages" aria-label={t("Queued messages")}>
+  return <ol id={id} ref={rootRef} tabIndex={-1} className="pending-messages" aria-label={t("Queued messages")}>
     {review && <li className="pending-message-note" role="status">{t("Saved copies need review before you send again.")}</li>}
     {unsaved && <li className="pending-message-note" role="status">{t("Queue could not be saved. Keep this tab open or copy the messages before reloading.")}</li>}
     {messages.map((message) => {
