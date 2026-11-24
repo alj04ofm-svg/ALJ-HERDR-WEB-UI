@@ -468,6 +468,7 @@ export function Composer({
       effortClipped: clipped(".composer-reasoning"),
     });
     if (draw !== "full") status.setAttribute("data-model", draw);
+    if (draw === "no-effort" && clipped(".composer-model")) status.setAttribute("data-model", "out");
     const hint = hintRef.current;
     if (!hint) return;
     // with the label stepped out and no ring, the row beside the sentence draws nothing: it gives

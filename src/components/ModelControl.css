@@ -1,4 +1,4 @@
-.model-control { border: 0; background: transparent; padding: 0; color: inherit; font: inherit; cursor: pointer; border-radius: var(--radius-sm); min-height: var(--space-6); }
+.model-control { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; min-height: var(--space-6); border: 0; background: transparent; padding: 0; color: inherit; font: inherit; cursor: pointer; border-radius: var(--radius-sm); }
 .model-control:hover { color: var(--text-strong); }
 .model-control-chevron { width: var(--space-3); height: var(--space-3); flex: none; color: var(--text-dim); }
 .model-settings { width: min(100%, 520px); padding: var(--space-6); }
@@ -15,9 +15,11 @@
 @media (pointer: coarse) { .model-control { min-height: var(--touch-target); } }
 @media (max-width: 560px) { .model-settings { padding: var(--space-4); } .model-settings select { font-size: 16px; } }
 
-.composer-status:not([data-model="out"]) .model-control { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; }
-.composer-status[data-model="out"] .model-control { position: static; display: inline-flex; align-items: center; width: auto; height: auto; margin: 0; padding: 0; clip: auto; overflow: visible; }
+.composer-status[data-model="out"] .model-control { justify-content: center; min-width: var(--control-h); background: var(--bg-hover); }
 .composer-status[data-model="out"] .model-control .composer-model, .composer-status[data-model="out"] .model-control .composer-reasoning { display: none; }
+.model-control-compact { display: none; }
+.composer-status[data-model="out"] .model-control-chevron { display: none; }
+.composer-status[data-model="out"] .model-control-compact { display: block; width: var(--fs-sm); height: var(--fs-sm); }
 
 .model-control-state { color: var(--text-dim); white-space: nowrap; font-size: var(--fs-2xs); }
 .model-control-state[data-live="true"] { color: var(--status-done); }

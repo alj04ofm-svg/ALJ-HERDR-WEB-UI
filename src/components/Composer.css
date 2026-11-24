@@ -215,10 +215,8 @@
   display: contents;
 }
 
-/* the mark, the model, the level and the ring in one quiet pill, as tall as a control. It is a
-   surface, not a control: no border, no hover, no cursor, and the ring inside it is the only
-   thing to press. It shrinks before its neighbours do, so a name that does not fit is measured
-   clipped inside it (Composer.tsx) and the label steps out */
+/* the mark, model settings, context and usage share one surface. Width measurement in
+   Composer.tsx steps the model control down to its icon if the full label cannot fit. */
 .composer-pill {
   display: flex;
   flex: 0 1 auto;
@@ -243,8 +241,7 @@
   display: none;
 }
 
-/* stepped out: read, not drawn (the properties of .visually-hidden, set from the measured row) */
-.composer-status[data-model="out"] .composer-model-info,
+/* keep the reasoning text available to assistive tech when only the model label fits */
 .composer-status[data-model="no-effort"] .composer-reasoning {
   position: absolute;
   width: 1px;
@@ -255,12 +252,6 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
-}
-
-.composer-status:not([data-model="out"]) .composer-model-info {
-  /* no box of its own: the name and the level sit in the pill itself, so the name can give way
-     before anything else does and the level never overlaps what follows */
-  display: contents;
 }
 
 /* a readable name in the UI face */
@@ -900,6 +891,24 @@
 
   .composer-status {
     padding: var(--space-1) var(--space-2) var(--space-2) var(--space-1);
+  }
+
+  .composer-surface:has(.model-control) {
+    grid-template-areas:
+      "attachments attachments attachments"
+      "text text text"
+      "tools tools tools"
+      "left left right"
+      "status status status";
+  }
+
+  .composer-surface:has(.model-control) .composer-status {
+    justify-content: flex-start;
+    padding: 0 var(--space-3) var(--space-2);
+  }
+
+  .composer-status .composer-pill:has(.model-control) {
+    height: max(var(--control-h), var(--touch-target));
   }
 
   /* A phone fits neither half of a pi command's row, and pi writes explanations twice as long as

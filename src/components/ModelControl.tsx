@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, RefreshCw, X } from "lucide-react";
+import { ChevronDown, RefreshCw, SlidersHorizontal, X } from "lucide-react";
 import type { ConversationMetadata } from "../../shared/protocol.ts";
 import type { PaneModelSettings } from "../../shared/protocol.ts";
 import { ApiError } from "../lib/api.ts";
@@ -83,6 +83,7 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
       {shownEffort && <span className="composer-reasoning"><span className="composer-reasoning-dot" aria-hidden="true">·</span><span className="composer-reasoning-short">{shownEffort}</span></span>}
       <span id={`${id}-state`} className="model-control-state" data-live={!!native}>{state}</span>
       <ChevronDown className="model-control-chevron" aria-hidden="true" />
+      <SlidersHorizontal className="model-control-compact" aria-hidden="true" />
     </button>
     {open && createPortal(<div className="modal-scrim" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div className="modal model-settings" ref={trap} role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1} aria-busy={busy || loading}>

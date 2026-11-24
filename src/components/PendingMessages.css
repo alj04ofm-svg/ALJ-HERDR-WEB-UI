@@ -55,6 +55,22 @@
   overflow-wrap: anywhere;
 }
 
+.has-sidebar-scene .pending-messages > .pending-message-note,
+.has-sidebar-scene .pending-message-meta {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+.has-sidebar-scene .pending-messages > .pending-message-note {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.has-sidebar-scene .pending-message-note {
+  color: var(--text);
+}
+
 .pending-message-action {
   color: var(--text-dim);
 }
