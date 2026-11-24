@@ -1429,12 +1429,35 @@
   .terminal-stack.is-chat .composer-surface { transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
 }
 
+.composer-delivery {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-end: var(--space-3);
+  max-inline-size: calc(100% - 2 * var(--space-3));
+  translate: 0 50%;
+  pointer-events: none;
+}
+
 .composer-delivery:not(:empty) {
-  align-self: flex-end;
-  max-inline-size: 100%;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--bg-panel);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border: var(--hairline) solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: var(--fs-2xs);
+  line-height: var(--lh-base);
+}
+
+.composer-delivery > svg {
+  flex: none;
+  inline-size: var(--space-3);
+  block-size: var(--space-3);
   color: var(--text-dim);
-  font-size: var(--fs-xs);
+}
+
+[data-keyboard] .composer-delivery {
+  translate: 0 30%;
 }

@@ -178,8 +178,12 @@
   .app-header.is-zoned .view-switch > button { min-width: var(--touch-target); min-height: var(--touch-target); }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 420px) {
   .app-header .shell-new-tab { display: none; }
+}
+
+@media (max-width: 360px) {
+  .app-header.is-zoned.is-chat .view-switch { display: none; }
 }
 
 .app-header.is-zoned .header-meta { gap: var(--space-1); }
@@ -200,6 +204,10 @@
 @media (max-width: 768px) {
   .app-header.is-zoned .header-health { min-width: var(--touch-target); min-height: var(--touch-target); }
   .app-header.is-zoned .shell-new-tab span { display: none; }
+}
+
+@media (max-width: 480px) {
+  .app-header.is-zoned .header-health { display: none; }
 }
 
 .app-header.is-zoned :is(.header-side, .header-meta) .icon-button:is(:hover, :focus-visible),

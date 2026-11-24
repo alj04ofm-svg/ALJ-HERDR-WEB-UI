@@ -4,7 +4,7 @@ import { paneStorageId, type Machine } from "../../shared/machines.ts";
 import { useT } from "../lib/i18n.ts";
 import { composerDrafts } from "../lib/composerDraft.ts";
 import { pendingMessages } from "../lib/pendingMessages.ts";
-import { agentNavigationLabel, sidebarAgents } from "../lib/sidebarAgents.ts";
+import { agentNavigationLabel, agentTabName, sidebarAgents } from "../lib/sidebarAgents.ts";
 import { paneStatus } from "../lib/status.ts";
 import { RowMenu, type RowMenuItem } from "./RowMenu.tsx";
 import "./AttentionMenu.css";
@@ -42,10 +42,14 @@ export function AttentionMenu({ machines, canInteract, onSelect }: {
         const done = state === "done" && seen.get(owner) !== completion;
         if (state !== "blocked" && !review && !done) continue;
         const kind = state === "blocked" ? 0 : review ? 1 : 2;
+        const workspaceTabs = machine.snapshot.tabs.filter(tab => tab.workspace_id === pane.workspace_id);
+        const label = agentNavigationLabel(entry, workspaceTabs);
+        const tab = agentTabName(entry.tab, workspaceTabs, t);
         ranks[kind]!.push({
           id: owner,
-          label: agentNavigationLabel(entry, machine.snapshot.tabs.filter(tab => tab.workspace_id === pane.workspace_id)),
-          hint: [kind === 0 ? t("Needs input") : kind === 1 ? sendIssue ? t("Review interrupted send") : t("Review pending messages") : t("Ready to review"), entry.workspace.label, machine.name].join(" · "),
+          label,
+          hint: [kind === 0 ? t("Needs input") : kind === 1 ? sendIssue ? t("Review interrupted send") : t("Review pending messages") : t("Ready to review"),
+            tab && tab !== label && tab !== entry.workspace.label ? tab : null, entry.workspace.label, machine.name].filter(Boolean).join(" · "),
           icon: kind === 0 ? CircleAlert : kind === 1 ? TriangleAlert : CheckCircle2,
           run: () => {
             if (state === "done") setSeen(previous => new Map(previous).set(owner, completion));

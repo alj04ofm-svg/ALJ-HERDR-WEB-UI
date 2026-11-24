@@ -18,7 +18,7 @@ import {
   type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
-import { Layers, ArrowUp, ClipboardPlus, Ellipsis, FileText, Plus, Square, TriangleAlert, X } from "lucide-react";
+import { Layers, ArrowUp, ClipboardPlus, Clock3, Ellipsis, FileCheck2, FileText, Plus, Send, Square, TriangleAlert, X } from "lucide-react";
 
 import "./Composer.css";
 
@@ -910,9 +910,13 @@ export function Composer({
   const usageCaption = usageLimit === undefined ? "" : `${usageLimit.kind === "session" ? "5h" : windowLabel(usageLimit)} ${formatPercent(meterPercent(usageLimit, settings.usageCount))}`;
   const usageAccessible = usage === undefined ? "" : `${t("Subscription usage")}: ${usageName(usage)}, ${usageDetail.replaceAll("\n", ", ")}`;
   const hintText = hint === null ? null : t(hint === "uploading" ? "Uploading file…" : "Reconnecting… message held here, never queued");
-  const deliveryText = note !== null || uploading ? null : sending ? t("Sending…")
-    : text.trim() ? (composerDrafts.isUnsaved(draftKey) ? t("Draft kept in this tab") : t("Draft saved on this device"))
-    : delivery === "sent" ? t("Sent to terminal") : delivery === "pending" && hasPendingMessages ? t("Check pending messages above") : null;
+  const receipt = note !== null || uploading ? null
+    : sending ? { text: t("Sending…"), icon: Clock3 }
+    : text.trim() ? composerDrafts.isUnsaved(draftKey)
+      ? { text: t("Draft kept in this tab"), icon: TriangleAlert }
+      : { text: t("Draft saved on this device"), icon: FileCheck2 }
+    : delivery === "sent" ? { text: t("Sent to terminal"), icon: Send }
+    : delivery === "pending" && hasPendingMessages ? { text: t("Check pending messages above"), icon: Clock3 } : null;
   const menuId = `composer-menu-${paneId}`;
   // the arrow keys move the selection, not the focus (it stays in the box), so the browser does not scroll to it
   useEffect(() => {
@@ -922,7 +926,6 @@ export function Composer({
   return (
     <div className="composer" role="group" aria-label={t("Message composer")} data-dictating={dictation.voice.state !== "idle" ? "" : undefined}>
       {greeting}
-      <div className="composer-delivery" role="status">{deliveryText}</div>
       {/* why the message in the box did not go: on the box's top edge, read with it, its one way on beside it */}
       {note !== null && (
         <div className={`composer-note${typeof note === "object" ? " composer-note-offer" : ""}`} role="alert">
@@ -1199,6 +1202,7 @@ export function Composer({
             </button>
           )}
         </div>
+        <div className="composer-delivery" role="status">{receipt && <><receipt.icon aria-hidden="true" /><span>{receipt.text}</span></>}</div>
       </div>
       {/* said while typing, before the send: after it the browser is already open and the reader is
           already in the state the words describe. Not a block — the text still goes, and pi runs the

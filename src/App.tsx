@@ -261,7 +261,9 @@ export function App() {
   // from 769px the drawer is a plain sidebar column and its toggle is hidden, so a drawer a
   // narrow window opened must not come back (with its scrim) the next time the window narrows
   const wideScreen = useMediaQuery("(min-width: 769px)");
-  const tinyHeader = useMediaQuery("(max-width: 360px)");
+  const phoneHeader = useMediaQuery("(max-width: 480px)");
+  const tinyHeader = useMediaQuery("(max-width: 420px)");
+  const narrowestHeader = useMediaQuery("(max-width: 360px)");
   const phoneDrawerOpen = drawerOpen && !wideScreen;
   useEffect(() => { if (wideScreen) setDrawerOpen(false); }, [wideScreen]);
   useEffect(() => {
@@ -286,6 +288,9 @@ export function App() {
   useEffect(() => watchDrawerSwipe(() => drawerOpenRef.current, setDrawerOpen), []);
   // a desktop opened by a link that says so starts with the sidebar collapsed, and the address says so while it is
   const [tabsOpen, setTabsOpen] = useState(false);
+  const tabsButton = useRef<HTMLButtonElement>(null);
+  const headerStrip = useRef<HTMLDivElement>(null);
+  const focusOpenedTabs = useRef(false);
   const [taskStore] = useState(createTaskStore);
   const [taskMode, setTaskMode] = useState<TaskBoardMode | null>(null);
   const showTaskBoard = useCallback((mode: TaskBoardMode) => setTaskMode(mode), []);
@@ -1146,15 +1151,23 @@ export function App() {
   // Claim the menu's history entry before the lazy health panel finishes loading.
   usePhoneSheetBack(closeHealth, healthAnchor !== null);
   const headerHasTabs = view === "chat" && tabsOpen && Boolean(snapshot && selectedPane && selectedWorkspace);
+  const chatShown = showsChat(selectedPane, view);
+  useLayoutEffect(() => {
+    if (!headerHasTabs || !focusOpenedTabs.current) return;
+    focusOpenedTabs.current = false;
+    headerStrip.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus();
+  }, [headerHasTabs]);
   const moreItems: RowMenuItem[] = [
-    ...(!wideScreen && headerHasTabs ? [
+    ...((!wideScreen && headerHasTabs) || (narrowestHeader && chatShown) ? [
       { id: "terminal", label: t("Terminal"), icon: SquareTerminal, run: () => { setTabsOpen(false); setView("terminal"); } },
+    ] : []),
+    ...(tinyHeader && selectedWorkspace ? [{ id: "new-tab", label: t("New tab"), icon: Plus, run: () => actions.openNewTab() }] : []),
+    ...(phoneHeader || (!wideScreen && headerHasTabs) ? [
       { id: "health", label: t("VPS health"), icon: Activity, run: () => {
         const anchor = document.querySelector<HTMLElement>(".header-more-button");
         if (anchor) setHealthAnchor(anchor);
       } },
     ] : []),
-    ...(tinyHeader && selectedWorkspace ? [{ id: "new-tab", label: t("New tab"), icon: Plus, run: () => actions.openNewTab() }] : []),
     { id: "usage", label: t("Usage"), icon: Gauge, run: () => setUsageOpen(true) },
     ...(selectedPane && !selectedPane.restore_error ? [{ id: "find", label: t("Find in terminal"), icon: Search, run: actions.openFind }] : []),
     ...(selectedPane ? [{ id: "move-pane", label: t("Move pane to…"), icon: FolderInput, run: () => {
@@ -1170,7 +1183,6 @@ export function App() {
 
   // the chat's surface is what the pane column shows: the header's pane zone and the tab strip
   // take it (from 769px). A pane herdr could not restore draws a placeholder, not the chat.
-  const chatShown = showsChat(selectedPane, view);
   const showCity = chatShown && settings.atmosphere !== "off";
 
   if (locked === null) {
@@ -1202,7 +1214,13 @@ export function App() {
   if (locked) return <AccessGate reason={lockReason} initialCode={pairCode} onUnlocked={unlock} />;
 
   const workspaceTabs = snapshot && selectedPane && selectedWorkspace ? (
-    <div id="workspace-tabs" className="workspace-tabs"><TabStrip explicitlyOpened={tabsOpen} workingOnly={headerHasTabs} hideNewTab={headerHasTabs && tinyHeader} snapshot={snapshot} workspace={selectedWorkspace} selectedPane={selectedPane} onSelectPane={selectPane} onNewTab={() => actions.openNewTab()} onCloseTab={(tabId) => actions.closeTab(selectedMachineId, tabId)}
+    <div id="workspace-tabs" className="workspace-tabs" ref={headerHasTabs ? headerStrip : undefined} onKeyDown={headerHasTabs ? event => {
+      if (event.key !== "Escape" || event.defaultPrevented || event.nativeEvent.isComposing || !event.currentTarget.contains(event.target as Node)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setTabsOpen(false);
+      tabsButton.current?.focus({ preventScroll: true });
+    } : undefined}><TabStrip explicitlyOpened={tabsOpen} workingOnly={headerHasTabs} hideNewTab={headerHasTabs && tinyHeader} snapshot={snapshot} workspace={selectedWorkspace} selectedPane={selectedPane} onSelectPane={selectPane} onNewTab={() => actions.openNewTab()} onCloseTab={(tabId) => actions.closeTab(selectedMachineId, tabId)}
             paneActions={(paneId) => {
               const target = snapshot.panes.find((item) => item.pane_id === paneId);
               if (!target || !paneActionsRef.current) return [];
@@ -1276,7 +1294,10 @@ export function App() {
             </button>
           </div>
         )}
-        {view === "chat" && selectedWorkspace && <button type="button" className="shell-view-button" aria-label={t("View tabs")} aria-expanded={tabsOpen} aria-controls={headerHasTabs ? "workspace-tabs" : undefined} onClick={() => setTabsOpen(open => !open)}><Grid2X2 aria-hidden="true" /><span>{t("Tabs")}</span></button>}
+        {view === "chat" && selectedWorkspace && <button ref={tabsButton} type="button" className="shell-view-button" aria-label={t("View tabs")} aria-expanded={headerHasTabs} aria-controls={headerHasTabs ? "workspace-tabs" : undefined} onClick={event => {
+          focusOpenedTabs.current = !tabsOpen && event.detail === 0;
+          setTabsOpen(!tabsOpen);
+        }}><Grid2X2 aria-hidden="true" /><span>{t("Tabs")}</span></button>}
         <div className="header-meta">
           <AttentionMenu machines={machines} canInteract={auth?.role !== "watch"} onSelect={openAttention} />
           <button type="button" className="icon-button header-health" aria-haspopup="dialog" aria-expanded={healthAnchor !== null}
