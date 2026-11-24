@@ -1,6 +1,6 @@
 import "./App.css";
 import fmBrand from "./brand/freak-media.svg";
-import { type CSSProperties, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { type ContextType, type CSSProperties, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Activity, Bell, Ellipsis, FolderInput, FolderOpen, Gauge, Grid2X2, Link, Lock, Menu, MessageSquare, PanelLeft, PanelLeftClose, PanelLeftDashed, Plus, Search, SquareTerminal, X } from "lucide-react";
 
 import type { AgentStatus, ServerMessage, AccessRefusal, HealthAuth, HerdrPane } from "../shared/protocol.ts";
@@ -13,6 +13,7 @@ import { MachineSessionsProvider } from "./lib/machineSessionContext.tsx";
 import { WeatherWidget, type SceneWeather } from "./components/WeatherWidget.tsx";
 import { PaneTerminal } from "./components/PaneTerminal.tsx";
 import { PANE_TABPANEL_ID, paneTabPanelLabel } from "./lib/paneRegion.ts";
+import { AttentionMenu } from "./components/AttentionMenu.tsx";
 import { AccessGate } from "./components/AccessGate.tsx";
 import { AgentMark } from "./components/AgentMark.tsx";
 import { NewSessionDialog, type NewTabTarget } from "./components/NewSessionDialog.tsx";
@@ -37,6 +38,7 @@ import { createTaskStore } from "./lib/workspaceTasks.ts";
 import { chatReadDeadlineMs } from "./lib/chatReadDeadline.ts";
 import { withMutationDeadline } from "./lib/mutationDeadline.ts";
 import { headerCrumb, showsChat } from "./lib/headerCrumb.ts";
+import type { TaskSource } from "../shared/tasks.ts";
 import { paneStorageId, type Machine, type MachineEvent } from "../shared/machines.ts";
 import { takeAuthTokenFromUrl } from "./lib/authLink.ts";
 import { applyPaneStatus } from "./lib/snapshot.ts";
@@ -287,7 +289,10 @@ export function App() {
   const [taskStore] = useState(createTaskStore);
   const [taskMode, setTaskMode] = useState<TaskBoardMode | null>(null);
   const showTaskBoard = useCallback((mode: TaskBoardMode) => setTaskMode(mode), []);
-  const taskBoardContext = useMemo(() => ({ store: taskStore, mode: taskMode, show: showTaskBoard }), [taskStore, taskMode, showTaskBoard]);
+  const [taskSource, setTaskSource] = useState<TaskSource>();
+  const [taskResume, setTaskResume] = useState<NonNullable<ContextType<typeof TaskBoardContext>>["resume"]>(null);
+  const finishTaskResume = useCallback(() => setTaskResume(null), []);
+  const closeTaskBoard = useCallback(() => { setTaskMode(null); setTaskSource(undefined); }, []);
   useEffect(() => { if (locked) setTaskMode(null); }, [locked]);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const openSignOut = useCallback(() => setSignOutOpen(true), []);
@@ -682,12 +687,25 @@ export function App() {
     if (machineId !== selectedMachineRef.current) setConnected(false);
     setSelectedMachineId(machineId); setSelectedPaneId(paneId); setAutoSelected(false); setDrawerOpen(false);
     setOutputStopped(false);
+    setTaskResume(null);
     setNotificationViewTarget(view && paneId !== null ? { machine_id: machineId, pane_id: paneId, view } : null);
     // this browser's choice only: herdr's focus, its TUI and every other device stay where they are
     storeSelection(machineId, paneId);
     // a pane picked (a tapped notification, the sidebar, Back) before a link landed supersedes the link
     pendingLink.current = null; pendingFile.current = null; setLinkLanded(true);
   }, []);
+  const taskFromReply = useCallback((machineId: string, paneId: string, reply: TaskSource["reply"]) => {
+    const snapshot = machinesRef.current.find(machine => machine.id === machineId)?.snapshot;
+    const pane = snapshot?.panes.find(item => item.pane_id === paneId);
+    const workspace = snapshot?.workspaces.find(item => item.workspace_id === pane?.workspace_id);
+    if (!pane?.terminal_id || !workspace) return;
+    setTaskSource({ machine_id: machineId, pane_id: paneId, terminal_id: pane.terminal_id, workspace_id: workspace.workspace_id, label: (workspace.label.trim() || "Agent").slice(0, 240), ...(reply && { reply }) });
+    setTaskMode("board");
+  }, []);
+  const taskBoardContext = useMemo(() => ({ store: taskStore, mode: taskMode, show: showTaskBoard,
+    fromReply: auth?.role === "watch" ? undefined : taskFromReply, resume: taskResume, finishResume: finishTaskResume,
+  }), [taskStore, taskMode, showTaskBoard, auth?.role, taskFromReply, taskResume, finishTaskResume]);
+  const openAttention = useCallback((machine: string, pane: string) => selectTarget(machine, pane, "chat"), [selectTarget]);
   const selectTargetRef = useRef(selectTarget); selectTargetRef.current = selectTarget;
   // the moves this client asked for and has no answer to yet (MovePaneMenu): the effect below
   // looks again when one ends, since a failed move leaves the selection to it after all
@@ -1260,6 +1278,7 @@ export function App() {
         )}
         {view === "chat" && selectedWorkspace && <button type="button" className="shell-view-button" aria-label={t("View tabs")} aria-expanded={tabsOpen} aria-controls={headerHasTabs ? "workspace-tabs" : undefined} onClick={() => setTabsOpen(open => !open)}><Grid2X2 aria-hidden="true" /><span>{t("Tabs")}</span></button>}
         <div className="header-meta">
+          <AttentionMenu machines={machines} canInteract={auth?.role !== "watch"} onSelect={openAttention} />
           <button type="button" className="icon-button header-health" aria-haspopup="dialog" aria-expanded={healthAnchor !== null}
             aria-label={t("VPS health")} title={t("VPS health")} onClick={event => setHealthAnchor(event.currentTarget)}><Activity aria-hidden="true" /></button>
           {selectedWorkspace && <button type="button" className="shell-new-tab" aria-label={t("New tab")} title={t("New tab in {workspace}", { workspace: selectedWorkspace.label })} onClick={() => actions.openNewTab()}><Plus aria-hidden="true" /><span>{t("New tab")}</span></button>}
@@ -1430,7 +1449,11 @@ export function App() {
       </MachineContext.Provider>}
       <CommandPalette key={selectedMachineId} machines={machines} onSelect={selectTarget} open={paletteOpen} onClose={() => setPaletteOpen(false)} snapshot={snapshot} online={selectedMachine?.state === "connected"} selectedPaneId={selectedPaneId} view={view} actions={actions} />
       {taskMode && <Suspense fallback={<span className="task-sidebar-loading" role="status">Loading task board…</span>}>
-        <TaskBoard store={taskStore} machines={machines} onSelect={(machine, pane) => { setDrawerOpen(false); selectTarget(machine, pane); }} initialCapture={taskMode === "capture"} onClose={() => setTaskMode(null)} />
+        <TaskBoard store={taskStore} machines={machines} onSelect={(machine, pane) => { setDrawerOpen(false); selectTarget(machine, pane); }} initialCapture={taskMode === "capture"} source={taskSource} onClose={closeTaskBoard}
+          onResume={(machine, pane, reply) => {
+            selectTarget(machine, pane, "chat");
+            if (reply) setTaskResume({ machine, pane, reply });
+          }} />
       </Suspense>}
     </div></TaskBoardContext.Provider></MachineContext.Provider></MachineSessionsProvider>
   );

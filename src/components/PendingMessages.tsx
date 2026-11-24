@@ -44,7 +44,9 @@ export function PendingMessages({ messages, active = true, connected, blocked, u
       ?? stack.querySelector<HTMLTextAreaElement>(".composer-text");
     next?.focus({ preventScroll: true });
   };
+  const review = messages.some(message => !message.serverOwned);
   return <ol ref={rootRef} className="pending-messages" aria-label={t("Queued messages")}>
+    {review && <li className="pending-message-note" role="status">{t("Saved copies need review before you send again.")}</li>}
     {unsaved && <li className="pending-message-note" role="status">{t("Queue could not be saved. Keep this tab open or copy the messages before reloading.")}</li>}
     {messages.map((message) => {
       const busy = isBusy(message.id) || message.state === "sending";

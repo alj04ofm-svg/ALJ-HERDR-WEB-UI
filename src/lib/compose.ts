@@ -39,6 +39,7 @@ export function submitNotTyped(code: string): boolean {
 
 /** A send refused over a one-row draft in Claude's terminal input box: the note, and the draft a send may clear first. */
 export interface DraftRefusal { note: string; draft: string }
+export type ComposerSendResult = boolean | string | DraftRefusal | { delivery: "sent" | "pending" };
 
 /** submitNote, or a DraftRefusal when the server named a draft it can clear (SubmitResult's `draft`). */
 export function submitRefusal(code: string, message: string, draft?: string): string | DraftRefusal {

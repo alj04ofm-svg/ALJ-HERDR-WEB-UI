@@ -379,10 +379,10 @@
 }
 .is-animated .city-river .city-docked-yacht {
   left: var(--city-berth);
-  animation: city-yacht-docking 84s steps(720) -24s infinite;
+  animation: city-yacht-docking 96s steps(720) -24s infinite;
 }
 .is-animated .city-river .city-docked-yacht::after {
-  animation: city-berth-wake 84s steps(270) -24s infinite;
+  animation: city-berth-wake 96s steps(270) -24s infinite;
 }
 .city-guest-yacht {
   --city-channel: 17%;
@@ -393,17 +393,21 @@
 .is-animated .city-river .city-guest-yacht,
 .is-animated .city-river .city-guest-yacht::after { animation-duration: 109s; animation-delay: -31s; }
 @keyframes city-yacht-docking {
-  0% { transform: translate(-25cqw, 13cqh); }
-  13% { transform: translate(-6cqw, 3cqh) rotate(-3deg); }
-  20%, 49% { transform: translate(0, 0); }
-  58% { transform: translate(6cqw, 3cqh) rotate(4deg); }
-  74% { transform: translate(25cqw, 7cqh); }
-  100% { transform: translate(88cqw, 12cqh); }
+  0%, 100% { transform: translate(0, 0); }
+  0%, 48%, 100% { scale: 1 1; }
+  52%, 87% { scale: -1 1; }
+  91% { scale: 1 1; }
+  8%, 25% { transform: translate(0, 0); }
+  35% { transform: translate(7cqw, 3cqh) rotate(4deg); }
+  48%, 52% { transform: translate(88cqw, 10cqh); }
+  70% { transform: translate(45cqw, 8cqh); }
+  82% { transform: translate(6cqw, 2cqh) rotate(-3deg); }
+  87%, 93% { transform: translate(0, 0); }
 }
 @keyframes city-berth-wake {
-  0%, 71%, 100% { opacity: .58; transform: scaleX(1); }
-  13%, 58% { opacity: .22; transform: scaleX(.45); }
-  20%, 49% { opacity: 0; transform: scaleX(.18); }
+  48%, 52%, 70% { opacity: .54; transform: scaleX(1); }
+  0%, 8%, 25%, 87%, 93%, 100% { opacity: 0; transform: scaleX(.18); }
+  35%, 82% { opacity: .31; transform: scaleX(.6); }
 }
 
 .city-plane {
@@ -1461,3 +1465,35 @@
   56%, 100% { opacity: 0; transform: translate(340%, 67%); }
 }
 @keyframes city-taxi-reflection { 42%, 62% { box-shadow: -1px 5px 6px var(--accent); } }
+
+
+.city-site[data-public-works] .city-building {
+  clip-path: inset(var(--public-works-inset) 0 0);
+}
+.city-site[data-public-works="0"] { --public-works-inset: 90%; }
+.city-site[data-public-works="1"] { --public-works-inset: 67%; }
+.city-site[data-public-works="2"] { --public-works-inset: 30%; }
+.city-civic-works {
+  position: absolute;
+  inset: 0;
+  --city-crane-paint: var(--accent);
+  --city-roof: var(--border-strong);
+}
+.city-civic-frame {
+  position: absolute;
+  inset: calc(var(--public-works-inset) - 12%) 0 0;
+  border-inline: var(--hairline) solid var(--border-strong);
+  background:
+    repeating-linear-gradient(to bottom, var(--border-strong) 0 var(--hairline), transparent var(--hairline) 12%),
+    repeating-linear-gradient(to right, var(--border-strong) 0 var(--hairline), transparent var(--hairline) 22%);
+}
+.city-civic-works .city-crane-mast { inset: 12% auto 0 8%; height: auto; }
+.city-civic-jib {
+  position: absolute;
+  inset: 12% -25% auto 0;
+  height: var(--space-1);
+  border-block: var(--hairline) solid var(--accent);
+  background: repeating-linear-gradient(45deg, transparent 0 4px, var(--accent) 4px 5px);
+}
+.city-civic-works .city-site-fencing { animation: none; opacity: 1; }
+.city-site[data-public-works] .city-reflection { opacity: .25; }

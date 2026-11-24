@@ -15,6 +15,9 @@ export class ComposerDraftStore {
   private unsaved = new Set<string>();
   /** the text each pending send carries, and whether the draft stopped extending it meanwhile */
   private pending = new Map<string, { sent: string; edited: boolean }>();
+  private sendIssues = new Map<string, string>();
+  private issueVersion = 0;
+  issueRevision = (): number => this.issueVersion;
   private listeners = new Set<() => void>();
   /** the drafts this tab itself is sending: another tab's lease is read from storage */
   private own = new Set<string>();
@@ -26,11 +29,20 @@ export class ComposerDraftStore {
   ) {}
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private notify(): void { for (const listener of this.listeners) listener(); }
+  isUnsaved(key: string): boolean { return this.unsaved.has(key); }
+  sendIssue(key: string): string | undefined { return this.sendIssues.get(key); }
+  setSendIssue(key: string, note?: string): void {
+    if (this.sendIssues.get(key) === note) return;
+    if (note) this.sendIssues.set(key, note);
+    else this.sendIssues.delete(key);
+    this.issueVersion++;
+    this.notify();
+  }
   read(key: string): Draft {
     let draft = this.drafts.get(key);
     if (!draft) {
       let text: string | null = null;
-      try { text = this.storage().getItem(key); } catch { /* private mode */ }
+      try { text = this.storage().getItem(key); } catch { this.unsaved.add(key); }
       this.saved.set(key, text);
       draft = { text: text ?? "", sending: false };
       this.drafts.set(key, draft);
@@ -80,6 +92,7 @@ export class ComposerDraftStore {
     const pending = this.pending.get(key);
     if (pending && !text.startsWith(pending.sent)) pending.edited = true;
     this.drafts.set(key, { ...draft, text });
+    if (text.length === 0) this.setSendIssue(key);
     try {
       if (text) this.storage().setItem(key, text);
       else this.storage().removeItem(key);

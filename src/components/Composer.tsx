@@ -36,6 +36,7 @@ import {
   composerStatusWord,
   contextLeftPercent,
   type DraftRefusal,
+  type ComposerSendResult,
   formatTokens,
   imageMention,
   insertMention,
@@ -79,10 +80,11 @@ export interface ComposerProps {
   restored?: string | null;
   /** an empty chat's greeting: it stands over the composer's column and takes no row of its own */
   greeting?: ReactNode;
+  hasPendingMessages?: boolean;
   /** true: sent, clear the box; a string: keep the text and say why; a DraftRefusal: the same, and the
    * note offers to send again with `clearDraft`, which clears that draft from the terminal first; a
    * promise settles to any of them */
-  onSend: (text: string, clearDraft?: string) => boolean | string | DraftRefusal | Promise<boolean | string | DraftRefusal>;
+  onSend: (text: string, clearDraft?: string) => ComposerSendResult | Promise<ComposerSendResult>;
   onAbort: () => void;
   onUploadImage: (file: File, options?: import("../lib/attachmentUpload.ts").UploadOptions) => Promise<string>;
   onShowUsage?: () => void;
@@ -246,6 +248,7 @@ export function Composer({
   suggestion = null,
   restored = null,
   greeting = null,
+  hasPendingMessages = false,
   onSend,
   onAbort,
   onUploadImage,
@@ -302,7 +305,8 @@ export function Composer({
   const [dragging, setDragging] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
   const onRefineNote = useCallback((message: string | null) => setNote(message), []);
-  const [note, setNote] = useState<string | DraftRefusal | null>(null);
+  const [delivery, setDelivery] = useState<"sent" | "pending" | null>(null);
+  const [note, setNote] = useState<string | DraftRefusal | null>(() => composerDrafts.sendIssue(draftKey) ?? null);
   // shown only when chosen in Settings → Quick replies: a button beside the box was one more thing to read
   const quickOpen = settings.showQuickReplies;
   const quickReplies = quickReplyButtons(settings);
@@ -724,10 +728,22 @@ export function Composer({
     if (!connected || uploading || sending || text.trim().length === 0) return;
     const sent = text;
     const sentAttachments = attachments;
-    const settle = (result: boolean | string | DraftRefusal): void => {
-      const acknowledged = result === true ? composerDrafts.settle(draftKey, sent) : null;
+    const unconfirmed = t("Not confirmed. Check the terminal before sending again.");
+    const failed = (message: string) => {
+      composerDrafts.setSendIssue(draftKey, message);
+      if (mounted.current) setNote(message);
+    };
+    const settle = (result: ComposerSendResult): void => {
+      const receipt = typeof result === "object" && "delivery" in result ? result.delivery : null;
+      const acknowledged = result === true || receipt !== null ? composerDrafts.settle(draftKey, sent) : null;
+      if (typeof result === "string") composerDrafts.setSendIssue(draftKey, result);
+      else if (typeof result === "object" && "draft" in result) composerDrafts.setSendIssue(draftKey, result.note);
+      else if (result === false) composerDrafts.setSendIssue(draftKey, t("The message did not leave this device. Your draft is still here."));
+      else composerDrafts.setSendIssue(draftKey);
       if (!mounted.current) return;
-      if (typeof result !== "boolean") setNote(result);
+      setDelivery(receipt);
+      if (typeof result === "string" || typeof result === "object" && "draft" in result) setNote(result);
+      if (result === false) setNote(t("The message did not leave this device. Your draft is still here."));
       if (acknowledged === null) return;
       rememberPrompt(draftKey, sent);
       // only what was sent leaves the box: text added after it stays exactly as typed. Changed
@@ -746,20 +762,22 @@ export function Composer({
     try {
       const result = onSend(text, clearDraft);
       if (!(result instanceof Promise)) { settle(result); composerDrafts.end(draftKey); return; }
-      void result.then(settle).catch(() => { if (mounted.current) setNote(t("Not confirmed. Check the terminal before sending again.")); }).finally(() => composerDrafts.end(draftKey));
+      void result.then(settle).catch(() => failed(unconfirmed)).finally(() => composerDrafts.end(draftKey));
     } catch {
       composerDrafts.end(draftKey);
-      if (mounted.current) setNote(t("Not confirmed. Check the terminal before sending again."));
+      failed(unconfirmed);
     }
-  }, [attachments, connected, dictation.forget, draftKey, onSend, sending, text, uploading]);
+  }, [attachments, connected, dictation.forget, draftKey, onSend, sending, t, text, uploading]);
 
   /** A quick reply follows the same delivery policy as Send, and leaves the box alone. */
   const sendQuick = useCallback((reply: string) => {
     if (!connected || sending) return;
     setNote(null);
     // a quick reply is not the box's text, so its note offers no send over a draft
-    const settle = (result: boolean | string | DraftRefusal): void => {
-      if (mounted.current && typeof result !== "boolean") setNote(typeof result === "string" ? result : submitNote("input_draft", result.note));
+    const settle = (result: ComposerSendResult): void => {
+      if (!mounted.current) return;
+      if (typeof result === "object" && "delivery" in result) setDelivery(result.delivery);
+      else if (typeof result !== "boolean") setNote(typeof result === "string" ? result : submitNote("input_draft", result.note));
     };
     if (!composerDrafts.begin(draftKey)) return;
     try {
@@ -891,6 +909,9 @@ export function Composer({
   const usageCaption = usageLimit === undefined ? "" : `${usageLimit.kind === "session" ? "5h" : windowLabel(usageLimit)} ${formatPercent(meterPercent(usageLimit, settings.usageCount))}`;
   const usageAccessible = usage === undefined ? "" : `${t("Subscription usage")}: ${usageName(usage)}, ${usageDetail.replaceAll("\n", ", ")}`;
   const hintText = hint === null ? null : t(hint === "uploading" ? "Uploading file…" : "Reconnecting… message held here, never queued");
+  const deliveryText = note !== null || uploading ? null : sending ? t("Sending…")
+    : text.trim() ? (composerDrafts.isUnsaved(draftKey) ? t("Draft kept in this tab") : t("Draft saved on this device"))
+    : delivery === "sent" ? t("Sent to terminal") : delivery === "pending" && hasPendingMessages ? t("Check pending messages above") : null;
   const menuId = `composer-menu-${paneId}`;
   // the arrow keys move the selection, not the focus (it stays in the box), so the browser does not scroll to it
   useEffect(() => {
@@ -900,6 +921,7 @@ export function Composer({
   return (
     <div className="composer" role="group" aria-label={t("Message composer")} data-dictating={dictation.voice.state !== "idle" ? "" : undefined}>
       {greeting}
+      <div className="composer-delivery" role="status">{deliveryText}</div>
       {/* why the message in the box did not go: on the box's top edge, read with it, its one way on beside it */}
       {note !== null && (
         <div className={`composer-note${typeof note === "object" ? " composer-note-offer" : ""}`} role="alert">

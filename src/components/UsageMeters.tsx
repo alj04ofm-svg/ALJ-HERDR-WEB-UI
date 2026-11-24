@@ -54,6 +54,8 @@ function Provider({ usage, now, count, paced }: { usage: ProviderUsage; now: num
   const t = useT();
   const name = PROVIDER_NAME[usage.id];
   const problem = problemText(t, usage);
+  const checked = Date.parse(usage.checked_at ?? "");
+  const checkedText = Number.isFinite(checked) ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(checked) : null;
   return (
     <section className="usage-provider" aria-label={usageName(usage)}>
       <header className="usage-provider-head">
@@ -62,6 +64,7 @@ function Provider({ usage, now, count, paced }: { usage: ProviderUsage; now: num
         {usage.plan && <span className="usage-plan">{usage.plan}</span>}
         {usage.account && <span className="usage-account" title={usage.account}>{usage.account}</span>}
       </header>
+      {checkedText && <p className="usage-note">{t("Last refreshed {time}", { time: checkedText })}</p>}
       {problem && <p className={`usage-note${isError(usage) ? " is-problem" : ""}`}>{problem}</p>}
       {usage.windows.map((window, index) => {
         const reset = formatResetIn(window.resets_at, now);
@@ -79,7 +82,7 @@ function Provider({ usage, now, count, paced }: { usage: ProviderUsage; now: num
               {/* where an even pace would be by now, counted as the bar counts: used past it, or left short of it, is ahead of pace */}
               {pace && <i className="usage-bar-pace" style={{ left: `${count === "left" ? 100 - pace.elapsed * 100 : pace.elapsed * 100}%` }} />}
             </span>
-            {reset && <span className="usage-row-reset">{t("Resets in {time}", { time: reset })}</span>}
+            {reset && <span className="usage-row-reset" title={window.resets_at && Number.isFinite(Date.parse(window.resets_at)) ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(Date.parse(window.resets_at)) : undefined}>{t("Resets in {time}", { time: reset })}</span>}
             {pace && pace.perHour > 0 && (
               <span className="usage-row-pace">
                 {formatRate(window, pace)}

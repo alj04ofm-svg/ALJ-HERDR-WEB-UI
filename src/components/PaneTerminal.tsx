@@ -18,7 +18,7 @@ import { EMPTY_DRAFT, applyToDraft, draftIsEmpty, restoreDraft, type InputDraft 
 import { messageQueues } from "../lib/messageQueue.ts";
 import { pendingMessages } from "../lib/pendingMessages.ts";
 import { heldCountShown, heldOpenAtFold, heldOpenOnFocus, heldRefocusDue, heldRowError, heldRowsFold, heldRowsHidden, heldToggleShown, SHORT_PHONE_QUERY } from "../lib/heldRows.ts";
-import { type DraftRefusal, MAX_COMPOSER_CHARS, QUEUE_READY_STATUS, agentDisplayLabel, composerDelivery, composerMessage, composerPayload, submitNote, submitNotTyped, submitRefusal } from "../lib/compose.ts";
+import { type ComposerSendResult, MAX_COMPOSER_CHARS, QUEUE_READY_STATUS, agentDisplayLabel, composerDelivery, composerMessage, composerPayload, submitNote, submitNotTyped, submitRefusal } from "../lib/compose.ts";
 import { afterRead, afterSend, afterSettled, composerLift, greetingMemory, rememberGreeting, greetingFits, greetingFolder, roomOverComposer, showsGreeting, type ChatRead } from "../lib/greeting.ts";
 import { answerFromText, answerHint, answerRefusal, needsConfirmation, type TypedAnswer } from "../lib/promptAnswer.ts";
 import { ApiError, assertAttachable, fetchPaneScroll, fetchPaneSelection, scrollPane } from "../lib/api.ts";
@@ -2193,7 +2193,7 @@ export function PaneTerminal({
   }, [greetingDue, paneId]);
 
   const composerSend = useCallback(
-    (text: string, clearDraft?: string): boolean | string | DraftRefusal | Promise<boolean | string | DraftRefusal> => {
+    (text: string, clearDraft?: string): ComposerSendResult | Promise<ComposerSendResult> => {
       const pane = paneRef.current;
       // Codex's queue open in the terminal holds the input: a message would become the answer
       if (pane !== null && heldByOpenQueue) {
@@ -2223,7 +2223,7 @@ export function PaneTerminal({
       const delivery: SubmitDelivery = clearDraft !== undefined || queued === "immediate" ? "immediate"
         : settings.autoSendQueued ? "send-now" : "hold";
       const result = submitComposerMessage(text, delivery, clearDraft);
-      return result === null ? false : result.then((answer) => answer.ok ? true : submitRefusal(answer.code, answer.message, answer.draft));
+      return result === null ? false : result.then((answer) => answer.ok ? { delivery: answer.pending ? "pending" : "sent" } : submitRefusal(answer.code, answer.message, answer.draft));
     },
     [agent, agentStatus, answerPanePrompt, answering, heldByOpenQueue, submitComposerMessage, queueStore, machineId, settings.autoSendQueued],
   );
@@ -2527,6 +2527,7 @@ export function PaneTerminal({
           plan={plan}
           backgroundWait={backgroundWait}
           metadata={chatMetadata?.pane === paneId ? chatMetadata.value : null}
+          hasPendingMessages={pending.length > 0}
           connected={connected && !held}
           answerHint={answering === null ? null
             : pendingAnswer?.promptId === answering.id ? t("Confirm your answer in the card above, or type another…") : answerHint(answering)}

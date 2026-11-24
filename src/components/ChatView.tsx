@@ -1,3 +1,4 @@
+import { TaskBoardContext } from "../lib/taskBoardContext.ts";
 import { ConversationSearch } from "./ConversationSearch.tsx";
 import { composerDrafts } from "../lib/composerDraft.ts";
 import { MAX_COMPOSER_CHARS } from "../lib/compose.ts";
@@ -465,6 +466,7 @@ interface TurnProps {
   /** ...and "Needs you" while the agent is blocked */
   waiting: boolean;
   showThinking: boolean;
+  onSaveTask?: (turn: ConversationTurn) => void;
 }
 
 const TASK_RESULT_ICONS: Record<OmoTaskResult["status"], ComponentType<LucideProps>> = { completed: CircleCheck, failed: CircleX, cancelled: CircleSlash };
@@ -507,7 +509,7 @@ function noticeLabel(t: ReturnType<typeof useT>, notice: Extract<ConversationPar
 }
 
 // a turn that did not change keeps its object across polls: skip re-rendering it
-const Turn = memo(function Turn({ paneId, turn, live, waiting, showThinking }: TurnProps) {
+const Turn = memo(function Turn({ paneId, turn, live, waiting, showThinking, onSaveTask }: TurnProps) {
   const t = useT();
   const machineId = useMachineId();
   const [quoteNotice, setQuoteNotice] = useState<string | null>(null);
@@ -557,7 +559,7 @@ const Turn = memo(function Turn({ paneId, turn, live, waiting, showThinking }: T
   const { work, answer } = splitTurn(turn.parts);
   const answerText = answer.map((part) => part.text).join("\n\n");
   const goal = turnGoal(turn.parts);
-  return <article className="chat-turn chat-turn-agent">
+  return <article className="chat-turn chat-turn-agent" data-reply-revision={turn.ts ? turnRevision(turn, true) : undefined} tabIndex={-1}>
     {goal !== null && <GoalActivity goal={goal} />}
     {work.length > 0 && <WorkBlockView paneId={paneId} parts={work} duration={formatWorkDuration(turn.ts, turn.end_ts ?? null)} live={live} waiting={waiting} showThinking={showThinking} update={publicWorkUpdate(turn.parts)} />}
     {answer.map((part, index) => <Markdown key={index}>{part.text}</Markdown>)}
@@ -566,6 +568,7 @@ const Turn = memo(function Turn({ paneId, turn, live, waiting, showThinking }: T
       <CopyButton className="chat-meta-btn" text={answerText} label={t("Copy as markdown")} onResult={copied}><span className="chat-meta-fmt">MD</span></CopyButton>
       <CopyButton className="chat-meta-btn chat-meta-plain" text={plainText(answerText)} label={t("Copy as plain text")} onResult={copied}><span className="chat-meta-fmt">TXT</span><span className="chat-meta-word">{t("Plain text")}</span></CopyButton>
       <button className="chat-meta-btn" type="button" onClick={() => { const key = `herdr-web-ui:composer-draft:${paneStorageId(machineId, paneId)}`; const draft = composerDrafts.read(key).text; const quoted = answerText.split("\n").map(line => `> ${line}`).join("\n"); const next = `${draft}${draft.trim() ? "\n\n" : ""}${quoted}\n\n`; if (next.length > MAX_COMPOSER_CHARS) { setQuoteNotice(t("Your draft is too long to add this quote.")); return; } composerDrafts.set(key, next); setQuoteNotice(t("Quote added to draft. Review before sending.")); }}>{t("Quote answer")}</button>
+      {!live && onSaveTask && <button className="chat-meta-btn" type="button" onClick={() => onSaveTask(turn)}>{t("Save as task")}</button>}
       {time !== null && <time dateTime={turn.ts ?? undefined}>{time}</time>}
     </div>}
     {quoteNotice && <p className="field-hint" role="status">{quoteNotice}</p>}
@@ -680,6 +683,22 @@ export const ChatView = memo(function ChatView({ paneId, refreshKey, invalidatio
   const olderGeneration = useRef(0);
   const history = useRef<string | undefined>(undefined);
   const [historyId, setHistoryId] = useState<string | undefined>(undefined);
+  const machineId = useMachineId();
+  const taskBoard = useContext(TaskBoardContext);
+  const fromReply = taskBoard?.fromReply;
+  const saveReply = useCallback((turn: ConversationTurn) => {
+    const revision = turnRevision(turn, true);
+    fromReply?.(machineId, paneId, historyId && historyId.length <= 512 && turn.ts && /^\d{4}-\d{2}-\d{2}T/.test(turn.ts) && Number.isFinite(Date.parse(turn.ts))
+      ? { history_id: historyId, timestamp: turn.ts, revision } : undefined);
+  }, [fromReply, machineId, paneId, historyId]);
+  const resume = taskBoard?.resume?.machine === machineId && taskBoard.resume.pane === paneId ? taskBoard.resume : null;
+  const finishResume = taskBoard?.finishResume;
+  const resumePages = useRef(new Set<string>());
+  const [resumeMessage, setResumeMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (!resume) { resumePages.current.clear(); return; }
+    setResumeMessage(null);
+  }, [resume]);
   const shownPane = useRef(paneId);
   const prepended = useRef<{ top: number; height: number } | null>(null);
   const [pollKey, setPollKey] = useState(0);
@@ -1038,6 +1057,32 @@ export const ChatView = memo(function ChatView({ paneId, refreshKey, invalidatio
   // the chat left the screen (another lens): nothing is known of it until it is read again
   useLayoutEffect(() => () => onRead?.(paneId, null), [onRead, paneId]);
 
+  useEffect(() => {
+    if (!resume || !loaded || !finishResume || error !== null) return;
+    const reply = resume.reply;
+    const target = historyId === reply.history_id
+      ? [...(scroller.current?.querySelectorAll<HTMLElement>("[data-reply-revision]") ?? [])]
+        .find(node => node.dataset.replyRevision === reply.revision)
+      : undefined;
+    if (target) {
+      stickToBottom.current = false;
+      target.scrollIntoView({ block: "center", behavior: "instant" });
+      target.focus({ preventScroll: true });
+      finishResume();
+      return;
+    }
+    if (historyId === reply.history_id && typeof olderCursor === "string" && olderState !== "failed" && resumePages.current.size < 4) {
+      if (!resumePages.current.has(olderCursor)) {
+        resumePages.current.add(olderCursor);
+        void loadOlder();
+        return;
+      }
+      if (olderState === "loading") return;
+    }
+    setResumeMessage(t("The saved reply could not be found. The source chat is open."));
+    finishResume();
+  }, [resume, loaded, finishResume, error, historyId, shownTurns, olderCursor, olderState, loadOlder, t]);
+
   // Native transcripts can share a timestamp across commentary and final turns.
   const turnKeyOccurrences = new Map<string, number>();
   const search = <ConversationSearch key={paneId} container={scroller} revision={shownTurns} />;
@@ -1046,6 +1091,7 @@ export const ChatView = memo(function ChatView({ paneId, refreshKey, invalidatio
   <div className={`chat-view${dockSearch ? " has-docked-search" : ""}`} ref={scroller} onScroll={onScroll} role="log" aria-live="polite" aria-label={t("conversation of {pane}", { pane: paneId })}>
     {!dockSearch && search}
     <div className="chat-transcript" data-conversation-source={state.conversationSource}>
+      {resumeMessage && <p className="chat-inline-state" role="status">{resumeMessage}</p>}
       {/* the conversation below is not all the file holds: a /tree left these behind, and pi moved
           its leaf without writing anything, so nothing here could say they were ever there. First
           in the transcript, because paging back would otherwise drop them under their own heading */}
@@ -1075,7 +1121,7 @@ export const ChatView = memo(function ChatView({ paneId, refreshKey, invalidatio
             const occurrence = turnKeyOccurrences.get(baseKey) ?? 0;
             turnKeyOccurrences.set(baseKey, occurrence + 1);
             return <RenderBoundary key={`${baseKey}:${occurrence}`} resetKey={turnRevision(turn, true)} fallback={() => <p className="chat-inline-state chat-inline-error">{t("This message can't be shown here. The terminal has it.")}</p>}>
-              <Turn paneId={paneId} turn={turn} live={live} waiting={isWaitingWorkTurn(live, agentStatus)} showThinking={settings.showThinking} />
+              <Turn paneId={paneId} turn={turn} live={live} waiting={isWaitingWorkTurn(live, agentStatus)} showThinking={settings.showThinking} onSaveTask={fromReply ? saveReply : undefined} />
             </RenderBoundary>;
           })
         : agent !== null

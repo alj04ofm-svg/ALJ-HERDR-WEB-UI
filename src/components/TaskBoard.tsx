@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { Archive, ArrowLeft, CalendarDays, Check, CheckCheck, ChevronRight, Circle, CircleCheck, Columns3, List, Radio, Sparkles, Maximize2, Minimize2, Plus, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
-import { TASK_STAGES, TASK_STAGE_LABELS, type TaskStage, type WorkspaceTask } from "../../shared/tasks.ts";
+import { Archive, ArrowLeft, CalendarDays, Check, CheckCheck, ChevronRight, Circle, CircleCheck, Columns3, Link2, List, Radio, Sparkles, Maximize2, Minimize2, Plus, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
+import { TASK_STAGES, TASK_STAGE_LABELS, type TaskSource, type TaskStage, type WorkspaceTask } from "../../shared/tasks.ts";
 import type { Machine } from "../../shared/machines.ts";
 import { sidebarAgents, agentNavigationLabel } from "../lib/sidebarAgents.ts";
 import { paneStatus } from "../lib/status.ts";
@@ -34,11 +34,12 @@ const COLUMNS: { stage: TaskStage; label: string; includes: TaskStage[] }[] = [
 ];
 const TASK_COMPARE_FIELDS = [
   ["title", "Title"], ["notes", "Notes"], ["stage", "Stage"], ["scope", "Area"], ["priority", "Priority"],
-  ["project", "Project"], ["due", "Due date"], ["due_time", "Due time"], ["checklist", "Checklist"], ["archived", "Archived"],
+  ["project", "Project"], ["due", "Due date"], ["due_time", "Due time"], ["checklist", "Checklist"], ["archived", "Archived"], ["source", "Source"],
 ] as const;
 
 function taskFieldText(task: WorkspaceTask, field: typeof TASK_COMPARE_FIELDS[number][0]): string {
   if (field === "checklist") return task.checklist.map(item => `${item.done ? "Complete" : "Open"} · ${item.title}`).join("\n");
+  if (field === "source") return task.source ? [task.source.label, task.source.reply?.timestamp].filter(Boolean).join(" · ") : "";
   if (field === "archived") return task.archived ? "Yes" : "No";
   if (field === "stage") return TASK_STAGE_LABELS[task.stage];
   return task[field] ?? "";
@@ -69,9 +70,9 @@ function dueLabel(date: string) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(`${date}T12:00:00`));
 }
 
-function BoardCard({ task, today, canMove, disabled, canComplete, completionDisabled, onEdit, onComplete }: {
+function BoardCard({ task, today, canMove, disabled, canComplete, completionDisabled, onEdit, onComplete, onResume }: {
   task: WorkspaceTask; today: string; canMove: boolean; disabled: boolean;
-  canComplete: boolean; completionDisabled: boolean; onEdit(): void; onComplete(): void;
+  canComplete: boolean; completionDisabled: boolean; onEdit(): void; onComplete(): void; onResume?: () => void;
 }) {
   const completed = task.stage === "done";
   const checkedCount = task.checklist.filter(item => item.done).length;
@@ -94,6 +95,7 @@ function BoardCard({ task, today, canMove, disabled, canComplete, completionDisa
       <span className="task-card-project" title={task.project || undefined}>{task.project || (task.scope === "business" ? "Business" : "Personal")}</span>
       {task.priority !== "normal" && <span className="task-priority">{task.priority === "urgent" ? "Urgent" : "High"}</span>}
       {task.due && <time dateTime={task.due} className={task.due < today && task.stage !== "done" ? "task-overdue" : undefined}><CalendarDays aria-hidden="true" />{dueLabel(task.due)}{task.due_time && ` · ${task.due_time}`}</time>}
+      {task.source && onResume && <button className="btn btn-ghost task-source-link" type="button" disabled={disabled} onClick={onResume} title={task.source.label}><Link2 aria-hidden="true" />Resume work</button>}
       {!!task.checklist.length && <span className="task-card-check" aria-label={`${checkedCount} of ${task.checklist.length} checklist items complete`}><CheckCheck aria-hidden="true" />{checkedCount}/{task.checklist.length}</span>}
     </div>
   </article>;
@@ -139,6 +141,8 @@ function NotesEditor({ editor, projects, itemText, setItemText, patch, onBack, o
       {savedTask && <button type="button" className="btn" onClick={onReload}>Load saved task</button>}
     </div>}
     <fieldset className="task-editor-fields" disabled={busy}>
+      {draft.source && <div className="task-source-detail"><span><Link2 aria-hidden="true" />{draft.source.label}{draft.source.reply ? " · Chat reply" : " · Agent"}</span>
+        <button type="button" className="btn btn-ghost" onClick={() => patch({ source: undefined })}>Remove link</button></div>}
       {differences.length > 0 && <details className="task-compare">
         <summary>Compare with saved task ({differences.length})</summary>
         <dl>
@@ -185,7 +189,7 @@ function NotesEditor({ editor, projects, itemText, setItemText, patch, onBack, o
   </form>;
 }
 
-export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSelect, initialCapture = false }: { initialCapture?: boolean; onClose(): void; store?: TaskStore; machines?: Machine[]; onSelect?(machine: string, pane: string): void }) {
+export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSelect, source, onResume, initialCapture = false }: { initialCapture?: boolean; onClose(): void; store?: TaskStore; machines?: Machine[]; onSelect?(machine: string, pane: string): void; source?: TaskSource; onResume?(machine: string, pane: string, reply: TaskSource["reply"]): void }) {
   const [store] = useState(() => suppliedStore ?? createTaskStore());
   const { snapshot, error, pending, conflict } = useTaskStore(store);
   const [view, setView] = useState<TaskFilter>("all");
@@ -206,7 +210,11 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
   const [project, setProject] = useState("");
   const [query, setQuery] = useState("");
   const t = useT();
-  const [editor, setEditor] = useState<Editor | null>(null);
+  const [editor, setEditor] = useState<Editor | null>(() => {
+    if (!source) return null;
+    const original = { ...newTask("business", "", "inbox"), source };
+    return { original, draft: { ...original }, isNew: true };
+  });
   const [itemText, setItemText] = useState("");
   const [confirm, setConfirm] = useState<"close" | "board" | "reload" | "inline" | null>(null);
   const [status, setStatus] = useState("");
@@ -496,10 +504,20 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
     const state = paneStatus(entry.pane);
     return state === "working" || state === "blocked" ? [{ machine, entry, state }] : [];
   }) : []);
+  function resumeSource(source: TaskSource) {
+    if (busy || unsaved || !onResume) return;
+    const machine = machines.find(item => item.id === source.machine_id);
+    if (machine?.state !== "connected") { setStatus("The source PC is offline or has been removed."); return; }
+    const pane = machine.snapshot?.panes.find(item => item.terminal_id === source.terminal_id && !item.restore_error);
+    if (!pane) { setStatus("The original agent tab has closed. The task is still here."); return; }
+    onClose();
+    onResume(machine.id, pane.pane_id, source.reply);
+  }
   const cards = (entries: WorkspaceTask[]) => entries.map(task => <BoardCard key={task.id} task={task} today={today}
     canMove={canMove && !addingInline && layout === "board" && view !== "archive"}
     canComplete={view !== "archive"} disabled={addingInline} completionDisabled={!canMove || addingInline || Boolean(editor)}
-    onEdit={() => edit(task)} onComplete={() => void toggleComplete(task)} />);
+    onEdit={() => edit(task)} onComplete={() => void toggleComplete(task)}
+    onResume={task.source && onResume && !editor && !unsaved && !busy ? () => resumeSource(task.source!) : undefined} />);
 
   return createPortal(<div className="modal-scrim task-scrim" onClick={event => { if (event.currentTarget === event.target) attemptExit("close"); }}>
     <section className="modal task-workspace" ref={surface} data-expanded={expanded} data-editing={Boolean(editor)} role="dialog"
@@ -556,7 +574,10 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
                 <button type="button" className="btn" disabled={!snapshot || !canMove} onClick={() => edit({
                   ...newTask("business", archivedProject(snapshot, project) ? "" : project, state === "blocked" ? "needs-you" : "inbox"),
                   title: (entry.pane.plan?.current || title).slice(0, 240),
-                  notes: `From ${title} in ${entry.workspace.label} (${machine.name}).`,
+                  ...(entry.pane.terminal_id ? { source: {
+                    machine_id: machine.id, pane_id: entry.pane.pane_id, terminal_id: entry.pane.terminal_id,
+                    workspace_id: entry.workspace.workspace_id, label: (title.trim() || entry.workspace.label || "Agent").slice(0, 240),
+                  } } : {}),
                 }, true)}><Plus aria-hidden="true" /> Add to tasks</button>
               </article>;
             }) : <div className="task-empty"><h3>No agents need attention</h3><p>Working agents and requests for input appear here.</p></div>}
@@ -661,7 +682,7 @@ export function TaskBoard({ onClose, store: suppliedStore, machines = [], onSele
           patch={values => { setEditor(previous => previous && ({ ...previous, draft: { ...previous.draft, ...values } })); setConfirm(null); }}
           onBack={() => attemptExit("board")} onSave={task => void update(task, true)}
           onReload={() => { if (dirty) setConfirm("reload"); else if (activeTask) setEditor({ original: activeTask, draft: { ...activeTask }, isNew: false }); else exitEditor(); }}
-          busy={busy} conflict={conflict || pending === "load"} externallyChanged={externallyChanged} savedTask={activeTask ?? undefined} projectArchived={Boolean(archivedProject(snapshot, editor.draft.project))} />}
+          busy={busy} conflict={conflict || pending === "load" || !snapshot} externallyChanged={externallyChanged} savedTask={activeTask ?? undefined} projectArchived={Boolean(archivedProject(snapshot, editor.draft.project))} />}
       </div>
       {projectPanel && snapshot && <TaskProjectActions key={projectPanel.path + projectPanel.mode} panel={projectPanel}
         snapshot={snapshot} projects={projects} busy={busy} blocked={conflict} feedback={conflict ? `${error} Close this panel to reload.` : error || (busy ? "Saving project…" : status)} onPanel={setProjectPanel}

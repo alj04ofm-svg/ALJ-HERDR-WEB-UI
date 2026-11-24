@@ -447,3 +447,15 @@
 @media (max-width: 870px) {
   .task-workspace[data-editing="true"] .task-editor { width: 100%; }
 }
+
+.task-source-link { min-block-size: var(--touch-target); }
+.task-source-detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--text-dim);
+}
+.task-source-detail span { display: inline-flex; align-items: center; gap: var(--space-2); }
+.task-source-detail svg { flex: none; width: 1em; height: 1em; }

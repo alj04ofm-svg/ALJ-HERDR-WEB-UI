@@ -20,7 +20,11 @@ test("projects, times and archives survive reload and stale writes cannot replac
   try {
     expect(new TaskStore(state).read()).toEqual({ revision: "old", tasks: [task], archived_projects: [] });
     const projects = ["Studio", "Studio / Editing", "Empty project"];
-    const archived = { ...task, due_time: "15:30", archived: true, project: projects[1]! };
+    const source = {
+      machine_id: "test-machine", pane_id: "test:pane", terminal_id: "test-terminal", workspace_id: "test-workspace", label: "Fictional Studio",
+      reply: { history_id: "test-history", timestamp: now, revision: "assistant|test-turn" },
+    };
+    const archived = { ...task, source, due_time: "15:30", archived: true, project: projects[1]! };
     const saved = await put({ revision: "old", tasks: [archived], projects, archived_projects: ["Empty project"] });
     expect(saved.status).toBe(200);
     expect(saved.headers.get("cache-control")).toBe("no-store");
@@ -31,6 +35,7 @@ test("projects, times and archives survive reload and stale writes cannot replac
     const original = readFileSync(path, "utf8");
     expect((await put({ revision, tasks: [] })).status).toBe(409);
     expect((await put({ revision, tasks: [{ ...archived, due_time: "25:30" }] })).status).toBe(400);
+    expect((await put({ revision, tasks: [{ ...archived, source: { ...source, reply: { ...source.reply, unexpected: true } } }] })).status).toBe(400);
     expect((await put({ revision, tasks: [archived], projects: ["Studio", "Studio"] })).status).toBe(400);
     expect(readFileSync(path, "utf8")).toBe(original);
   } finally { rmSync(state, { recursive: true, force: true }); }

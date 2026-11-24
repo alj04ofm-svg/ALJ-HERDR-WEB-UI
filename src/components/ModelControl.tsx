@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, RefreshCw, X } from "lucide-react";
 import type { ConversationMetadata } from "../../shared/protocol.ts";
@@ -22,6 +22,7 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
   const [notice, setNotice] = useState("");
   const [model, setModel] = useState("");
   const [effort, setEffort] = useState("");
+  const readGeneration = useRef(0);
   const id = useId();
   const trap = useFocusTrap<HTMLDivElement>(open);
   const close = useCallback(() => { if (!busy) setOpen(false); }, [busy]);
@@ -29,12 +30,14 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
   const accept = useCallback((next: PaneModelSettings) => { setSettings(next); setModel(next.model ?? ""); setEffort(next.effort ?? ""); }, []);
   // Always re-read native values after reload; never persist a cosmetic model preference.
   useEffect(() => {
-    let live = true; setSettings(null); setError(""); setNotice(""); setOpen(false); setLoading(false);
+    const generation = ++readGeneration.current;
+    const live = () => readGeneration.current === generation;
+    setSettings(null); setError(""); setNotice(""); setOpen(false); setLoading(false);
     if (agent === "codex" && connected) {
       setLoading(true);
-      void api.fetchPaneModelSettings(paneId).then(next => { if (live) accept(next); }).catch(() => {}).finally(() => { if (live) setLoading(false); });
+      void api.fetchPaneModelSettings(paneId).then(next => { if (live()) accept(next); }).catch(() => {}).finally(() => { if (live()) setLoading(false); });
     }
-    return () => { live = false; };
+    return () => { readGeneration.current++; };
   }, [paneId, agent, connected, api, accept]);
   useEffect(() => {
     if (!open) return;
@@ -42,13 +45,18 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
     window.addEventListener("keydown", escape, true); return () => window.removeEventListener("keydown", escape, true);
   }, [open, close]);
   const refresh = async () => {
+    if (!connected) return;
+    const generation = ++readGeneration.current;
     setLoading(true); setError(""); setNotice("");
-    try { accept(await api.fetchPaneModelSettings(paneId)); }
-    catch (e) {
+    try {
+      const next = await api.fetchPaneModelSettings(paneId);
+      if (readGeneration.current === generation) accept(next);
+    } catch (e) {
+      if (readGeneration.current !== generation) return;
       setSettings(null);
       setError(e instanceof ApiError ? e.detail : t("Could not read native settings. Try Refresh."));
     }
-    finally { setLoading(false); }
+    finally { if (readGeneration.current === generation) setLoading(false); }
   };
   const apply = async (field: "model" | "effort") => {
     if (!settings?.supported || !settings.thread_id || !settings.model || busy) return;
@@ -66,12 +74,14 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
   const shownModel = native ? settings.model : metadata?.model;
   const shownEffort = native ? settings.effort : metadata?.reasoning_effort;
   const label = shownModel ? modelLabel(shownModel) : null;
+  const state = native ? t("Live settings") : label || shownEffort ? t("Last recorded") : loading ? t("Checking settings…") : t("Settings unavailable");
   const current = settings?.models.find(m => m.id === settings.model);
   return <>
     <button type="button" className="composer-model-info model-control" aria-label={t("Model and reasoning")} aria-haspopup="dialog" aria-expanded={open}
-      title={native ? t("Change model or reasoning effort") : t("Last recorded settings. Open to check native controls.")} onClick={() => { setOpen(true); void refresh(); }}>
+      aria-describedby={`${id}-state`} title={state} onClick={() => { setOpen(true); void refresh(); }}>
       <span className={`composer-model${label?.named ? "" : " is-id"}`}>{label?.text ?? t("Model —")}</span>
       {shownEffort && <span className="composer-reasoning"><span className="composer-reasoning-dot" aria-hidden="true">·</span><span className="composer-reasoning-short">{shownEffort}</span></span>}
+      <span id={`${id}-state`} className="model-control-state" data-live={!!native}>{state}</span>
       <ChevronDown className="model-control-chevron" aria-hidden="true" />
     </button>
     {open && createPortal(<div className="modal-scrim" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
@@ -93,7 +103,7 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
         </>}
         {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
         <footer>
-          {onOpenTerminal && !native && !loading && <button type="button" className="btn" onClick={onOpenTerminal}>{t("Terminal")}</button>}
+          {onOpenTerminal && !native && !loading && <button type="button" className="btn" onClick={() => { close(); onOpenTerminal(); }}>{t("Terminal")}</button>}
           <button type="button" className="btn" disabled={busy || loading || !connected} onClick={() => void refresh()}><RefreshCw aria-hidden="true" />{t("Refresh")}</button>
           <button type="button" className="btn" disabled={busy} onClick={close}>{t("Done")}</button>
         </footer>

@@ -123,16 +123,22 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
       document.removeEventListener("visibilitychange", sync);
     };
   }, [skyTime]);
+  const publicWorksDay = Math.floor(day / 2);
+  const publicWorksLot = rebuildOrder[publicWorksDay % rebuildOrder.length]!;
+  // The public works site advances on the marina's local clock, even when no browser is open.
+  const publicWorksPhase = (day % 2) * 2 + Number(skyTime.getHours() >= 12);
+  const civicProject = moving && publicWorksPhase < 3;
   const dailyBuildings = rebuilt?.day === day ? rebuilt : null;
-  const vacantLot = dailyBuildings?.cleared ?? (day % 3 === 0 ? day % waterfront.length : -1);
-  const buildable = rebuildOrder.filter(index => index !== vacantLot);
+  const vacancy = dailyBuildings?.cleared ?? (day % 3 === 0 ? day % waterfront.length : -1);
+  const vacantLot = civicProject && vacancy === publicWorksLot ? (vacancy + 1) % waterfront.length : vacancy;
+  const buildable = rebuildOrder.filter(index => index !== vacantLot && !(civicProject && index === publicWorksLot));
   const start = (cycle + day) % buildable.length;
   const eventPhase = (cycle + day) % 7;
-  const district = eventPhase === 0;
+  const district = eventPhase === 0 && !event;
   const giantVisit = moving && district && cycle > 0 && Math.floor((cycle + day) / 7) % 2 === 0;
   const sites = buildable.slice(start).concat(buildable.slice(0, start)).slice(0, district ? 3 : eventPhase === 3 ? 2 : 1);
   const lead = sites[0];
-  const activeSites = moving && (district || eventPhase === 3) ? sites : [];
+  const activeSites = moving && !event && (district || eventPhase === 3) ? sites : [];
   const available = residents.map((_, index) => index).filter(index => !giantVisit || !giantChase.includes(index));
   const crewSize = giantVisit ? 3 : 2;
   const crew = activeSites.map((_, position) => Array.from({ length: crewSize }, (_, member) =>
@@ -178,6 +184,7 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
       setCycle(index => index + 1);
     }}>
       {waterfront.map(({ x, height, width }, index) => {
+        const publicWorks = civicProject && index === publicWorksLot && index !== vacantLot ? publicWorksPhase : undefined;
         const siteCrew = crew[activeSites.indexOf(index)];
         const working = siteCrew !== undefined;
         const variant = index + day + (dailyBuildings?.versions[index] ?? 0);
@@ -185,7 +192,7 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
         const nextArchitecture = waterfront[(variant + 1) % waterfront.length]!.architecture;
         const alternate = working && district;
         const clearing = working && index === closingLot;
-        return <div className="city-site" key={index} data-target={working} data-replacement={alternate} data-architecture={architecture}
+        return <div className="city-site" key={index} data-target={working} data-replacement={alternate} data-architecture={architecture} data-public-works={publicWorks}
           style={{ "--city-lot": `${x}%`, "--city-height": `${height}%`, "--city-width": `${width}cqw` } as CSSProperties}>
           {index === vacantLot ? <span className="city-quay-lot" /> : <>
           <span className="city-building">
@@ -198,6 +205,11 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
           {clearing ? <span className="city-quay-lot is-opening" />
             : alternate && <div className="city-site-replacement" data-architecture={nextArchitecture}><span className="city-facade" /></div>}
           </>}
+          {publicWorks !== undefined && <div className="city-civic-works">
+            <span className="city-civic-frame" />
+            <span className="city-crane-mast" /><span className="city-civic-jib" />
+            <span className="city-site-fencing" />
+          </div>}
           {working && <div className="city-sequence" key={cycle} data-district={district}
             style={{ "--city-damage-lag": `${district ? sites.indexOf(index) * .35 : 0}s` } as CSSProperties}>
             {index === lead && district && !giantVisit && <span className="city-meteor" />}
@@ -267,8 +279,8 @@ const CityScene = memo(function CityScene({ moving, weather, paused, manualBoats
       {!event && <div className="city-vessel city-yacht city-yacht-returning" />}
       {!manualBoats && <div className="city-vessel city-jet-ski" />}
       {!event && <div className="city-vessel city-jet-ski city-jet-ski-second" />}
-      <div className="city-vessel city-yacht city-docked-yacht"><i /></div>
-      <div className="city-vessel city-yacht city-docked-yacht city-guest-yacht"><i /></div>
+      <div className="city-vessel city-yacht city-docked-yacht" data-berth="west"><i /></div>
+      <div className="city-vessel city-yacht city-docked-yacht city-guest-yacht" data-berth="east"><i /></div>
       <div className="city-water-taxi"><i /><b /><span /></div>
     </div>
     <div className="city-bridge-traffic" />

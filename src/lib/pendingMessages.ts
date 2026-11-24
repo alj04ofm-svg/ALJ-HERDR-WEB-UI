@@ -16,13 +16,15 @@ export class PendingMessageStore {
   private busy = new Set<string>();
   /** rows saved as not confirmed while they are shown as they were (unconfirm) */
   private unconfirmed = new Set<string>();
+  private version = 0;
+  revision = (): number => this.version;
   private listeners = new Set<() => void>();
   constructor(private storage: () => StoragePort = () => window.localStorage) {}
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
     return () => { this.listeners.delete(listener); };
   };
-  private notify(): void { for (const listener of this.listeners) listener(); }
+  private notify(): void { this.version++; for (const listener of this.listeners) listener(); }
   isUnsaved(owner: string): boolean { return this.unsaved.has(owner); }
   isOwned(owner: string, id: string, scope: string | null): boolean { return scope !== null && this.scopes.get(owner)?.get(id) === scope; }
   isBusy(owner: string, id: string): boolean { return this.busy.has(`${owner}\0${id}`); }
