@@ -1,29 +1,47 @@
 /** The owner's reusable English work briefs. Selecting one edits a draft; Send stays explicit. */
 export const WORK_PROMPTS = {
-  plan: `Plan the work we are discussing. Use the latest request, the available project instructions and current evidence. If the goal is implicit, state your best read of it and flag the assumption.
+  plan: `Look at the latest request, the project rules and current work. Pick up to three outcomes, in the order that removes the biggest dependency or gets something usable in my hands fastest.
 
-Give up to three outcomes in dependency order. For each, say what would make it done, what to verify, and what could block it. End with the first concrete action and any decision that genuinely needs me. Keep this pass to planning.`,
-  update: `Give me a status update on the work we are discussing. Check the current artifacts or recent results you can access and reconcile them with the agreed goal.
+For each, give the smallest useful deliverable, its acceptance check, and the risk most likely to break the plan. If my request is broad, name what you would defer and why. End with the first move and any decision that genuinely needs me. Keep this pass to planning.`,
+  update: `Give me a status update I can act on. Check the actual deliverable and the latest available results before answering. Start with what I can use now, link it, and tell me how to open or try it.
 
-Start with what I can use now and link to it when possible. Then give what's in progress, what is blocked, and the next action. Distinguish live, verified locally, and unverified when that difference matters. If you cannot check something, say what evidence is missing. Keep this pass to reporting.`,
-  audit: `Audit the current work against its goal and how people actually use it. Inspect the relevant artifacts first and follow the main journey from input to outcome. Check likely failures such as incorrect results, lost data, permission mistakes, inaccessible controls, or poor recovery where they apply.
+Then cover what's left, the highest-impact blocker, and the next step currently under way. Distinguish source, preview, and live. If you know only that a build or fixture passed, say exactly that. Keep this pass to reporting.`,
+  audit: `Audit the current deliverable through the real user journey. Inspect what exists, then follow the main action from the first click or command to the visible or saved result. Try a failure or recovery path wherever it could lose work, mislead the user, or expose private data.
 
-Rank the findings by impact and give evidence. Fix the highest-value issues already in scope, then check the affected behavior. Report what you reproduced, what you fixed, how you verified it, and what still needs attention.`,
-  continue: `Pick up the unfinished work from this conversation. Identify the latest agreed outcome, what is already done, and the next step that advances it. Preserve decisions, constraints, drafts and work in progress.
+Rank findings by impact and separate reproduced failures from code-supported risks. Fix the highest-value issues already in scope. Rerun the original journey and report the evidence, remaining issues, and live status.`,
+  continue: `Pick up the latest unfinished request. Check the current worktree or deliverable and any active jobs before repeating an action. Preserve earlier decisions, drafts, and active work. If the latest instruction narrows the task, follow it.
 
-Carry out that step and any authorized work it unlocks. Keep changes narrow and check the result. If something is blocked, continue independent work and tell me exactly what is needed. If there is no active task, say so briefly.`,
-  finish: `Finish the agreed work. Compare the current result with the acceptance criteria and identify the smallest set of remaining steps needed to make it usable.
+Take the next authorized step and finish what it unlocks. If blocked, advance independent work and name the exact blocker. If everything is already done, tell me what I can use and how you know.`,
+  finish: `Finish the agreed scope and take ownership through delivery. Compare each requested outcome with the current result, then do the smallest remaining work that makes it usable. Preserve existing data, preferences, and active jobs.
 
-Do the authorized steps, verify the complete outcome in its normal workflow, and deliver it through the project's established process when allowed. Preserve existing data and active work. Give me the result or link, the checks you ran, and any concrete blocker or limitation.`,
-  team: `Complete the current task. If this environment and the project permit delegation, assign independent pieces to the smallest useful team. Give each person or agent a clear deliverable, ownership boundary and verification target. Work directly if delegation is unavailable or offers no advantage.
+Verify the real workflow, ship through the authorized project process, and check the delivered version. Give me the link or usable result, the action you tested, and any concrete limitation. A passing build alone is an intermediate result.`,
+  team: `If delegation is permitted and useful, give each specialist an independent deliverable, a clear editing boundary, and one verification target. Keep shared files, deployment, and the final decision with one coordinator. Work directly if delegation offers no advantage.
 
-Keep one coordinator accountable for shared resources, integration and verification. Deliver the combined result and give a concise rundown of what was checked and what still needs attention.`,
-  design: `Improve how people use the current deliverable. Start from its intended audience, established identity and primary action. Inspect what exists, then identify the largest sources of friction, confusion or inconsistency.
+Resolve overlapping changes, integrate the result, and test the combined user journey. Report the result and anything still blocked.`,
+  design: `Open the current interface or artifact and do the main thing a real user comes here to do. Find the three biggest moments of friction. Prioritize clarity, orientation, and the next action before styling. Keep the established identity, content, features, and user preferences.
 
-Make a small set of high-impact changes. Preserve the content and preferences people already rely on. For an interface, check representative screen sizes, keyboard operation, readability and motion where affected. For a document or other artifact, review the real reading or viewing flow. Tell me what improved and what you verified.`,
-  handoff: `Bring the current work to a usable checkpoint. Finish safe steps already in scope, verify the result, and leave enough context for someone else to resume without rereading the conversation.
+Make a focused pass using the existing components and tokens. Check desktop and phone, keyboard, readability, and reduced motion where relevant. Test the same journey again and report the improvement and what is live.`,
+  handoff: `Bring this work to a checkpoint another person or agent can use without rereading the thread. Finish authorized steps already in progress, verify the result, and preserve active work.
 
-Record the goal, result, relevant links or paths, what you checked, what is live, and the next exact step. Use the existing project handoff location if there is one. Identify anything still blocked and the input needed to proceed.`,
+In the existing handoff location, record the goal, current result, relevant links or paths, what you actually checked, what's live, and the exact next action. Include any blocker and the smallest input that would clear it.`,
+  priority: `Given what I've asked for and what's actually open, tell me the one move that creates the most value in the next hour. Compare it with the tempting lower-value work and tell me what can wait.
+
+Give me a clear finish line and a fast reality check. If the next step is already authorized, take it and show me the result. Otherwise give me the decision in one sentence.`,
+  screenshot: `Use the screenshot, error text, or behavior I just showed you as the starting point. Identify the visible symptom, then reproduce it on the closest authorized surface. Check the live and source versions if they may differ.
+
+Trace the cause before changing anything. Make the smallest durable fix, repeat the action that failed, and check the nearest regression. If you only reproduced it in a fixture, say so. Keep screenshots and live data out of public changes.`,
+  live: `Open the same URL, screen, or entry point I would use. Check that it serves the intended version, then perform the action that matters and inspect the result after refresh when persistence is relevant. Use an isolated account or fixture when the real action would affect data or active work.
+
+If preview and live differ, locate the first point of drift and correct it through the approved process. Tell me what you clicked, what happened, and which parts used real services versus mocks.`,
+  sharing: `Review the exact repo, build, link, or file I intend to share as if you were a stranger opening it. Look for credentials, private URLs and host paths, personal transcripts or tasks, config, screenshots, and unintended access in the shareable surface and relevant published history. Report locations without exposing secret values.
+
+Verify which features work on a fresh install with the recipient's own accounts. Fix in-scope packaging or documentation issues. If exposure is confirmed, flag the action the owner needs before sharing. State what the checks covered.`,
+  recover: `A job, deploy, connection, or integration looks stuck. Find the first failing step using the smallest useful probe. Distinguish a confirmed failure from an operation that may already have succeeded. Preserve partial outputs, open sessions, and pending work.
+
+Recover or retry once the outcome is safe to repeat. Verify the original action from the user's side. If still blocked, explain what you ruled out and the exact external change needed.`,
+  experiment: `Test the riskiest assumption behind the idea I just described. Define one observable success measure, then use the smallest viable prototype or before-and-after check. Keep it separate from live data and avoid creating infrastructure unless the test requires it.
+
+Show the result, what surprised you, and whether to ship, revise, or drop it. If the evidence supports a small authorized improvement, land that improvement and verify it in the normal workflow.`,
 } as const;
 
 export type WorkPromptId = keyof typeof WORK_PROMPTS;

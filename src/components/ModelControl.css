@@ -5,6 +5,9 @@
 .model-settings header, .model-settings footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .model-settings h2 { margin: 0; font-size: var(--fs-lg); color: var(--text-strong); }
 .model-settings-note { color: var(--text-dim); font-size: var(--fs-sm); line-height: var(--lh-base); }
+.model-native-fallback { padding: var(--space-3); border: var(--hairline) solid var(--border); border-radius: var(--radius-md); background: var(--bg-elevated); }
+.model-native-fallback p { margin: 0; line-height: var(--lh-base); }
+.model-native-fallback .btn { margin-top: var(--space-2); }
 .model-settings-field { margin-block: var(--space-5); }
 .model-settings-field label { display: block; margin-bottom: var(--space-2); font-weight: var(--fw-medium); }
 .model-settings-field > div { display: flex; gap: var(--space-2); }

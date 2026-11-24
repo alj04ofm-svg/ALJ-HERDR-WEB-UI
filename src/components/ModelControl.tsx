@@ -12,7 +12,7 @@ import { usePhoneSheetBack } from "../lib/sheetHistory.ts";
 import { useT } from "../lib/i18n.ts";
 import "./ModelControl.css";
 
-export function ModelControl({ paneId, agent, metadata, connected, onOpenTerminal }: { paneId: string; agent: string | null; metadata?: ConversationMetadata | null; connected: boolean; onOpenTerminal?: () => void }) {
+export function ModelControl({ paneId, agent, metadata, connected, onOpenTerminal, onPrepareCommand }: { paneId: string; agent: string | null; metadata?: ConversationMetadata | null; connected: boolean; onOpenTerminal?: () => void; onPrepareCommand?: () => void }) {
   const t = useT();
   const api = useMachineApi();
   const [open, setOpen] = useState(false);
@@ -20,6 +20,7 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [nativeUnavailable, setNativeUnavailable] = useState(false);
   const [notice, setNotice] = useState("");
   const [checkedAt, setCheckedAt] = useState<Date | null>(null);
   const [model, setModel] = useState("");
@@ -37,7 +38,7 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
   useEffect(() => {
     const generation = ++readGeneration.current;
     const live = () => readGeneration.current === generation;
-    setSettings(null); setError(""); setNotice(""); setCheckedAt(null); setLoading(false);
+    setSettings(null); setError(""); setNativeUnavailable(false); setNotice(""); setCheckedAt(null); setLoading(false);
     if (agent === "codex" && connected) {
       setLoading(true);
       void api.fetchPaneModelSettings(paneId).then(next => { if (live()) accept(next); }).catch(() => {}).finally(() => { if (live()) setLoading(false); });
@@ -52,14 +53,15 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
   const refresh = async () => {
     if (!connected) return;
     const generation = ++readGeneration.current;
-    setLoading(true); setError(""); setNotice("");
+    setLoading(true); setError(""); setNativeUnavailable(false); setNotice("");
     try {
       const next = await api.fetchPaneModelSettings(paneId);
       if (readGeneration.current === generation) accept(next);
     } catch (e) {
       if (readGeneration.current !== generation) return;
       setSettings(null);
-      setError(e instanceof ApiError ? e.detail : t("Could not read native settings. Try Refresh."));
+      if (agent === "codex" && e instanceof ApiError && e.code === "native_unavailable") setNativeUnavailable(true);
+      else setError(e instanceof ApiError ? e.detail : t("Could not read native settings. Try Refresh."));
     }
     finally { if (readGeneration.current === generation) setLoading(false); }
   };
@@ -88,6 +90,7 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
   const label = shownModel ? modelLabel(shownModel) : null;
   const state = native ? t("Live settings") : label || shownEffort ? t("Last recorded") : loading ? t("Checking settings…") : t("Settings unavailable");
   const current = settings?.models.find(m => m.id === settings.model);
+  const fallback = agent === "codex" && connected && !loading && !native;
   return <>
     <button type="button" className="composer-model-info model-control" aria-label={t("Model and reasoning")} aria-haspopup="dialog" aria-expanded={open}
       aria-describedby={`${id}-state`} title={state} onClick={() => { setOpen(true); void refresh(); }}>
@@ -102,7 +105,15 @@ export function ModelControl({ paneId, agent, metadata, connected, onOpenTermina
         <header><h2 id={id}>{t("Model and reasoning")}</h2><button type="button" className="icon-button" aria-label={t("Close")} onClick={close} disabled={busy}><X aria-hidden="true" /></button></header>
         {loading && <p role="status">{t("Reading native settings…")}</p>}
         {!connected && <p role="status">{t("Reconnecting…")}</p>}
-        {connected && !loading && !native && !error && <p role="status">{settings?.reason ?? t("Native settings are unavailable. Try Refresh.")}</p>}
+        {nativeUnavailable ? <p role="status">{t("Web settings are unavailable for this Codex session.")}</p>
+          : connected && !loading && !native && !error && <p role="status">{settings?.reason ?? t("Native settings are unavailable. Try Refresh.")}</p>}
+        {fallback && <div className="model-native-fallback">
+          <p>{t("Use /model in Codex to choose a model and reasoning effort for this session.")}</p>
+          {onPrepareCommand && <button type="button" className="btn btn-primary" onClick={() => {
+            close();
+            requestAnimationFrame(onPrepareCommand);
+          }}>{t("Add /model to draft")}</button>}
+        </div>}
         {settings && checkedAt && <p className="model-settings-note">{t("Last checked {when}", { when: checkedAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" }) })}</p>}
         {native && <>
           <div className="model-settings-field"><label htmlFor={`${id}-model`}>{t("Model")}</label><div><select className="select" id={`${id}-model`} value={model} onChange={e => setModel(e.target.value)} disabled={busy || loading}>

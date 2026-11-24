@@ -1156,7 +1156,12 @@ export function Composer({
             {/* Native model controls share the quiet pill with the context ring. */}
             <span className={`composer-pill${metadata?.model ? "" : " is-bare"}`}>
               {agent && <AgentMark agent={agent} size={14} />}
-              {modelShown && <ModelControl key={`${machineId}:${paneId}`} paneId={paneId} agent={agent} metadata={metadata} connected={connected} onOpenTerminal={onOpenTerminal} />}
+              {modelShown && <ModelControl key={`${machineId}:${paneId}`} paneId={paneId} agent={agent} metadata={metadata} connected={connected} onOpenTerminal={onOpenTerminal}
+                onPrepareCommand={!text && !attachments.length && !sending && !uploading && dictation.voice.state === "idle" && answerHint === null && agentStatus !== "working" && agentStatus !== "blocked" ? () => {
+                  if (!mounted.current || !activeRef.current || textRef.current || attachmentsRef.current.length) return;
+                  setNote(null);
+                  setTextAndCaret("/model", "/model".length);
+                } : undefined} />}
               {metadata?.context && <ContextRing context={metadata.context} shown={contextShown} readOnly={mobile} onToggle={() => setContextShown((open) => !open)} />}
               {onShowUsage && usage !== undefined && usageLimit !== undefined && <button
                 type="button" aria-haspopup="dialog" onClick={onShowUsage}

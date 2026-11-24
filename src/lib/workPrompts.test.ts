@@ -12,7 +12,7 @@ describe("work prompt draft safety", () => {
     expect(appendWorkPrompt(" \n ", "update", 20_000)).toBe(WORK_PROMPTS.update);
   });
 
-  test.each(["continue", "finish", "team"] as const)("%s stays editable and preserves a dictated request", (id) => {
+  test.each(["continue", "finish", "team", "priority", "screenshot", "live", "sharing", "recover", "experiment"] as const)("%s stays editable and preserves a dictated request", (id) => {
     const draft = "First fix the existing owner report. Keep the live jobs running.";
     expect(appendWorkPrompt(draft, id, 20_000)).toBe(`${draft}\n\n${WORK_PROMPTS[id]}`);
     expect(appendWorkPrompt(draft, id, draft.length)).toBeNull();
