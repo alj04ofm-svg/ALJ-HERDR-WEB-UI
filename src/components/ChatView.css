@@ -34,20 +34,54 @@
   --chat-fs-xl: calc(var(--fs-xl) * var(--chat-scale, 1));
 }
 
+.terminal-stack.is-chat > .terminal-surface {
+  --chat-search-height: max(44px, var(--touch-target));
+  --chat-clear-top: calc(var(--chat-search-height) + var(--space-1) + var(--space-5));
+}
+
 .chat-search-dock {
   position: absolute;
-  inset: var(--space-1) var(--space-3) auto;
+  inset: 0 0 auto;
+  padding: var(--space-1) var(--space-3) 0;
   z-index: 2;
   pointer-events: none;
 }
+
+/* Only the glass fades. The transcript can scroll through the whole viewport and its
+   selectable text stays intact under the search controls. */
+.chat-search-dock::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--chat-clear-top);
+  background: linear-gradient(color-mix(in srgb, var(--bg) 34%, transparent), transparent);
+}
+
+@supports ((backdrop-filter: blur(6px)) or (-webkit-backdrop-filter: blur(6px))) {
+  .chat-search-dock::before {
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    mask-image: linear-gradient(var(--text) 0%, var(--text) 12%, transparent 100%);
+  }
+}
+
+/* Keep keyboard focus and selection sharp when they cross the glass. */
+.terminal-surface:has(.chat-view :focus-visible) .chat-search-dock::before,
+.terminal-surface:has(.chat-view:active) .chat-search-dock::before {
+  content: none;
+}
+
+@media (prefers-contrast: more), (forced-colors: active) {
+  .chat-search-dock::before { content: none; }
+}
+
 .chat-search-dock .conversation-search {
-  position: static;
-  height: max(44px, var(--touch-target));
+  position: relative;
+  height: var(--chat-search-height);
 }
 .chat-view.has-docked-search {
-  inset-block-start: calc(max(44px, var(--touch-target)) + var(--space-1));
-  padding-block-start: var(--space-2);
-  scroll-padding-top: var(--space-2);
+  padding-block-start: var(--chat-clear-top);
+  scroll-padding-top: var(--chat-clear-top);
 }
 
 .chat-transcript {
@@ -1380,12 +1414,10 @@
 
 .terminal-stack.has-city .chat-view {
   background: linear-gradient(
-    var(--bg) 0%,
-    color-mix(in srgb, var(--bg) 58%, transparent) 28% 44%,
-    color-mix(in srgb, var(--bg) 58%, transparent) 72%,
+    color-mix(in srgb, var(--bg) 28%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 58%, transparent) 24% 72%,
     color-mix(in srgb, var(--bg) 24%, transparent) 100%
-  ) 0 0 / 100% 100% no-repeat local;
-  background-attachment: fixed;
+  );
 }
 .terminal-stack.has-city .chat-transcript {
   --text-dim: color-mix(in srgb, var(--text) 90%, var(--text-strong));
