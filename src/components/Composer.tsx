@@ -873,19 +873,44 @@ export function Composer({
     setTextAndCaret(value.slice(0, selectionStart) + pasted + value.slice(selectionEnd), selectionStart + pasted.length);
   }, [pasteFiles, setTextAndCaret, t]);
 
-  // Redirect an actual paste while keeping editable controls and modal input independent.
+  // Redirect typing and paste only when the active chat owns the keyboard.
   useEffect(() => {
     if (!active) return;
-    const pasteIntoDraft = (event: globalThis.ClipboardEvent) => {
+    const draftTarget = (event: Event) => {
       const box = textareaRef.current;
       const target = event.target;
-      if (!box || !box.getClientRects().length || event.defaultPrevented || !event.clipboardData || modalOpen() ||
-          !(target instanceof Element) || target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='textbox'], [role='menu'], [role='listbox'], [role='dialog']")) return;
+      if (!box || event.defaultPrevented || !(target instanceof Element) ||
+          target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='textbox'], [role='searchbox'], [role='combobox'], [role='menu'], [role='listbox'], [role='dialog'], [aria-haspopup='menu'][aria-expanded='true']") ||
+          modalOpen() || !box.getClientRects().length) return null;
+      return box;
+    };
+    const typeIntoDraft = (event: globalThis.KeyboardEvent) => {
+      // Leave navigation, shortcuts, space-to-scroll and IME keystrokes to their current target.
+      if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing || event.keyCode === 229 ||
+          event.key === " " || [...event.key].length !== 1) return;
+      const box = draftTarget(event);
+      if (!box) return;
+      event.preventDefault();
+      const { value, selectionStart, selectionEnd } = box;
+      if (value.length - (selectionEnd - selectionStart) + event.key.length > MAX_COMPOSER_CHARS) {
+        box.focus({ preventScroll: true });
+        return;
+      }
+      setNote(null);
+      setTextAndCaret(value.slice(0, selectionStart) + event.key + value.slice(selectionEnd), selectionStart + event.key.length);
+    };
+    const pasteIntoDraft = (event: globalThis.ClipboardEvent) => {
+      const box = draftTarget(event);
+      if (!box || !event.clipboardData) return;
       pasteText({ clipboardData: event.clipboardData, preventDefault: () => event.preventDefault() }, box, true);
     };
+    document.addEventListener("keydown", typeIntoDraft);
     document.addEventListener("paste", pasteIntoDraft);
-    return () => document.removeEventListener("paste", pasteIntoDraft);
-  }, [active, pasteText]);
+    return () => {
+      document.removeEventListener("keydown", typeIntoDraft);
+      document.removeEventListener("paste", pasteIntoDraft);
+    };
+  }, [active, pasteText, setTextAndCaret]);
 
   const onDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
