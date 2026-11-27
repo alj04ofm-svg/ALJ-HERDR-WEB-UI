@@ -56,6 +56,7 @@ const launchPresets = [
   { id: "flash", kind: "opencode", label: "OpenCode Go", detail: "DeepSeek Flash", args: ["--model", "opencode-go/deepseek-v4.1-flash"] },
   { id: "sol", kind: "codex", label: "GPT‑6.2 Sol", detail: "Medium", args: ["-m", "gpt-6.2-sol", "-c", 'model_reasoning_effort="medium"'] },
   { id: "astra", kind: "codex", label: "GPT‑6.2 Astra", detail: "Medium", args: ["-m", "gpt-6.2-astra", "-c", 'model_reasoning_effort="medium"'] },
+  { id: "opus", kind: "claude", label: "Claude Opus 5.5", detail: "Medium", args: ["--model", "claude-opus-5-5", "--effort", "medium"] },
 ] as const;
 
 function directoryBasename(value: string): string {
